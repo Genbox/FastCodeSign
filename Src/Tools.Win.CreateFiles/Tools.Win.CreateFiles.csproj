@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastCodeSignature.Native.Authenticode\FastCodeSignature.Native.Authenticode.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\Files\Unsigned\WinPe\*">
+      <LinkBase>WinPe</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
+    <Content Include="..\..\Files\Unsigned\WMI\*">
+      <LinkBase>WMI</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
+    <Content Include="..\..\Files\Unsigned\WSH\*">
+      <LinkBase>WSH</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
+    <Content Include="..\..\Files\FastCodeSignature.pfx">
+      <Link>FastCodeSignature.pfx</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

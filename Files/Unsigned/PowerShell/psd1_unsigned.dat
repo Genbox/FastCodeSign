@@ -1,0 +1,10 @@
+@{
+    RootModule        = 'psd1_unsigned.psd1'
+    ModuleVersion     = '1.0.0'
+    GUID              = 'bb8e5a25-9205-4474-ba2c-1a15a70eb8d1'
+    Author            = 'Ian Qvist'
+    CompanyName       = 'None'
+    Copyright         = '(c) 2025 Ian Qvist. All rights reserved.'
+    Description       = 'A simple module that says hello to a given name.'
+    FunctionsToExport = @('Say-Hello')
+}

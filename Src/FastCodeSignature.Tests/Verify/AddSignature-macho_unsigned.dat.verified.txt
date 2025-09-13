@@ -1,0 +1,104 @@
+﻿{
+  Version: 1,
+  ContentInfo: {
+    ContentType: {
+      Value: 1.2.840.113549.1.7.1,
+      FriendlyName: PKCS 7 Data
+    }
+  },
+  Detached: false,
+  SignerInfos: [
+    {
+      Version: 1,
+      SignerIdentifier: {
+        Type: IssuerAndSerialNumber,
+        Value: {
+          IssuerName: CN=FastCodeSignature,
+          SerialNumber: Guid_1
+        }
+      },
+      SignedAttributes: [
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.3,
+            FriendlyName: Content Type
+          },
+          Values: [
+            {
+              ContentType: {
+                Value: 1.2.840.113549.1.7.1,
+                FriendlyName: PKCS 7 Data
+              },
+              Oid: {
+                Value: 1.2.840.113549.1.9.3,
+                FriendlyName: Content Type
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.5,
+            FriendlyName: Signing Time
+          },
+          Values: [
+            {
+              SigningTime: DateTime_1,
+              Oid: {
+                Value: 1.2.840.113549.1.9.5,
+                FriendlyName: Signing Time
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.4,
+            FriendlyName: Message Digest
+          },
+          Values: [
+            {
+              MessageDigest: UY2R7hG75TMxffk/DIKFjUUA3RDpf+PaX6ykaLzWNrg=,
+              Oid: {
+                Value: 1.2.840.113549.1.9.4,
+                FriendlyName: Message Digest
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113635.100.9.2
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.2.840.113635.100.9.2
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113635.100.9.1
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.2.840.113635.100.9.1
+              }
+            }
+          ]
+        }
+      ],
+      DigestAlgorithm: {
+        Value: 2.16.840.1.101.3.4.2.1,
+        FriendlyName: sha256
+      },
+      SignatureAlgorithm: {
+        Value: 1.2.840.113549.1.1.1,
+        FriendlyName: RSA
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+#pragma namespace("\\\\.\\root\\cimv2")
+
+class Hello_Class
+{
+    [key] string Name;
+    string Greeting;
+};

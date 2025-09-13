@@ -1,0 +1,8 @@
+function Say-Hello {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    Write-Output "hello $Name"
+}

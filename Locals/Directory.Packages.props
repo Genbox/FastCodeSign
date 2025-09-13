@@ -1,0 +1,9 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup>
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.9" />
+    <PackageVersion Include="Verify.XunitV3" Version="30.19.1" />
+    <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
+  </ItemGroup>
+
+</Project>

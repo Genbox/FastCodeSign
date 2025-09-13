@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<component>
+  <registration
+    description="Hello Component"
+    progid="Hello.Component"
+    version="1.0"
+    classid="{12345678-1234-1234-1234-1234567890AB}" />
+
+  <public>
+    <method name="SayHello">
+      <parameter name="name" />
+    </method>
+  </public>
+
+  <script language="VBScript">
+    <![CDATA[
+    Function SayHello(name)
+        SayHello = "Hello, " & name & "!"
+    End Function
+    ]]>
+  </script>
+</component>

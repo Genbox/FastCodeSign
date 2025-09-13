@@ -1,0 +1,33 @@
+name: Nuget release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+**'
+
+env:
+  DOTNET_EnableDiagnostics: 0
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+      - name: Setup .NET Core 9.0
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: '9.0.x'
+      - name: Publish
+        shell: pwsh
+        env:
+          NUGET_KEY: ${{secrets.NUGET_KEY}}
+          PWSHG_KEY: ${{secrets.PWSHG_KEY}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          ./Scripts/Publish.ps1

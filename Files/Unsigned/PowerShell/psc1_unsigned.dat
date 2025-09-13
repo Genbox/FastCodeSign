@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PSConsoleFile ConsoleSchemaVersion="1.0">
+  <PSVersion>5.1</PSVersion>
+
+  <!-- Snap-ins to load (older style, mostly for Windows PowerShell) -->
+  <PSSnapIns>
+    <PSSnapIn Name="Microsoft.PowerShell.Diagnostics" />
+    <PSSnapIn Name="Microsoft.PowerShell.Utility" />
+  </PSSnapIns>
+
+  <!-- Modules to auto-import -->
+  <Modules>
+    <Module Name="HelloModule" />
+  </Modules>
+</PSConsoleFile>

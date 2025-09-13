@@ -1,0 +1,262 @@
+﻿{
+  Version: 3,
+  ContentInfo: {
+    ContentType: {
+      Value: 1.3.6.1.4.1.311.2.1.4
+    },
+    Content: ME0wGAYKKwYBBAGCNwIBDzAKAwIAAKAEogKAADAxMA0GCWCGSAFlAwQCAQUABCDetssm1sb73OTQrgJF0y3bALJIrpSiH0MZTel2R2b5Qg==
+  },
+  Detached: false,
+  Certificates: [
+    {
+      Archived: false,
+      Extensions: [
+        {
+          KeyUsages: DigitalSignature,
+          Critical: true,
+          Oid: {
+            Value: 2.5.29.15,
+            FriendlyName: Key Usage
+          }
+        },
+        {
+          EnhancedKeyUsages: [
+            {
+              Value: 1.3.6.1.5.5.7.3.3,
+              FriendlyName: Code Signing
+            }
+          ],
+          Critical: false,
+          Oid: {
+            Value: 2.5.29.37,
+            FriendlyName: Enhanced Key Usage
+          }
+        },
+        {
+          SubjectKeyIdentifier: B2C5BA77AD1EBF26C80BF3F105DC03C88FA2440D,
+          SubjectKeyIdentifierBytes: {
+            Length: 20,
+            IsEmpty: false
+          },
+          Critical: false,
+          Oid: {
+            Value: 2.5.29.14,
+            FriendlyName: Subject Key Identifier
+          }
+        }
+      ],
+      FriendlyName: ,
+      HasPrivateKey: false,
+      IssuerName: {
+        Name: CN=FastCodeSignature,
+        Oid: {}
+      },
+      NotAfter: DateTime_1,
+      NotBefore: DateTime_2,
+      PublicKey: {
+        EncodedKeyValue: {
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          }
+        },
+        EncodedParameters: {
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          }
+        },
+        Oid: {
+          Value: 1.2.840.113549.1.1.1,
+          FriendlyName: RSA
+        }
+      },
+      RawDataMemory: {
+        Length: 1292,
+        IsEmpty: false
+      },
+      SerialNumber: Guid_1,
+      SignatureAlgorithm: {
+        Value: 1.2.840.113549.1.1.11,
+        FriendlyName: sha256RSA
+      },
+      SubjectName: {
+        Name: CN=FastCodeSignature,
+        Oid: {}
+      },
+      Thumbprint: EE6FC96AAF31858586F0F6E0B70C2E11F2F232AD,
+      Version: 3,
+      Handle: {},
+      Issuer: CN=FastCodeSignature,
+      Subject: CN=FastCodeSignature,
+      SerialNumberBytes: {
+        Length: 16,
+        IsEmpty: false
+      }
+    }
+  ],
+  SignerInfos: [
+    {
+      Version: 1,
+      SignerIdentifier: {
+        Type: IssuerAndSerialNumber,
+        Value: {
+          IssuerName: CN=FastCodeSignature,
+          SerialNumber: Guid_1
+        }
+      },
+      SignedAttributes: [
+        {
+          Oid: {
+            Value: 1.3.6.1.4.1.311.2.1.12
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.3.6.1.4.1.311.2.1.12
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.3,
+            FriendlyName: Content Type
+          },
+          Values: [
+            {
+              ContentType: {
+                Value: 1.3.6.1.4.1.311.2.1.4
+              },
+              Oid: {
+                Value: 1.2.840.113549.1.9.3,
+                FriendlyName: Content Type
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.3.6.1.4.1.311.2.1.11
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.3.6.1.4.1.311.2.1.11
+              }
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.4,
+            FriendlyName: Message Digest
+          },
+          Values: [
+            {
+              MessageDigest: UM2OD9WLIeuYQYFLz5WtqV5AwSKZDdCfaphB8qRm/h0=,
+              Oid: {
+                Value: 1.2.840.113549.1.9.4,
+                FriendlyName: Message Digest
+              }
+            }
+          ]
+        }
+      ],
+      Certificate: {
+        Archived: false,
+        Extensions: [
+          {
+            KeyUsages: DigitalSignature,
+            Critical: true,
+            Oid: {
+              Value: 2.5.29.15,
+              FriendlyName: Key Usage
+            }
+          },
+          {
+            EnhancedKeyUsages: [
+              {
+                Value: 1.3.6.1.5.5.7.3.3,
+                FriendlyName: Code Signing
+              }
+            ],
+            Critical: false,
+            Oid: {
+              Value: 2.5.29.37,
+              FriendlyName: Enhanced Key Usage
+            }
+          },
+          {
+            SubjectKeyIdentifier: B2C5BA77AD1EBF26C80BF3F105DC03C88FA2440D,
+            SubjectKeyIdentifierBytes: {
+              Length: 20,
+              IsEmpty: false
+            },
+            Critical: false,
+            Oid: {
+              Value: 2.5.29.14,
+              FriendlyName: Subject Key Identifier
+            }
+          }
+        ],
+        FriendlyName: ,
+        HasPrivateKey: false,
+        IssuerName: {
+          Name: CN=FastCodeSignature,
+          Oid: {}
+        },
+        NotAfter: DateTime_1,
+        NotBefore: DateTime_2,
+        PublicKey: {
+          EncodedKeyValue: {
+            Oid: {
+              Value: 1.2.840.113549.1.1.1,
+              FriendlyName: RSA
+            }
+          },
+          EncodedParameters: {
+            Oid: {
+              Value: 1.2.840.113549.1.1.1,
+              FriendlyName: RSA
+            }
+          },
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          }
+        },
+        RawDataMemory: {
+          Length: 1292,
+          IsEmpty: false
+        },
+        SerialNumber: Guid_1,
+        SignatureAlgorithm: {
+          Value: 1.2.840.113549.1.1.11,
+          FriendlyName: sha256RSA
+        },
+        SubjectName: {
+          Name: CN=FastCodeSignature,
+          Oid: {}
+        },
+        Thumbprint: EE6FC96AAF31858586F0F6E0B70C2E11F2F232AD,
+        Version: 3,
+        Handle: {},
+        Issuer: CN=FastCodeSignature,
+        Subject: CN=FastCodeSignature,
+        SerialNumberBytes: {
+          Length: 16,
+          IsEmpty: false
+        }
+      },
+      DigestAlgorithm: {
+        Value: 2.16.840.1.101.3.4.2.1,
+        FriendlyName: sha256
+      },
+      SignatureAlgorithm: {
+        Value: 1.2.840.113549.1.1.1,
+        FriendlyName: RSA
+      }
+    }
+  ]
+}

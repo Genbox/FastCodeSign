@@ -1,0 +1,160 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
+MinimumVisualStudioVersion = 15.0.26124.0
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastCodeSignature", "Src\FastCodeSignature\FastCodeSignature.csproj", "{D47FDDF9-B47A-411C-B6A0-F59A6C9555F6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastCodeSignature.Examples", "Src\FastCodeSignature.Examples\FastCodeSignature.Examples.csproj", "{276D1EB6-57A2-4808-AC3F-DCC14E996C30}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastCodeSignature.Tests", "Src\FastCodeSignature.Tests\FastCodeSignature.Tests.csproj", "{24047F09-FAE0-4920-BFDB-0D8D3064B403}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Items", "_Items", "{EF1D19B3-97F1-4504-95AB-BE249F5BF29A}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		LICENSE.txt = LICENSE.txt
+		README.md = README.md
+		.editorconfig = .editorconfig
+		.globalconfig = .globalconfig
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Imports", "_Imports", "{D6E44C0A-ACC6-49BE-B28A-0898406AE276}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastCodeSignature.Benchmarks", "Src\FastCodeSignature.Benchmarks\FastCodeSignature.Benchmarks.csproj", "{0DCA9367-838B-46C8-8699-655A5183A549}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Github", "_Github", "{8BE96FCD-5479-45FA-8444-A757B0A49AB2}"
+	ProjectSection(SolutionItems) = preProject
+		.github\FUNDING.yml = .github\FUNDING.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Project", "Project", "{9CF208D8-ABE2-46C2-8A7F-09D78AEF734B}"
+	ProjectSection(SolutionItems) = preProject
+		Imports\Console.props = Imports\Console.props
+		Imports\Benchmarks.props = Imports\Benchmarks.props
+		Imports\Examples.props = Imports\Examples.props
+		Imports\Library.props = Imports\Library.props
+		Imports\Tests.props = Imports\Tests.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Packages", "Packages", "{BCF300EC-36D5-4090-8873-173BF33FFDE0}"
+	ProjectSection(SolutionItems) = preProject
+		Src\Directory.Packages.props = Src\Directory.Packages.props
+		Src\Directory.Packages.Analyzers.props = Src\Directory.Packages.Analyzers.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IssueTemplates", "IssueTemplates", "{1DB935D4-B6CE-4932-BC43-CB1E0612529D}"
+	ProjectSection(SolutionItems) = preProject
+		.github\ISSUE_TEMPLATE\bug_report.md = .github\ISSUE_TEMPLATE\bug_report.md
+		.github\ISSUE_TEMPLATE\feature_request.md = .github\ISSUE_TEMPLATE\feature_request.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Workflows", "Workflows", "{D63DB5B6-B73B-4BF5-868B-38F6BC727480}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\nuget-release.yml = .github\workflows\nuget-release.yml
+		.github\workflows\generic-build.yml = .github\workflows\generic-build.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Managed", "Managed", "{831189D5-75FB-45A4-B38B-05A942288B72}"
+	ProjectSection(SolutionItems) = preProject
+		Src\Directory.Build.targets = Src\Directory.Build.targets
+		Src\Directory.Build.props = Src\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Local", "Local", "{EF086041-6B4F-402E-A07E-B40E808803C7}"
+	ProjectSection(SolutionItems) = preProject
+		Locals\Directory.Build.props = Locals\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Scripts", "_Scripts", "{4AF3B768-7B9E-49B9-8F16-7A412FD24123}"
+	ProjectSection(SolutionItems) = preProject
+		Scripts\Build.ps1 = Scripts\Build.ps1
+		Scripts\Publish.ps1 = Scripts\Publish.ps1
+		Scripts\CreatePfx.ps1 = Scripts\CreatePfx.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Packages", "Packages", "{ACE2FB44-DAF5-4C83-B023-8B411B9D8060}"
+	ProjectSection(SolutionItems) = preProject
+		Locals\Directory.Packages.props = Locals\Directory.Packages.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.Win.CreatePowerShellFiles", "Src\Tools.Win.CreatePowerShellFiles\Tools.Win.CreatePowerShellFiles.csproj", "{FD4D1EBE-5B02-4260-A092-84693A690745}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastCodeSignature.Native.Authenticode", "Src\FastCodeSignature.Native.Authenticode\FastCodeSignature.Native.Authenticode.csproj", "{2E857070-2D92-44BC-965C-35C2ACAB10F9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastCodeSignature.Native.Authenticode.Tests", "Src\FastCodeSignature.Native.Authenticode.Tests\FastCodeSignature.Native.Authenticode.Tests.csproj", "{BC7F66CF-EE7A-448B-8F0C-E957977A2C49}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{7BE55C02-7A28-435D-9DB9-8F06F1368F7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.Win.CreateFiles", "Src\Tools.Win.CreateFiles\Tools.Win.CreateFiles.csproj", "{C457DE04-0E18-49DE-8BFF-D4EE19B554D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.Mac.CreateFiles", "Src\Tools.Mac.CreateFiles\Tools.Mac.CreateFiles.csproj", "{D19D8482-075D-4EB0-8535-2FBCE4D9F586}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastCodeSignature.Native.MacCodeSign", "Src\FastCodeSignature.Native.MacCodeSign\FastCodeSignature.Native.MacCodeSign.csproj", "{BF775FF7-86D9-4F7F-81DA-35EE595B949F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D47FDDF9-B47A-411C-B6A0-F59A6C9555F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D47FDDF9-B47A-411C-B6A0-F59A6C9555F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D47FDDF9-B47A-411C-B6A0-F59A6C9555F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D47FDDF9-B47A-411C-B6A0-F59A6C9555F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{276D1EB6-57A2-4808-AC3F-DCC14E996C30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{276D1EB6-57A2-4808-AC3F-DCC14E996C30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{276D1EB6-57A2-4808-AC3F-DCC14E996C30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{276D1EB6-57A2-4808-AC3F-DCC14E996C30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24047F09-FAE0-4920-BFDB-0D8D3064B403}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24047F09-FAE0-4920-BFDB-0D8D3064B403}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24047F09-FAE0-4920-BFDB-0D8D3064B403}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24047F09-FAE0-4920-BFDB-0D8D3064B403}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DCA9367-838B-46C8-8699-655A5183A549}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DCA9367-838B-46C8-8699-655A5183A549}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DCA9367-838B-46C8-8699-655A5183A549}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DCA9367-838B-46C8-8699-655A5183A549}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD4D1EBE-5B02-4260-A092-84693A690745}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD4D1EBE-5B02-4260-A092-84693A690745}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD4D1EBE-5B02-4260-A092-84693A690745}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD4D1EBE-5B02-4260-A092-84693A690745}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E857070-2D92-44BC-965C-35C2ACAB10F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E857070-2D92-44BC-965C-35C2ACAB10F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E857070-2D92-44BC-965C-35C2ACAB10F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E857070-2D92-44BC-965C-35C2ACAB10F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC7F66CF-EE7A-448B-8F0C-E957977A2C49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC7F66CF-EE7A-448B-8F0C-E957977A2C49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC7F66CF-EE7A-448B-8F0C-E957977A2C49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC7F66CF-EE7A-448B-8F0C-E957977A2C49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C457DE04-0E18-49DE-8BFF-D4EE19B554D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C457DE04-0E18-49DE-8BFF-D4EE19B554D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C457DE04-0E18-49DE-8BFF-D4EE19B554D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C457DE04-0E18-49DE-8BFF-D4EE19B554D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D19D8482-075D-4EB0-8535-2FBCE4D9F586}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D19D8482-075D-4EB0-8535-2FBCE4D9F586}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D19D8482-075D-4EB0-8535-2FBCE4D9F586}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D19D8482-075D-4EB0-8535-2FBCE4D9F586}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF775FF7-86D9-4F7F-81DA-35EE595B949F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF775FF7-86D9-4F7F-81DA-35EE595B949F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF775FF7-86D9-4F7F-81DA-35EE595B949F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF775FF7-86D9-4F7F-81DA-35EE595B949F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A9354605-C154-495A-B990-F6AB329CDE39}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1DB935D4-B6CE-4932-BC43-CB1E0612529D} = {8BE96FCD-5479-45FA-8444-A757B0A49AB2}
+		{D63DB5B6-B73B-4BF5-868B-38F6BC727480} = {8BE96FCD-5479-45FA-8444-A757B0A49AB2}
+		{831189D5-75FB-45A4-B38B-05A942288B72} = {D6E44C0A-ACC6-49BE-B28A-0898406AE276}
+		{9CF208D8-ABE2-46C2-8A7F-09D78AEF734B} = {831189D5-75FB-45A4-B38B-05A942288B72}
+		{BCF300EC-36D5-4090-8873-173BF33FFDE0} = {831189D5-75FB-45A4-B38B-05A942288B72}
+		{EF086041-6B4F-402E-A07E-B40E808803C7} = {D6E44C0A-ACC6-49BE-B28A-0898406AE276}
+		{ACE2FB44-DAF5-4C83-B023-8B411B9D8060} = {EF086041-6B4F-402E-A07E-B40E808803C7}
+		{FD4D1EBE-5B02-4260-A092-84693A690745} = {7BE55C02-7A28-435D-9DB9-8F06F1368F7C}
+		{C457DE04-0E18-49DE-8BFF-D4EE19B554D4} = {7BE55C02-7A28-435D-9DB9-8F06F1368F7C}
+		{D19D8482-075D-4EB0-8535-2FBCE4D9F586} = {7BE55C02-7A28-435D-9DB9-8F06F1368F7C}
+	EndGlobalSection
+EndGlobal

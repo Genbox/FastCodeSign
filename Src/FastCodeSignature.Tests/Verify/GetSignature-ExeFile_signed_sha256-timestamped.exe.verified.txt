@@ -1,0 +1,297 @@
+﻿{
+  Version: 1,
+  ContentInfo: {
+    ContentType: {
+      Value: 1.3.6.1.4.1.311.2.1.4
+    },
+    Content: MEwwFwYKKwYBBAGCNwIBDzAJAwEAoASiAoAAMDEwDQYJYIZIAWUDBAIBBQAEIA/Wuqg1ODBMtt4tFJAVrMDaJoyNDMKFF2qmOCMp7Bqg
+  },
+  Detached: false,
+  Certificates: [
+    {
+      Archived: false,
+      Extensions: [
+        {
+          KeyUsages: DigitalSignature,
+          Critical: true,
+          Oid: {
+            Value: 2.5.29.15,
+            FriendlyName: Key Usage
+          },
+          RawData: AwIHgA==
+        },
+        {
+          EnhancedKeyUsages: [
+            {
+              Value: 1.3.6.1.5.5.7.3.3,
+              FriendlyName: Code Signing
+            }
+          ],
+          Critical: false,
+          Oid: {
+            Value: 2.5.29.37,
+            FriendlyName: Enhanced Key Usage
+          },
+          RawData: MAoGCCsGAQUFBwMD
+        },
+        {
+          SubjectKeyIdentifier: B2C5BA77AD1EBF26C80BF3F105DC03C88FA2440D,
+          SubjectKeyIdentifierBytes: {
+            Length: 20,
+            IsEmpty: false
+          },
+          Critical: false,
+          Oid: {
+            Value: 2.5.29.14,
+            FriendlyName: Subject Key Identifier
+          },
+          RawData: BBSyxbp3rR6/JsgL8/EF3APIj6JEDQ==
+        }
+      ],
+      FriendlyName: ,
+      HasPrivateKey: false,
+      IssuerName: {
+        Name: CN=FastCodeSignature,
+        Oid: {},
+        RawData: MBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJl
+      },
+      NotAfter: DateTime_1,
+      NotBefore: DateTime_2,
+      PublicKey: {
+        EncodedKeyValue: {
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          },
+          RawData: MIICCgKCAgEA4GWA4IhM9gPGJaU/JxwWThGclvtSgtQ0L96E8JUyXLEtz2XTi9g4Vgb7WEfDI4rTfJkxn5S9WQS1EIT10B+muy0Sj+/0XzVSHbf/fSuiw+iLNTMVBnNkMPswt163A9AyywyaYN9zXw2IczSz3BPB8qyox04AlEaEGBogLGLrjR1hJ6K3DRun/q62xWUmdfPxWQvoFR47sl2vbBQNvGWjmag2I1TsyoKrKaygGrVG+th4U3+GQ4fnLHJC78XTAk8qxlrWL8BGA+EU2W4hIY+2JzlpLGZ9me/98dvt0fRcbRuKhQjHDZJjeKOT09u5Boz5ueMu42RYnmXVN6QRufuH33tYy/I/uRqvwpqA/l+oQIM6nDxybkiefnuk/JYImCXSQBwuQ0ormBODyaH8VuzFy5CctHCu3mAFw/kwukfJb5PH+uDVbma8iJmxz5b/FhG+usoQjcqiURESS9GUUr7R60hCEAwYeeHubrKv8P7MTnRQ3e/0L/JbRReN1Zv1OYI/UG0EGgL0GtZMN9Qu85/qiRljvebrR+e8wbYHiJZC4dDbgDBk4WorhaqO7STtZ8xVW7lgmghc99rejIkfw/YnQknf98kllYNnySafsX7cXxqJUMMnWGIFGYycRNurJ/NWBbwLPAytJzsrsBm7Auw1fq4LHugBL48Vu9YmzbFal8kCAwEAAQ==
+        },
+        EncodedParameters: {
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          },
+          RawData: BQA=
+        },
+        Oid: {
+          Value: 1.2.840.113549.1.1.1,
+          FriendlyName: RSA
+        }
+      },
+      RawData: MIIFCDCCAvCgAwIBAgIQN6UC480Ak4RIN4XdPF2RfjANBgkqhkiG9w0BAQsFADAcMRowGAYDVQQDDBFGYXN0Q29kZVNpZ25hdHVyZTAeFw0yNTA5MTMxMjM1MzRaFw0yODA5MTMxMjQ1MzNaMBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJlMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA4GWA4IhM9gPGJaU/JxwWThGclvtSgtQ0L96E8JUyXLEtz2XTi9g4Vgb7WEfDI4rTfJkxn5S9WQS1EIT10B+muy0Sj+/0XzVSHbf/fSuiw+iLNTMVBnNkMPswt163A9AyywyaYN9zXw2IczSz3BPB8qyox04AlEaEGBogLGLrjR1hJ6K3DRun/q62xWUmdfPxWQvoFR47sl2vbBQNvGWjmag2I1TsyoKrKaygGrVG+th4U3+GQ4fnLHJC78XTAk8qxlrWL8BGA+EU2W4hIY+2JzlpLGZ9me/98dvt0fRcbRuKhQjHDZJjeKOT09u5Boz5ueMu42RYnmXVN6QRufuH33tYy/I/uRqvwpqA/l+oQIM6nDxybkiefnuk/JYImCXSQBwuQ0ormBODyaH8VuzFy5CctHCu3mAFw/kwukfJb5PH+uDVbma8iJmxz5b/FhG+usoQjcqiURESS9GUUr7R60hCEAwYeeHubrKv8P7MTnRQ3e/0L/JbRReN1Zv1OYI/UG0EGgL0GtZMN9Qu85/qiRljvebrR+e8wbYHiJZC4dDbgDBk4WorhaqO7STtZ8xVW7lgmghc99rejIkfw/YnQknf98kllYNnySafsX7cXxqJUMMnWGIFGYycRNurJ/NWBbwLPAytJzsrsBm7Auw1fq4LHugBL48Vu9YmzbFal8kCAwEAAaNGMEQwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB0GA1UdDgQWBBSyxbp3rR6/JsgL8/EF3APIj6JEDTANBgkqhkiG9w0BAQsFAAOCAgEANN4GAB489F3/KRXMI2fbCAjHk40v+ejgYw6N147ZU0ZFC2uKUBXDuCCKV/lb4kLgf0LNRrgv2MWKw5ohuVb69tuCY+/uQAGAGnYC9aBwzmV9x73T92WkZLM6KEQO2sXxwR9boRQDvC6gbKFfTj1IVtZtLKMb2A1JmsIlPvtvAby3UvRODTCKRn+gazKXRkZ0u3+XZ9txKD29fgOtaX7wU3DPai8sycf3NlsBVQ24UoYW1tyEjifNFuvAj9aMTNHl3ox6dhLDKMl3SUxNnO71LpAeC0s3k9wN4+9bQTkRNWDG2CXfYSp3k8PfZUhWcbchoPCo+8HMgOqSyflBIxFPwNZ8mjRRdnwoZAukkwHbFTPztm6KHercQv7kpI55h5nIJtCch6oefdZ4Kcib3z/At9XKT/pPDrceTNdx6e5ZdqLsKvdx1hj0GceWOvK/xpTTxiHN9xwJTeJm7P5ea6GH/Nai81v7AjFSE/J9JC0S4gwxfIy2BwfwqRMF6/Um9dqpu+OXXqjmjwPMoo9LOOgZ5V0Hzs/DjVwAy+kXfZmFIq6nEkCSFEY5z6fn/GP1Qoz92pNiVNleZaQArAqCN3WXeCPF9grqqFsIjWoQ+FCN3QPfFItepCEWyN7tmb4jeJ3X8cerUljYKGfRHz1NP43TB18OW7Vvh0IzWMw6iOFtI2E=,
+      RawDataMemory: {
+        Length: 1292,
+        IsEmpty: false
+      },
+      SerialNumber: Guid_1,
+      SignatureAlgorithm: {
+        Value: 1.2.840.113549.1.1.11,
+        FriendlyName: sha256RSA
+      },
+      SubjectName: {
+        Name: CN=FastCodeSignature,
+        Oid: {},
+        RawData: MBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJl
+      },
+      Thumbprint: EE6FC96AAF31858586F0F6E0B70C2E11F2F232AD,
+      Version: 3,
+      Handle: {},
+      Issuer: CN=FastCodeSignature,
+      Subject: CN=FastCodeSignature,
+      SerialNumberBytes: {
+        Length: 16,
+        IsEmpty: false
+      }
+    }
+  ],
+  SignerInfos: [
+    {
+      Version: 1,
+      SignerIdentifier: {
+        Type: IssuerAndSerialNumber,
+        Value: {
+          IssuerName: CN=FastCodeSignature,
+          SerialNumber: Guid_1
+        }
+      },
+      SignedAttributes: [
+        {
+          Oid: {
+            Value: 1.3.6.1.4.1.311.2.1.12
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.3.6.1.4.1.311.2.1.12
+              },
+              RawData: MAA=
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.3,
+            FriendlyName: Content Type
+          },
+          Values: [
+            {
+              ContentType: {
+                Value: 1.3.6.1.4.1.311.2.1.4
+              },
+              Oid: {
+                Value: 1.2.840.113549.1.9.3,
+                FriendlyName: Content Type
+              },
+              RawData: BgorBgEEAYI3AgEE
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.3.6.1.4.1.311.2.1.11
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.3.6.1.4.1.311.2.1.11
+              },
+              RawData: MAwGCisGAQQBgjcCARU=
+            }
+          ]
+        },
+        {
+          Oid: {
+            Value: 1.2.840.113549.1.9.4,
+            FriendlyName: Message Digest
+          },
+          Values: [
+            {
+              MessageDigest: l/klfeZ2yau2POqFVNAa6oP9xp9iY3ukBq6a2LiHqCg=,
+              Oid: {
+                Value: 1.2.840.113549.1.9.4,
+                FriendlyName: Message Digest
+              },
+              RawData: BCCX+SV95nbJq7Y86oVU0Brqg/3Gn2Jje6QGrprYuIeoKA==
+            }
+          ]
+        }
+      ],
+      UnsignedAttributes: [
+        {
+          Oid: {
+            Value: 1.3.6.1.4.1.311.3.3.1
+          },
+          Values: [
+            {
+              Oid: {
+                Value: 1.3.6.1.4.1.311.3.3.1
+              },
+              RawData: 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
+            }
+          ]
+        }
+      ],
+      Certificate: {
+        Archived: false,
+        Extensions: [
+          {
+            KeyUsages: DigitalSignature,
+            Critical: true,
+            Oid: {
+              Value: 2.5.29.15,
+              FriendlyName: Key Usage
+            },
+            RawData: AwIHgA==
+          },
+          {
+            EnhancedKeyUsages: [
+              {
+                Value: 1.3.6.1.5.5.7.3.3,
+                FriendlyName: Code Signing
+              }
+            ],
+            Critical: false,
+            Oid: {
+              Value: 2.5.29.37,
+              FriendlyName: Enhanced Key Usage
+            },
+            RawData: MAoGCCsGAQUFBwMD
+          },
+          {
+            SubjectKeyIdentifier: B2C5BA77AD1EBF26C80BF3F105DC03C88FA2440D,
+            SubjectKeyIdentifierBytes: {
+              Length: 20,
+              IsEmpty: false
+            },
+            Critical: false,
+            Oid: {
+              Value: 2.5.29.14,
+              FriendlyName: Subject Key Identifier
+            },
+            RawData: BBSyxbp3rR6/JsgL8/EF3APIj6JEDQ==
+          }
+        ],
+        FriendlyName: ,
+        HasPrivateKey: false,
+        IssuerName: {
+          Name: CN=FastCodeSignature,
+          Oid: {},
+          RawData: MBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJl
+        },
+        NotAfter: DateTime_1,
+        NotBefore: DateTime_2,
+        PublicKey: {
+          EncodedKeyValue: {
+            Oid: {
+              Value: 1.2.840.113549.1.1.1,
+              FriendlyName: RSA
+            },
+            RawData: MIICCgKCAgEA4GWA4IhM9gPGJaU/JxwWThGclvtSgtQ0L96E8JUyXLEtz2XTi9g4Vgb7WEfDI4rTfJkxn5S9WQS1EIT10B+muy0Sj+/0XzVSHbf/fSuiw+iLNTMVBnNkMPswt163A9AyywyaYN9zXw2IczSz3BPB8qyox04AlEaEGBogLGLrjR1hJ6K3DRun/q62xWUmdfPxWQvoFR47sl2vbBQNvGWjmag2I1TsyoKrKaygGrVG+th4U3+GQ4fnLHJC78XTAk8qxlrWL8BGA+EU2W4hIY+2JzlpLGZ9me/98dvt0fRcbRuKhQjHDZJjeKOT09u5Boz5ueMu42RYnmXVN6QRufuH33tYy/I/uRqvwpqA/l+oQIM6nDxybkiefnuk/JYImCXSQBwuQ0ormBODyaH8VuzFy5CctHCu3mAFw/kwukfJb5PH+uDVbma8iJmxz5b/FhG+usoQjcqiURESS9GUUr7R60hCEAwYeeHubrKv8P7MTnRQ3e/0L/JbRReN1Zv1OYI/UG0EGgL0GtZMN9Qu85/qiRljvebrR+e8wbYHiJZC4dDbgDBk4WorhaqO7STtZ8xVW7lgmghc99rejIkfw/YnQknf98kllYNnySafsX7cXxqJUMMnWGIFGYycRNurJ/NWBbwLPAytJzsrsBm7Auw1fq4LHugBL48Vu9YmzbFal8kCAwEAAQ==
+          },
+          EncodedParameters: {
+            Oid: {
+              Value: 1.2.840.113549.1.1.1,
+              FriendlyName: RSA
+            },
+            RawData: BQA=
+          },
+          Oid: {
+            Value: 1.2.840.113549.1.1.1,
+            FriendlyName: RSA
+          }
+        },
+        RawData: MIIFCDCCAvCgAwIBAgIQN6UC480Ak4RIN4XdPF2RfjANBgkqhkiG9w0BAQsFADAcMRowGAYDVQQDDBFGYXN0Q29kZVNpZ25hdHVyZTAeFw0yNTA5MTMxMjM1MzRaFw0yODA5MTMxMjQ1MzNaMBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJlMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA4GWA4IhM9gPGJaU/JxwWThGclvtSgtQ0L96E8JUyXLEtz2XTi9g4Vgb7WEfDI4rTfJkxn5S9WQS1EIT10B+muy0Sj+/0XzVSHbf/fSuiw+iLNTMVBnNkMPswt163A9AyywyaYN9zXw2IczSz3BPB8qyox04AlEaEGBogLGLrjR1hJ6K3DRun/q62xWUmdfPxWQvoFR47sl2vbBQNvGWjmag2I1TsyoKrKaygGrVG+th4U3+GQ4fnLHJC78XTAk8qxlrWL8BGA+EU2W4hIY+2JzlpLGZ9me/98dvt0fRcbRuKhQjHDZJjeKOT09u5Boz5ueMu42RYnmXVN6QRufuH33tYy/I/uRqvwpqA/l+oQIM6nDxybkiefnuk/JYImCXSQBwuQ0ormBODyaH8VuzFy5CctHCu3mAFw/kwukfJb5PH+uDVbma8iJmxz5b/FhG+usoQjcqiURESS9GUUr7R60hCEAwYeeHubrKv8P7MTnRQ3e/0L/JbRReN1Zv1OYI/UG0EGgL0GtZMN9Qu85/qiRljvebrR+e8wbYHiJZC4dDbgDBk4WorhaqO7STtZ8xVW7lgmghc99rejIkfw/YnQknf98kllYNnySafsX7cXxqJUMMnWGIFGYycRNurJ/NWBbwLPAytJzsrsBm7Auw1fq4LHugBL48Vu9YmzbFal8kCAwEAAaNGMEQwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB0GA1UdDgQWBBSyxbp3rR6/JsgL8/EF3APIj6JEDTANBgkqhkiG9w0BAQsFAAOCAgEANN4GAB489F3/KRXMI2fbCAjHk40v+ejgYw6N147ZU0ZFC2uKUBXDuCCKV/lb4kLgf0LNRrgv2MWKw5ohuVb69tuCY+/uQAGAGnYC9aBwzmV9x73T92WkZLM6KEQO2sXxwR9boRQDvC6gbKFfTj1IVtZtLKMb2A1JmsIlPvtvAby3UvRODTCKRn+gazKXRkZ0u3+XZ9txKD29fgOtaX7wU3DPai8sycf3NlsBVQ24UoYW1tyEjifNFuvAj9aMTNHl3ox6dhLDKMl3SUxNnO71LpAeC0s3k9wN4+9bQTkRNWDG2CXfYSp3k8PfZUhWcbchoPCo+8HMgOqSyflBIxFPwNZ8mjRRdnwoZAukkwHbFTPztm6KHercQv7kpI55h5nIJtCch6oefdZ4Kcib3z/At9XKT/pPDrceTNdx6e5ZdqLsKvdx1hj0GceWOvK/xpTTxiHN9xwJTeJm7P5ea6GH/Nai81v7AjFSE/J9JC0S4gwxfIy2BwfwqRMF6/Um9dqpu+OXXqjmjwPMoo9LOOgZ5V0Hzs/DjVwAy+kXfZmFIq6nEkCSFEY5z6fn/GP1Qoz92pNiVNleZaQArAqCN3WXeCPF9grqqFsIjWoQ+FCN3QPfFItepCEWyN7tmb4jeJ3X8cerUljYKGfRHz1NP43TB18OW7Vvh0IzWMw6iOFtI2E=,
+        RawDataMemory: {
+          Length: 1292,
+          IsEmpty: false
+        },
+        SerialNumber: Guid_1,
+        SignatureAlgorithm: {
+          Value: 1.2.840.113549.1.1.11,
+          FriendlyName: sha256RSA
+        },
+        SubjectName: {
+          Name: CN=FastCodeSignature,
+          Oid: {},
+          RawData: MBwxGjAYBgNVBAMMEUZhc3RDb2RlU2lnbmF0dXJl
+        },
+        Thumbprint: EE6FC96AAF31858586F0F6E0B70C2E11F2F232AD,
+        Version: 3,
+        Handle: {},
+        Issuer: CN=FastCodeSignature,
+        Subject: CN=FastCodeSignature,
+        SerialNumberBytes: {
+          Length: 16,
+          IsEmpty: false
+        }
+      },
+      DigestAlgorithm: {
+        Value: 2.16.840.1.101.3.4.2.1,
+        FriendlyName: sha256
+      },
+      SignatureAlgorithm: {
+        Value: 1.2.840.113549.1.1.1,
+        FriendlyName: RSA
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<job id="HelloJob">
+  <script language="VBScript">
+    WScript.Echo "Hello from VBScript inside WSF!"
+  </script>
+
+  <script language="JScript">
+    WScript.Echo("Hello from JScript inside WSF!");
+  </script>
+</job>

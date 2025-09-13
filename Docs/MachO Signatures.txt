@@ -1,0 +1,29 @@
+
+Tools:
+- https://github.com/isignpy/isign
+- https://github.com/thefloweringash/sigtool/tree/main
+- https://github.com/JetBrains/format-ripper/tree/master
+- https://github.com/indygreg/apple-platform-rs/tree/main/apple-codesign
+- https://github.com/filipnavara/CodeSign
+- https://github.com/excitedplus1s/jtool2
+- https://github.com/ProcursusTeam/ldid/tree/master
+- https://github.com/qyang-nj/llios?tab=readme-ov-file
+
+Other docs:
+- https://blog.umangis.me/posts/a-deep-dive-into-ios-code-signing/#introduction
+- https://github.com/aidansteele/osx-abi-macho-file-format-reference
+- https://www.objc.io/issues/17-security/inside-code-signing/
+- https://angelica.gitbook.io/hacktricks/macos-hardening/macos-security-and-privilege-escalation/macos-security-protections/macos-code-signing
+- https://www.mothersruin.com/software/Archaeology/reverse/codesign.html
+
+Official docs:
+- https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-universal-apps-release-notes#Code-Signing
+- https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/RequirementLang/RequirementLang.html
+- https://developer.apple.com/documentation/xcode/using-the-latest-code-signature-format
+- https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG402
+- https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/AboutEntitlements.html
+- https://help.apple.com/xcode/mac/current/#/dev88ff319e7
+- https://www.apple.com/certificateauthority/
+- https://images.apple.com/certificateauthority/pdf/Apple_WWDR_CPS_v1.23.pdf
+- https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/AboutCS/AboutCS.html
+- https://developer.apple.com/support/expiration/
