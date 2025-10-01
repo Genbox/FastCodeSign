@@ -350,10 +350,9 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm 
         Span<byte> cdSpan = cdBlob.AsSpan();
         WriteCodeDirectoryHeader(ref cdSpan, maxSlot, codeLimit, obj.Text, ExecSegFlags.MainBinary, cdSize, idOffset, teamIdOffset, hashesOffset);
 
-        uint sbSize = (uint)(SuperBlobHeader.StructSize // SuperBlob header size
-                             + 16 //Unknown
-                             + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
-                             + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize)); //Size of all the blobs
+        uint sbSize = Align((uint)(SuperBlobHeader.StructSize // SuperBlob header size
+                                   + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
+                                   + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize)), 16); //Size of all the blobs
 
         //We need to update the header etc. before adding the CodeDirectory as it calculates page hashes, and they otherwise won't be correct.
         //Create a temporary storage for patching the header (paged aligned to make things easier down the road)
@@ -389,8 +388,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm 
         if (!chain.Build(cert) && !Array.TrueForAll(chain.ChainStatus, s => s.Status is X509ChainStatusFlags.InvalidExtension or X509ChainStatusFlags.HasNotSupportedCriticalExtension))
             throw new InvalidOperationException("Unable to build certificate chain");
 
-        //We skip the root cert as it is already installed on the machine
-        signer.Certificates.AddRange(chain.ChainElements.Skip(1).Select(x => x.Certificate).ToArray());
+        signer.Certificates.AddRange(chain.ChainElements.Select(x => x.Certificate).ToArray());
         signer.SignedAttributes.Add(new Pkcs9SigningTime());
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.AppleHashAttrOid,
