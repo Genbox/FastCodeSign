@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Formats.Asn1;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
@@ -31,28 +32,26 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public class MachObjectFormatHandler(X509Certificate2 cert, string identifier, RequirementSet requirements, HashAlgorithmName hash, string? teamId) : IFormatHandler
+public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm privateKey, string identifier, RequirementSet requirements, HashAlgorithmName hash, string? teamId) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    public static MachObjectFormatHandler Create(X509Certificate2 cert, string identifier, RequirementSet? requirements = null)
+    public static MachObjectFormatHandler Create(X509Certificate2 cert, AsymmetricAlgorithm privateKey, string identifier, RequirementSet? requirements = null, string? teamId = null)
     {
-        string? teamId = null;
-
         if (requirements == null)
         {
             if (cert.IsAppleDeveloperCertificate())
             {
                 requirements = RequirementSet.CreateAppleDevDefault(identifier, cert);
-                teamId = cert.GetTeamId();
+                teamId ??= cert.GetTeamId();
             }
             else
                 requirements = RequirementSet.CreateDefault(identifier, cert);
         }
 
-        return new MachObjectFormatHandler(cert, identifier, requirements, HashAlgorithmName.SHA256, teamId);
+        return new MachObjectFormatHandler(cert, privateKey, identifier, requirements, HashAlgorithmName.SHA256, teamId);
     }
 
     public bool IsValid(ReadOnlySpan<byte> data, string? ext)
@@ -327,7 +326,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, string identifier, R
 
     public Signature CreateSignature(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
-        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert)
+        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
             DigestAlgorithm = hashAlgorithm.ToOid(),
             IncludeOption = X509IncludeOption.None
@@ -383,12 +382,11 @@ public class MachObjectFormatHandler(X509Certificate2 cert, string identifier, R
         using X509Chain chain = new X509Chain();
         X509ChainPolicy chainPolicy = new X509ChainPolicy { TrustMode = X509ChainTrustMode.CustomRootTrust };
         chainPolicy.CustomTrustStore.Add(cert); //We add itself because it might be self-signed
-        chainPolicy.CustomTrustStore.Add(GetCert("Root.cer"));
-        chainPolicy.CustomTrustStore.Add(GetCert("G1.cer"));
-        chainPolicy.CustomTrustStore.Add(GetCert("G3.cer"));
-        chain.ChainPolicy = chainPolicy;
 
-        if (!chain.Build(cert))
+        foreach (X509Certificate2 appleCert in GetCerts())
+            chainPolicy.CustomTrustStore.Add(appleCert);
+
+        if (!chain.Build(cert) && !Array.TrueForAll(chain.ChainStatus, s => s.Status is X509ChainStatusFlags.InvalidExtension or X509ChainStatusFlags.HasNotSupportedCriticalExtension))
             throw new InvalidOperationException("Unable to build certificate chain");
 
         //We skip the root cert as it is already installed on the machine
@@ -707,13 +705,24 @@ public class MachObjectFormatHandler(X509Certificate2 cert, string identifier, R
             WriteUInt64BigEndian(span.Slice(offset, 8), value);
     }
 
-    private static X509Certificate2 GetCert(string name)
+    private static IEnumerable<X509Certificate2> GetCerts()
     {
-        using MemoryStream memoryStream = new MemoryStream();
-        using (Stream? manifestStream = typeof(MachObjectFormatHandler).Assembly.GetManifestResourceStream("Genbox.FastCodeSignature.Internal.MachObject.Certificates." + name))
-            manifestStream!.CopyTo(memoryStream);
+        Assembly assembly = typeof(MachObjectFormatHandler).Assembly;
 
-        return X509CertificateLoader.LoadCertificate(memoryStream.ToArray());
+        using MemoryStream memoryStream = new MemoryStream();
+
+        foreach (string resourceName in assembly.GetManifestResourceNames())
+        {
+            if (!resourceName.StartsWith("Genbox.FastCodeSignature.Internal.MachObject.Certificates.", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Loading different file than expected");
+
+            using (Stream? manifestStream = assembly.GetManifestResourceStream(resourceName))
+                manifestStream!.CopyTo(memoryStream);
+
+            yield return X509CertificateLoader.LoadCertificate(memoryStream.ToArray());
+
+            memoryStream.Position = 0; //To reuse the stream
+        }
     }
 
     private static bool IsSigned(MachObject obj) => obj.CodeSignature.DataOffset != 0 && obj.CodeSignature.DataSize != 0;

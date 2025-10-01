@@ -152,7 +152,7 @@ public class CodeSignTests
         return
         [
             //MachO
-            TestCase.Create(MachObjectFormatHandler.Create(cert, "macho_signed.dat"), "Signed/MachO/macho_signed.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6"),
+            TestCase.Create(MachObjectFormatHandler.Create(cert, cert.GetRSAPrivateKey(), "macho_signed.dat"), "Signed/MachO/macho_signed.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6"),
 
             //PowerShell
             TestCase.Create(new PowerShellModuleFormatHandler(cert, true), "Signed/PowerShell/psm1_signed.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
@@ -186,7 +186,7 @@ public class CodeSignTests
         return
         [
             //MachO
-            TestCase.Create(MachObjectFormatHandler.Create(cert, "macho_unsigned.dat"), "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6"),
+            TestCase.Create(MachObjectFormatHandler.Create(cert, cert.GetRSAPrivateKey(), "macho_unsigned.dat"), "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6"),
 
             //PowerShell
             TestCase.Create(new PowerShellModuleFormatHandler(cert, true), "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
