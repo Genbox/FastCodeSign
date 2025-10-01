@@ -1,4 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
+using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSignature.Internal.MachObject.Requirements.Enums;
 
@@ -6,7 +7,7 @@ namespace Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 
 public class RequirementSet : Dictionary<RequirementType, Requirement>
 {
-    public override string ToString() => string.Join(", ", this.Select(x => $"{x.Key}: {x.Value}"));
+    public override string ToString() => string.Join(", ", this.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
 
     public int Size => 12 + this.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
 
@@ -41,29 +42,39 @@ public class RequirementSet : Dictionary<RequirementType, Requirement>
     {
         ArgumentException.ThrowIfNullOrEmpty(identifier);
 
-        Expression expression = Expression.And(
-            Expression.Ident(identifier),
-            Expression.And(
-                Expression.AppleGenericAnchor,
-                Expression.And(
-                    Expression.CertField(0, "subject.CN", MatchOperation.Equal, cert.SubjectName.Name),
-                    Expression.CertGeneric(1, "1.2.840.113635.100.6.2.1", MatchOperation.Exists)
+        //designated => identifier "<ident>"
+        //and anchor apple generic
+        //and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */
+        //and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */
+        //and certificate leaf[subject.OU] = <teamid>
+
+        Expr expr = Expr.And(
+            Expr.Ident(identifier),
+            Expr.And(
+                Expr.AppleGenericAnchor,
+                Expr.And(
+                    Expr.CertGeneric(1, "1.2.840.113635.100.6.2.6", MatchOperation.Exists),
+                    Expr.And(
+                        Expr.CertGeneric(0, "1.2.840.113635.100.6.1.13", MatchOperation.Exists),
+                        Expr.CertField(0, "subject.OU", MatchOperation.Equal, cert.GetTeamId())
+                    )
                 )
             )
         );
 
-        return new RequirementSet { { RequirementType.Designated, new Requirement(expression) } };
+        return new RequirementSet { { RequirementType.Designated, new Requirement(expr) } };
     }
 
     public static RequirementSet CreateDefault(string identifier, X509Certificate2 cert)
     {
         ArgumentException.ThrowIfNullOrEmpty(identifier);
 
-        // identifier "Default_unsigned" and certificate leaf = H"ee6fc96aaf31858586f0f6e0b70c2e11f2f232ad"
+        // identifier "<ident>"
+        // and certificate leaf = H"<hash>"
 
-        Expression expression = Expression.And(
-            Expression.Ident(identifier),
-            Expression.AnchorHash(0, Convert.FromHexString(cert.Thumbprint))
+        Expr expression = Expr.And(
+            Expr.Ident(identifier),
+            Expr.AnchorHash(0, Convert.FromHexString(cert.Thumbprint))
         );
 
         return new RequirementSet { { RequirementType.Designated, new Requirement(expression) } };

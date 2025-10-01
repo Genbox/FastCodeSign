@@ -8,7 +8,7 @@ namespace Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 
 // Dumper: https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/reqdumper.cpp#L137
 // Maker: https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/reqmaker.cpp
-public abstract class Expression
+public abstract class Expr
 {
     private static readonly DateTime Epoc = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -16,28 +16,28 @@ public abstract class Expression
     public abstract void Write(Span<byte> buffer);
     public new abstract string ToString();
 
-    public static Expression False { get; } = new SimpleExpression(ExprOp.False);
-    public static Expression True { get; } = new SimpleExpression(ExprOp.True);
-    public static Expression AppleAnchor { get; } = new SimpleExpression(ExprOp.AppleAnchor);
-    public static Expression TrustedCerts { get; } = new SimpleExpression(ExprOp.TrustedCerts);
-    public static Expression AppleGenericAnchor { get; } = new SimpleExpression(ExprOp.AppleGenericAnchor);
-    public static Expression Notarized { get; } = new SimpleExpression(ExprOp.Notarized);
-    public static Expression LegacyDevId { get; } = new SimpleExpression(ExprOp.LegacyDevId);
-    public static Expression Ident(string identifier) => new StringExpression(ExprOp.Ident, identifier);
-    public static Expression AnchorHash(int certificateIndex, byte[] anchorHash) => new AnchorHashExpression(certificateIndex, anchorHash);
-    public static Expression InfoKeyValue(string field, string matchValue) => new InfoKeyValueExpression(field, Encoding.ASCII.GetBytes(matchValue));
-    public static Expression And(Expression left, Expression right) => new BinaryOperatorExpression(ExprOp.And, left, right);
-    public static Expression Or(Expression left, Expression right) => new BinaryOperatorExpression(ExprOp.Or, left, right);
-    public static Expression CdHash(byte[] codeDirectoryHash) => new CdHashExpression(codeDirectoryHash);
-    public static Expression Not(Expression inner) => new UnaryOperatorExpression(ExprOp.Not, inner);
-    public static Expression InfoKeyField(string field, MatchOperation matchOperation, string? matchValue = null) => new FieldMatchExpression(ExprOp.InfoKeyField, field, matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
-    public static Expression CertField(int certificateIndex, string certificateField, MatchOperation matchOperation, string? matchValue = null) => new CertExpression(ExprOp.CertField, certificateIndex, Encoding.ASCII.GetBytes(certificateField), matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
-    public static Expression TrustedCert(int certificateIndex) => new TrustedCertExpression(certificateIndex);
-    public static Expression CertGeneric(int certificateIndex, string certificateFieldOid, MatchOperation matchOperation, string? matchValue = null) => new CertExpression(ExprOp.CertGeneric, certificateIndex, GetOidBytes(certificateFieldOid).ToArray(), matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
-    public static Expression EntitlementField(string field, MatchOperation matchOperation, string? matchValue = null) => new FieldMatchExpression(ExprOp.EntitlementField, field, matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
-    public static Expression NamedAnchor(string anchorName) => new NamedExpression(ExprOp.NamedAnchor, Encoding.ASCII.GetBytes(anchorName));
-    public static Expression NamedCode(string code) => new NamedExpression(ExprOp.NamedCode, Encoding.ASCII.GetBytes(code));
-    public static Expression Platform(MachPlatform platform) => new PlatformExpression(platform);
+    public static Expr False { get; } = new SimpleExpr(ExprOp.False);
+    public static Expr True { get; } = new SimpleExpr(ExprOp.True);
+    public static Expr AppleAnchor { get; } = new SimpleExpr(ExprOp.AppleAnchor);
+    public static Expr TrustedCerts { get; } = new SimpleExpr(ExprOp.TrustedCerts);
+    public static Expr AppleGenericAnchor { get; } = new SimpleExpr(ExprOp.AppleGenericAnchor);
+    public static Expr Notarized { get; } = new SimpleExpr(ExprOp.Notarized);
+    public static Expr LegacyDevId { get; } = new SimpleExpr(ExprOp.LegacyDevId);
+    public static Expr Ident(string identifier) => new StringExpr(ExprOp.Ident, identifier);
+    public static Expr AnchorHash(int certificateIndex, byte[] anchorHash) => new AnchorHashExpr(certificateIndex, anchorHash);
+    public static Expr InfoKeyValue(string field, string matchValue) => new InfoKeyValueExpr(field, Encoding.ASCII.GetBytes(matchValue));
+    public static Expr And(Expr left, Expr right) => new BinaryOperatorExpr(ExprOp.And, left, right);
+    public static Expr Or(Expr left, Expr right) => new BinaryOperatorExpr(ExprOp.Or, left, right);
+    public static Expr CdHash(byte[] codeDirectoryHash) => new CdHashExpr(codeDirectoryHash);
+    public static Expr Not(Expr inner) => new UnaryOperatorExpr(ExprOp.Not, inner);
+    public static Expr InfoKeyField(string field, MatchOperation matchOperation, string? matchValue = null) => new FieldMatchExpr(ExprOp.InfoKeyField, field, matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
+    public static Expr CertField(int certificateIndex, string certificateField, MatchOperation matchOperation, string? matchValue = null) => new CertExpr(ExprOp.CertField, certificateIndex, Encoding.ASCII.GetBytes(certificateField), matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
+    public static Expr TrustedCert(int certificateIndex) => new TrustedCertExpr(certificateIndex);
+    public static Expr CertGeneric(int certificateIndex, string certificateFieldOid, MatchOperation matchOperation, string? matchValue = null) => new CertExpr(ExprOp.CertGeneric, certificateIndex, GetOidBytes(certificateFieldOid).ToArray(), matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
+    public static Expr EntitlementField(string field, MatchOperation matchOperation, string? matchValue = null) => new FieldMatchExpr(ExprOp.EntitlementField, field, matchOperation, matchValue != null ? Encoding.ASCII.GetBytes(matchValue) : null);
+    public static Expr NamedAnchor(string anchorName) => new NamedExpr(ExprOp.NamedAnchor, Encoding.ASCII.GetBytes(anchorName));
+    public static Expr NamedCode(string code) => new NamedExpr(ExprOp.NamedCode, Encoding.ASCII.GetBytes(code));
+    public static Expr Platform(MachPlatform platform) => new PlatformExpr(platform);
 
     private static ReadOnlySpan<byte> GetData(ReadOnlySpan<byte> expr) => expr.Slice(4, ReadInt32BigEndian(expr));
 
@@ -47,108 +47,6 @@ public abstract class Expression
             return GetData(expr);
 
         return ReadOnlySpan<byte>.Empty;
-    }
-
-    public static Expression FromBlob(ReadOnlySpan<byte> expr)
-    {
-        ExprOp op = (ExprOp)ReadUInt32BigEndian(expr);
-        switch (op)
-        {
-            case ExprOp.False:
-                return False;
-
-            case ExprOp.True:
-                return True;
-
-            case ExprOp.Ident:
-                return Ident(Encoding.ASCII.GetString(GetData(expr[4..])));
-
-            case ExprOp.AppleAnchor:
-                return AppleAnchor;
-
-            case ExprOp.AnchorHash:
-                return AnchorHash(ReadInt32BigEndian(expr[4..]), GetData(expr[8..]).ToArray());
-
-            case ExprOp.CdHash:
-                return CdHash(GetData(expr[4..]).ToArray());
-
-            case ExprOp.Not:
-                return Not(FromBlob(expr[4..]));
-
-            case ExprOp.TrustedCert:
-                return TrustedCert(ReadInt32BigEndian(expr.Slice(4, 4)));
-
-            case ExprOp.TrustedCerts:
-                return TrustedCerts;
-
-            case ExprOp.AppleGenericAnchor:
-                return AppleGenericAnchor;
-
-            case ExprOp.NamedAnchor:
-                return NamedAnchor(Encoding.ASCII.GetString(GetData(expr[4..])));
-
-            case ExprOp.NamedCode:
-                return NamedCode(Encoding.ASCII.GetString(GetData(expr[4..])));
-
-            case ExprOp.Platform:
-                return Platform((MachPlatform)ReadInt32BigEndian(expr[4..]));
-
-            case ExprOp.Notarized:
-                return Notarized;
-
-            case ExprOp.LegacyDevId:
-                return LegacyDevId;
-
-            case ExprOp.InfoKeyValue:
-            {
-                ReadOnlySpan<byte> field = GetData(expr[4..]);
-                ReadOnlySpan<byte> value = GetData(expr[(4 + field.Length + 4 + Align(field.Length, 4))..]);
-                return InfoKeyValue(Encoding.ASCII.GetString(field), Encoding.ASCII.GetString(value));
-            }
-            case ExprOp.And:
-            {
-                Expression left = FromBlob(expr[4..]);
-                Expression right = FromBlob(expr[(4 + left.Size)..]);
-                return And(left, right);
-            }
-            case ExprOp.Or:
-            {
-                Expression left = FromBlob(expr[4..]);
-                Expression right = FromBlob(expr[(4 + left.Size)..]);
-                return Or(left, right);
-            }
-            case ExprOp.InfoKeyField:
-            {
-                ReadOnlySpan<byte> field = GetData(expr[4..]);
-
-                int fieldBytesRead = 4 + Align(field.Length, 4);
-                MatchOperation matchOperation = (MatchOperation)ReadUInt32BigEndian(expr.Slice(4 + fieldBytesRead, 4));
-                ReadOnlySpan<byte> matchValue = GetMatchData(expr[(8 + fieldBytesRead)..], matchOperation);
-                return InfoKeyField(Encoding.ASCII.GetString(field), matchOperation, !matchValue.IsEmpty ? Encoding.ASCII.GetString(matchValue) : null);
-            }
-            case ExprOp.CertField:
-            case ExprOp.CertGeneric:
-            case ExprOp.CertPolicy:
-            case ExprOp.CertFieldDate:
-            {
-                int certificateIndex = ReadInt32BigEndian(expr.Slice(4, 4));
-                ReadOnlySpan<byte> field = GetData(expr[8..]);
-                int fieldBytesRead = 4 + Align(field.Length, 4);
-                MatchOperation matchOperation = (MatchOperation)ReadUInt32BigEndian(expr.Slice(8 + fieldBytesRead, 4));
-                ReadOnlySpan<byte> matchValue = GetMatchData(expr[(12 + fieldBytesRead)..], matchOperation);
-                return new CertExpression(op, certificateIndex, field.ToArray(), matchOperation, matchValue.ToArray());
-            }
-            case ExprOp.EntitlementField:
-            {
-                ReadOnlySpan<byte> field = GetData(expr[4..]);
-                int fieldBytesRead = 4 + Align(field.Length, 4);
-                MatchOperation matchOperation = (MatchOperation)ReadUInt32BigEndian(expr.Slice(4 + fieldBytesRead, 4));
-                ReadOnlySpan<byte> matchValue = GetMatchData(expr[(8 + fieldBytesRead)..], matchOperation);
-                return EntitlementField(Encoding.ASCII.GetString(field), matchOperation, !matchValue.IsEmpty ? Encoding.ASCII.GetString(matchValue) : null);
-            }
-            default:
-                throw new NotSupportedException("The expression operation is not supported.");
-        }
     }
 
     private static ReadOnlySpan<byte> GetOidBytes(string oid)
@@ -193,7 +91,7 @@ public abstract class Expression
         _ => slot.ToString(CultureInfo.InvariantCulture)
     };
 
-    private sealed class SimpleExpression(ExprOp op) : Expression
+    private sealed class SimpleExpr(ExprOp op) : Expr
     {
         public override int Size => 4;
 
@@ -215,7 +113,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class BinaryOperatorExpression(ExprOp op, Expression left, Expression right) : Expression
+    private sealed class BinaryOperatorExpr(ExprOp op, Expr left, Expr right) : Expr
     {
         private ExprOp Operation { get; } = op;
 
@@ -228,9 +126,9 @@ public abstract class Expression
             right.Write(buffer[(4 + left.Size)..]);
         }
 
-        private string WrapInnerExpression(Expression innerExpression)
+        private string WrapInnerExpression(Expr innerExpression)
         {
-            if (innerExpression is BinaryOperatorExpression boe && boe.Operation != Operation)
+            if (innerExpression is BinaryOperatorExpr boe && boe.Operation != Operation)
                 return $"({boe.ToString()})";
 
             return innerExpression.ToString();
@@ -244,7 +142,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class UnaryOperatorExpression(ExprOp op, Expression inner) : Expression
+    private sealed class UnaryOperatorExpr(ExprOp op, Expr inner) : Expr
     {
         public override int Size => 4 + inner.Size;
 
@@ -261,7 +159,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class StringExpression(ExprOp op, string opString) : Expression
+    private sealed class StringExpr(ExprOp op, string opString) : Expr
     {
         public override int Size => 8 + Align(Encoding.UTF8.GetByteCount(opString), 4);
 
@@ -281,7 +179,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class CdHashExpression(byte[] codeDirectoryHash) : Expression
+    private sealed class CdHashExpr(byte[] codeDirectoryHash) : Expr
     {
         public override int Size => 4 + codeDirectoryHash.Length;
 
@@ -294,7 +192,7 @@ public abstract class Expression
         public override string ToString() => $"cdhash H\"{Convert.ToHexString(codeDirectoryHash)}\"";
     }
 
-    private sealed class AnchorHashExpression(int certificateIndex, byte[] anchorHash) : Expression
+    private sealed class AnchorHashExpr(int certificateIndex, byte[] anchorHash) : Expr
     {
         public override int Size => 12 + anchorHash.Length;
 
@@ -309,7 +207,7 @@ public abstract class Expression
         public override string ToString() => $"certificate {CertificateSlotToString(certificateIndex)} = H\"{Convert.ToHexStringLower(anchorHash)}\"";
     }
 
-    private abstract class MatchExpression(MatchOperation matchOperation, byte[]? matchValue) : Expression
+    private abstract class MatchExpr(MatchOperation matchOperation, byte[]? matchValue) : Expr
     {
         public override int Size => 4 + (matchValue == null ? 0 : 4 + Align(matchValue.Length, 4));
 
@@ -352,7 +250,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class FieldMatchExpression(ExprOp op, string field, MatchOperation matchOperation, byte[]? matchValue) : MatchExpression(matchOperation, matchValue)
+    private sealed class FieldMatchExpr(ExprOp op, string field, MatchOperation matchOperation, byte[]? matchValue) : MatchExpr(matchOperation, matchValue)
     {
         private readonly object _field = field;
         private readonly byte[] _fieldBytes = Encoding.ASCII.GetBytes(field);
@@ -376,7 +274,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class CertExpression(ExprOp op, int certificateIndex, byte[] certificateField, MatchOperation matchOperation, byte[]? matchValue) : MatchExpression(matchOperation, matchValue)
+    private sealed class CertExpr(ExprOp op, int certificateIndex, byte[] certificateField, MatchOperation matchOperation, byte[]? matchValue) : MatchExpr(matchOperation, matchValue)
     {
         public override int Size => 12 + Align(certificateField.Length, 4) + base.Size;
 
@@ -409,7 +307,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class InfoKeyValueExpression(string field, byte[] matchValue) : Expression
+    private sealed class InfoKeyValueExpr(string field, byte[] matchValue) : Expr
     {
         private readonly object _field = field;
         private readonly byte[] _fieldBytes = Encoding.ASCII.GetBytes(field);
@@ -432,7 +330,7 @@ public abstract class Expression
         public override string ToString() => $"info[{_field}] = {ValueToString(matchValue)}";
     }
 
-    private sealed class NamedExpression(ExprOp op, byte[] name) : Expression
+    private sealed class NamedExpr(ExprOp op, byte[] name) : Expr
     {
         public override int Size => 8 + Align(name.Length, 4);
 
@@ -452,7 +350,7 @@ public abstract class Expression
         };
     }
 
-    private sealed class TrustedCertExpression(int certificateIndex) : Expression
+    private sealed class TrustedCertExpr(int certificateIndex) : Expr
     {
         public override int Size => 8;
 
@@ -465,7 +363,7 @@ public abstract class Expression
         public override string ToString() => $"certificate {CertificateSlotToString(certificateIndex)} trusted";
     }
 
-    private sealed class PlatformExpression(MachPlatform platform) : Expression
+    private sealed class PlatformExpr(MachPlatform platform) : Expr
     {
         public override int Size => 8;
 

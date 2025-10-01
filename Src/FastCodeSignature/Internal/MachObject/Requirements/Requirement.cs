@@ -2,7 +2,7 @@ using Genbox.FastCodeSignature.Internal.MachObject.Headers.Enums;
 
 namespace Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 
-public class Requirement(Expression expression)
+public class Requirement(Expr expression)
 {
     public int Size => 12 + expression.Size;
 
