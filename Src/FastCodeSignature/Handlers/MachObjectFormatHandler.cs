@@ -32,13 +32,13 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm privateKey, string identifier, RequirementSet requirements, HashAlgorithmName hash, string? teamId) : IFormatHandler
+public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, RequirementSet requirements, HashAlgorithmName hash, string? teamId) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    public static MachObjectFormatHandler Create(X509Certificate2 cert, AsymmetricAlgorithm privateKey, string identifier, RequirementSet? requirements = null, string? teamId = null)
+    public static MachObjectFormatHandler Create(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, RequirementSet? requirements = null, string? teamId = null)
     {
         if (requirements == null)
         {

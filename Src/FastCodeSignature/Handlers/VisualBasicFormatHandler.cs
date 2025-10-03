@@ -1,6 +1,7 @@
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
-public sealed class VisualBasicFormatHandler(X509Certificate2 cert) : TextFormatHandler(cert, "' ", "", Encoding.UTF8, "vb");
+public sealed class VisualBasicFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey) : TextFormatHandler(cert, privateKey, "' ", "", Encoding.UTF8, "vb");

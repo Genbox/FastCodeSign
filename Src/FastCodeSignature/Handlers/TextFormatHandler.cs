@@ -13,7 +13,7 @@ using Genbox.FastCodeSignature.Internal.WinPe.Spc;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
-public abstract class TextFormatHandler(X509Certificate2 cert, string commentStart, string commentEnd, Encoding fallbackEncoding, string extension) : IFormatHandler
+public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding fallbackEncoding, string extension) : IFormatHandler
 {
     private const string MagicHeader = "SIG # Begin signature block";
     private const string MagicFooter = "SIG # End signature block";
@@ -189,7 +189,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, string commentSta
 
     public Signature CreateSignature(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
-        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert)
+        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
             DigestAlgorithm = hashAlgorithm.ToOid()
         };
