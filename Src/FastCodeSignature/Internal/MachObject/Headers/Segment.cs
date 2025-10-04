@@ -4,7 +4,7 @@ namespace Genbox.FastCodeSignature.Internal.MachObject.Headers;
 
 // https://github.com/apple-oss-distributions/xnu/blob/e3723e1f17661b24996789d8afc084c0c3303b26/EXTERNAL_HEADERS/mach-o/loader.h#L355
 [StructLayout(LayoutKind.Auto)]
-internal readonly record struct Segment
+internal sealed class Segment
 {
     internal required int Offset { get; init; }
     internal required byte[] Name { get; init; }

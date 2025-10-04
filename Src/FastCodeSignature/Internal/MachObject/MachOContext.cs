@@ -1,20 +1,18 @@
-using System.Runtime.InteropServices;
+using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Internal.MachObject.Headers;
 using Genbox.FastCodeSignature.Internal.MachObject.Headers.Enums;
 
 namespace Genbox.FastCodeSignature.Internal.MachObject;
 
-[StructLayout(LayoutKind.Auto)]
-internal readonly ref struct MachObject
+internal class MachOContext : IContext
 {
     private static readonly byte[] LinkEditBytes = "__LINKEDIT"u8.ToArray();
     private static readonly byte[] TextBytes = "__TEXT"u8.ToArray();
 
-    internal MachObject(ReadOnlySpan<byte> data)
+    public static MachOContext Create(ReadOnlySpan<byte> data)
     {
-        int offset = 0;
+        //Note: I could be more strict here, but it is not well-defined what constitutes a "minimal mach object".
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
-        offset += 4;
 
         (bool le, bool is64Bit) = magic switch
         {
@@ -25,10 +23,15 @@ internal readonly ref struct MachObject
             _ => throw new NotSupportedException($"Unsupported magic: {magic}")
         };
 
-        MachHeader = MachHeader.Read(data[offset..], le);
+        int offset = 4;
+        MachHeader machHeader = MachHeader.Read(data[offset..], le);
         offset += is64Bit ? MachHeader.StructSize64 : MachHeader.StructSize32;
 
-        for (int i = 0; i < MachHeader.NumberOfCommands; i++)
+        Segment? linkEdit = null;
+        Segment? text = null;
+        CodeSignatureHeader? codeSignature = null;
+
+        for (int i = 0; i < machHeader.NumberOfCommands; i++)
         {
             LoadCommandHeader lcHeader = LoadCommandHeader.Read(data[offset..], le);
             int tempOffset = offset + LoadCommandHeader.StructSize;
@@ -37,32 +40,32 @@ internal readonly ref struct MachObject
             {
                 case LoadCommandType.SEGMENT:
 
-                    if (LinkEdit.Offset != 0 && Text.Offset != 0)
+                    if (linkEdit != null)
                         break; //We have found what we need
 
                     Segment seg32Header = Segment.Read32(data[tempOffset..], tempOffset, le);
 
                     if (seg32Header.Name.AsSpan(0, LinkEditBytes.Length).SequenceEqual(LinkEditBytes))
-                        LinkEdit = seg32Header;
+                        linkEdit = seg32Header;
                     else if (seg32Header.Name.AsSpan(0, TextBytes.Length).SequenceEqual(TextBytes))
-                        Text = seg32Header;
+                        text = seg32Header;
 
                     break;
                 case LoadCommandType.SEGMENT_64:
 
-                    if (LinkEdit.Offset != 0 && Text.Offset != 0)
+                    if (linkEdit != null)
                         break; //We have found what we need
 
                     Segment seg64Header = Segment.Read64(data[tempOffset..], tempOffset, le);
 
                     if (seg64Header.Name.AsSpan(0, LinkEditBytes.Length).SequenceEqual(LinkEditBytes))
-                        LinkEdit = seg64Header;
+                        linkEdit = seg64Header;
                     else if (seg64Header.Name.AsSpan(0, TextBytes.Length).SequenceEqual(TextBytes))
-                        Text = seg64Header;
+                        text = seg64Header;
 
                     break;
                 case LoadCommandType.CODE_SIGNATURE:
-                    CodeSignature = CodeSignatureHeader.Read(data[tempOffset..], tempOffset, le);
+                    codeSignature = CodeSignatureHeader.Read(data[tempOffset..], tempOffset, le);
                     break;
             }
 
@@ -71,14 +74,30 @@ internal readonly ref struct MachObject
             offset += (int)lcHeader.Size;
         }
 
-        IsLittleEndian = le;
-        Is64Bit = is64Bit;
+        if (linkEdit == null)
+            throw new InvalidOperationException("The Mach Object file does not contain a __LINKEDIT section.");
+
+        if (text == null)
+            throw new InvalidOperationException("The Mach Object file does not contain a __TEXT section.");
+
+        return new MachOContext
+        {
+            IsSigned = codeSignature != null && codeSignature.DataOffset != 0 && codeSignature.DataSize != 0,
+            IsLittleEndian = le,
+            Is64Bit = is64Bit,
+            MachHeader = machHeader,
+            CodeSignature = codeSignature,
+            LinkEdit = linkEdit,
+            Text = text,
+        };
     }
 
-    internal bool IsLittleEndian { get; }
-    internal bool Is64Bit { get; }
-    internal MachHeader MachHeader { get; }
-    internal CodeSignatureHeader CodeSignature { get; }
-    internal Segment LinkEdit { get; }
-    internal Segment Text { get; }
+    public required bool IsSigned { get; init; }
+
+    internal required bool IsLittleEndian { get; init; }
+    internal required bool Is64Bit { get; init; }
+    internal required MachHeader MachHeader { get; init; }
+    internal required CodeSignatureHeader? CodeSignature { get; init; }
+    internal required Segment LinkEdit { get; init; }
+    internal required Segment Text { get; init; }
 }

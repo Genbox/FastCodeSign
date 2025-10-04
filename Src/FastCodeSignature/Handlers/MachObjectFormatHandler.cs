@@ -7,7 +7,6 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSignature.Abstracts;
-using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.Helpers;
@@ -32,47 +31,19 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, RequirementSet requirements, HashAlgorithmName hash, string? teamId) : IFormatHandler
+public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    public static MachObjectFormatHandler Create(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, RequirementSet? requirements = null, string? teamId = null)
+    public bool CanHandle(ReadOnlySpan<byte> data, string? ext) => data.Length >= MachHeader.StructSize32 + LoadCommandHeader.StructSize;
+
+    public IContext GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
+
+    public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
-        if (requirements == null)
-        {
-            if (cert.IsAppleDeveloperCertificate())
-            {
-                requirements = RequirementSet.CreateAppleDevDefault(identifier, cert);
-                teamId ??= cert.GetTeamId();
-            }
-            else
-                requirements = RequirementSet.CreateDefault(identifier, cert);
-        }
-
-        return new MachObjectFormatHandler(cert, privateKey, identifier, requirements, HashAlgorithmName.SHA256, teamId);
-    }
-
-    public bool IsValid(ReadOnlySpan<byte> data, string? ext)
-    {
-        if (data.Length < MachHeader.StructSize32 + LoadCommandHeader.StructSize)
-            return false;
-
-        //Note: I could be more strict here, but it is not well-defined what constitutes a "minimal mach object".
-
-        MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
-
-        //We don't support signing fat. Unpack them into mach objects first.
-        return magic is MachMagic.MachMagicLE or MachMagic.MachMagic64LE or MachMagic.MachMagicBE or MachMagic.MachMagic64BE;
-    }
-
-    public ReadOnlySpan<byte> ExtractSignature(ReadOnlySpan<byte> data)
-    {
-        MachObject obj = new MachObject(data);
-
-        if (!IsSigned(obj))
-            return ReadOnlySpan<byte>.Empty;
+        MachOContext obj = (MachOContext)context;
 
         //Read the SuperBlob
         ReadOnlySpan<byte> sbSpan = data.Slice((int)obj.CodeSignature.DataOffset, (int)obj.CodeSignature.DataSize);
@@ -102,13 +73,13 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return ReadOnlySpan<byte>.Empty; // We did not manage to find the CMS blob
     }
 
-    public byte[] ComputeHash(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    public byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
-        MachObject obj = new MachObject(data);
+        MachOContext obj = (MachOContext)context;
 
         //If there is no signature, we cannot just hash the file, since Mach Object signatures require external files such as entitlement and requirements
         //We cannot require the caller to provide this data, so we simply tell them we are unable to hash unsigned files. That's what macOS's CodeSign does also.
-        if (!IsSigned(obj))
+        if (!obj.IsSigned)
             throw new InvalidOperationException("Mach Object does not support stable hashing");
 
         //Read the SuperBlob. We need to read the CodeDirectory header & hash the special slots.
@@ -217,12 +188,9 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return cdHasher.GetHashAndReset();
     }
 
-    public long RemoveSignature(Span<byte> data)
+    public long RemoveSignature(IContext context, Span<byte> data)
     {
-        MachObject obj = new MachObject(data);
-
-        if (!IsSigned(obj))
-            return 0; // There is no signature to remove
+        MachOContext obj = (MachOContext)context;
 
         //Remove the LC_CODE_SIGNATURE command from the list of load commands. It is the last command in the list.
         const uint size = LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize;
@@ -262,14 +230,11 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return obj.CodeSignature.DataSize;
     }
 
-    public void WriteSignature(IAllocation allocation, Signature signature)
+    public void WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
+        MachOContext obj = (MachOContext)context;
+
         Span<byte> data = allocation.GetSpan();
-        MachObject obj = new MachObject(data);
-
-        if (IsSigned(obj))
-            throw new InvalidOperationException("The file is already signed");
-
         int oldSize = data.Length;
         MachObjectInfo info = (MachObjectInfo)signature.SignatureInfo!;
 
@@ -323,7 +288,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         }
     }
 
-    public Signature CreateSignature(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -333,10 +298,13 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
 
         //Build the SuperBlob
         SortedList<CsSlot, byte[]> blobs = new SortedList<CsSlot, byte[]>();
-        blobs.Add(CsSlot.Requirements, requirements.ToArray());
+
+        if (requirements != null)
+            blobs.Add(CsSlot.Requirements, requirements.ToArray());
+
         int maxSlot = blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
 
-        MachObject obj = new MachObject(data);
+        MachOContext obj = (MachOContext)context;
         ulong linkEditEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize;
         Debug.Assert((uint)linkEditEnd == data.Length);
 
@@ -444,7 +412,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         }
     }
 
-    public bool TryGetHash(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    public bool ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
     {
         digest = null;
         algo = default;
@@ -468,7 +436,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return true;
     }
 
-    private static void WriteHeaders(Span<byte> span, MachObject obj, ulong codeLimit, int padLength, uint sbSize)
+    private static void WriteHeaders(Span<byte> span, MachOContext obj, ulong codeLimit, int padLength, uint sbSize)
     {
         bool le = obj.IsLittleEndian;
 
@@ -721,8 +689,6 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
             memoryStream.Position = 0; //To reuse the stream
         }
     }
-
-    private static bool IsSigned(MachObject obj) => obj.CodeSignature.DataOffset != 0 && obj.CodeSignature.DataSize != 0;
 
     private sealed class MachObjectInfo
     {

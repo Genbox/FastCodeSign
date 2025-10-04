@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
@@ -7,6 +6,7 @@ using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.Helpers;
+using Genbox.FastCodeSignature.Internal.WinPe;
 using Genbox.FastCodeSignature.Internal.WinPe.Enums;
 using Genbox.FastCodeSignature.Internal.WinPe.Headers;
 using Genbox.FastCodeSignature.Internal.WinPe.Spc;
@@ -16,7 +16,7 @@ namespace Genbox.FastCodeSignature.Handlers;
 
 public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey) : IFormatHandler
 {
-    public bool IsValid(ReadOnlySpan<byte> data, string? ext)
+    public bool CanHandle(ReadOnlySpan<byte> data, string? ext)
     {
         // The smallest valid PE file on Windows 7+ is:
         // x86: 252 bytes
@@ -40,29 +40,17 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
             && ext != "efi")
             return false;
 
-        ushort dosSignature = ReadUInt16LittleEndian(data);
-
-        if (dosSignature != 0x5A4D) //MZ
-            return false;
-
-        // DOS header: Read e_lfanew, which is the pointer to the COFF header
-        uint coffHeaderOffset = ReadUInt32LittleEndian(data[60..]);
-
-        // COFF header: Read the PE signature
-        uint peSignature = ReadUInt32LittleEndian(data[(int)coffHeaderOffset..]);
-        return peSignature == 0x00004550; // "PE\0\0"
+        return true;
     }
 
-    public ReadOnlySpan<byte> ExtractSignature(ReadOnlySpan<byte> data)
-    {
-        PeFileContext context = GetContext(data);
+    public IContext GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
 
-        // There is no signature
-        if (!IsSigned(context))
-            return ReadOnlySpan<byte>.Empty;
+    public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
+    {
+        WinPeContext obj = (WinPeContext)context;
 
         //There is a WIN_CERTIFICATE struct here. See https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-win_certificate
-        WinCertificate winCert = WinCertificate.Read(data.Slice((int)context.SecurityVirtualAddress, (int)context.SecuritySize));
+        WinCertificate winCert = WinCertificate.Read(data.Slice((int)obj.SecurityVirtualAddress, (int)obj.SecuritySize));
 
         //See https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-win_certificate
 
@@ -73,36 +61,36 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
             return ReadOnlySpan<byte>.Empty;
 
         // We need to skip the 8 byte header, and subtract it from the length
-        uint certDataOffset = context.SecurityVirtualAddress + 8;
+        uint certDataOffset = obj.SecurityVirtualAddress + 8;
         uint certDataLength = winCert.Length - 8;
 
         return data.Slice((int)certDataOffset, (int)certDataLength);
     }
 
-    public byte[] ComputeHash(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    public byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
-        PeFileContext context = GetContext(data);
+        WinPeContext obj = (WinPeContext)context;
 
         using IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithm);
 
         int offset = 0;
-        int size = (int)context.ChecksumOffset;
+        int size = (int)obj.ChecksumOffset;
 
         hasher.AppendData(data.Slice(offset, size));
 
-        offset = (int)context.ChecksumOffset + 4;
-        size = (int)context.SecurityDirOffset - offset;
+        offset = (int)obj.ChecksumOffset + 4;
+        size = (int)obj.SecurityDirOffset - offset;
 
         hasher.AppendData(data.Slice(offset, size));
 
-        offset = (int)(context.SecurityDirOffset + 8);
-        size = (int)context.SizeOfOptionalHeader - offset;
+        offset = (int)(obj.SecurityDirOffset + 8);
+        size = (int)obj.SizeOfOptionalHeader - offset;
 
         hasher.AppendData(data.Slice(offset, size));
 
-        uint sumOfBytesHashed = context.SizeOfOptionalHeader;
+        uint sumOfBytesHashed = obj.SizeOfOptionalHeader;
 
-        foreach (PeSection section in context.Sections)
+        foreach (PeSection section in obj.Sections)
         {
             offset = (int)section.PointerToRawData;
             size = (int)section.SizeOfRawData;
@@ -111,7 +99,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
             sumOfBytesHashed += section.SizeOfRawData;
         }
 
-        uint remainingLength = (uint)data.Length - (context.SecuritySize + sumOfBytesHashed);
+        uint remainingLength = (uint)data.Length - (obj.SecuritySize + sumOfBytesHashed);
         if (remainingLength > 0)
         {
             offset = (int)sumOfBytesHashed;
@@ -128,49 +116,20 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return hasher.GetHashAndReset();
     }
 
-    public long RemoveSignature(Span<byte> data)
+    public long RemoveSignature(IContext context, Span<byte> data)
     {
-        PeFileContext context = GetContext(data);
-
-        //The file is not signed. Do nothing.
-        if (!IsSigned(context))
-            return 0;
+        WinPeContext obj = (WinPeContext)context;
 
         //Remove the signature by zeroing the areas where the signature resides
-        ZeroSignature(data, context);
+        ZeroSignature(data, obj);
 
-        return (int)context.SecuritySize;
+        return (int)obj.SecuritySize;
     }
 
-    public void WriteSignature(IAllocation allocation, Signature signature)
+    public void WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
         Span<byte> data = allocation.GetSpan();
-        PeFileContext context = GetContext(data);
-
-        uint extraSize;
-
         byte[] encodedCms = signature.SignedCms.Encode();
-
-        if (IsSigned(context))
-        {
-            ZeroSignature(data, context);
-
-            //If there already is space for the new signature, reuse it.
-            //Truncate/extend the buffer to exactly the size we need.
-
-            int delta = encodedCms.Length - (int)context.SecuritySize;
-
-            // If delta is 0, there is exactly the space we need.
-
-            if (delta > 0) // There is more space than needed. Truncate the buffer.
-                extraSize = LeftShiftData(data, context.SecurityVirtualAddress, (uint)delta);
-            else if (delta < 0) // There is less space than needed. Extend the buffer.
-                extraSize = RightShiftData(data, context.SecuritySize, (uint)-delta);
-            else
-                extraSize = 0;
-        }
-        else
-            extraSize = 8; //8 = WIN_CERTIFICATE header
 
         //Keep a copy of the old EoF
         uint datLen = (uint)data.Length;
@@ -180,7 +139,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         sigLen += Pad(sigLen, 8);
 
         //Set our allocation to the correct size
-        allocation.SetLength(datLen + sigLen + extraSize);
+        allocation.SetLength(datLen + sigLen + 8); //8 = WIN_CERTIFICATE header
         data = allocation.GetSpan();
 
         //Create a span to contain the WIN_CERTIFICATE structure
@@ -196,11 +155,12 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         encodedCms.CopyTo(span[WinCertificate.StructSize..]); // bCertificate
 
         // Update the security directory entry
-        WriteUInt32LittleEndian(data[(int)context.SecurityDirOffset..], datLen);
-        WriteUInt32LittleEndian(data[(int)(context.SecurityDirOffset + 4)..], sigLen + 8); //8 = WIN_CERTIFICATE header
+        WinPeContext obj = (WinPeContext)context;
+        WriteUInt32LittleEndian(data[(int)obj.SecurityDirOffset..], datLen);
+        WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], sigLen + 8); //8 = WIN_CERTIFICATE header
     }
 
-    public Signature CreateSignature(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -223,7 +183,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
             new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),
             SpcPeImageData.ObjectIdentifier,
             signer.DigestAlgorithm,
-            ComputeHash(data, OidHelper.OidToHashAlgorithm(signer.DigestAlgorithm.Value!)),
+            ComputeHash(context, data, OidHelper.OidToHashAlgorithm(signer.DigestAlgorithm.Value!)),
             null);
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
@@ -232,7 +192,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return new Signature(signed, null);
     }
 
-    public bool TryGetHash(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    public bool ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
     {
         SpcIndirectDataContent indirect = SpcIndirectDataContent.Decode(signedCms.ContentInfo.Content);
         digest = indirect.Digest;
@@ -240,7 +200,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return true;
     }
 
-    private static void ZeroSignature(Span<byte> data, PeFileContext context)
+    private static void ZeroSignature(Span<byte> data, WinPeContext context)
     {
         //Zero the signature
         data.Slice((int)context.SecurityVirtualAddress, (int)context.SecuritySize).Clear();
@@ -250,74 +210,4 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         //Zero the security directory entry (8 bytes)
         WriteInt64LittleEndian(data[(int)context.SecurityDirOffset..], 0);
     }
-
-    private static PeFileContext GetContext(ReadOnlySpan<byte> data)
-    {
-        // Docs: https://upload.wikimedia.org/wikipedia/commons/1/1b/Portable_Executable_32_bit_Structure_in_SVG_fixed.svg
-
-        // DOS header: Read e_lfanew, which is the pointer to the COFF header
-        uint coffHeaderOffset = ReadUInt32LittleEndian(data[60..]);
-        ushort numberOfSections = ReadUInt16LittleEndian(data[(int)(coffHeaderOffset + 6)..]);
-        ushort sizeOfOptionalHeader = ReadUInt16LittleEndian(data[(int)(coffHeaderOffset + 20)..]);
-        uint optionalHeaderOffset = coffHeaderOffset + 24;
-        ushort magic = ReadUInt16LittleEndian(data[(int)optionalHeaderOffset..]);
-
-        uint sectionTableOffset = optionalHeaderOffset + sizeOfOptionalHeader;
-
-        // Read PE sections
-        List<PeSection> sections = new List<PeSection>(numberOfSections);
-
-        for (uint i = 0; i < numberOfSections; i++)
-        {
-            uint sh = sectionTableOffset + (i * 40); //40 = section header size
-
-            uint sizeOfRawData = ReadUInt32LittleEndian(data[((int)sh + 16)..]);
-            uint pointerToRawData = ReadUInt32LittleEndian(data[((int)sh + 20)..]);
-
-            if (sizeOfRawData > 0)
-                sections.Add(new PeSection(sizeOfRawData, pointerToRawData));
-        }
-
-        uint sizeOfHeaders = ReadUInt32LittleEndian(data[((int)optionalHeaderOffset + 60)..]);
-
-        // Skip 4-byte checksum, then hash to before security directory
-        uint checksumOffset = coffHeaderOffset + 88;
-
-        // Magic values:
-        // - 0x10b: 32bit
-        // - 0x20b: 64bit
-        // Find the offset to the security data directory (contains the authenticode certificates)
-        uint dataDirOffset = (uint)(coffHeaderOffset + (magic == 0x10b ? 120 : 136));
-
-        // Data Directory is a set of (PVA + Size) which is 8 bytes in total.
-        uint securityDirOffset = dataDirOffset + (4 * 8); // entry #4
-        uint securityVirtualAddress = ReadUInt32LittleEndian(data[(int)securityDirOffset..]);
-        uint securitySize = ReadUInt32LittleEndian(data[(int)(securityDirOffset + 4)..]);
-
-        return new PeFileContext
-        {
-            ChecksumOffset = checksumOffset,
-            SizeOfOptionalHeader = sizeOfHeaders,
-            Sections = sections.OrderBy(h => h.PointerToRawData).ToArray(),
-            SecurityDirOffset = securityDirOffset,
-            SecurityVirtualAddress = securityVirtualAddress,
-            SecuritySize = securitySize
-        };
-    }
-
-    private static bool IsSigned(in PeFileContext context) => context.SecurityDirOffset != 0 && context.SecurityVirtualAddress != 0 && context.SecuritySize > 12;
-
-    [StructLayout(LayoutKind.Auto)]
-    private readonly ref struct PeFileContext
-    {
-        internal uint ChecksumOffset { get; init; }
-        internal uint SizeOfOptionalHeader { get; init; }
-        internal PeSection[] Sections { get; init; }
-        internal uint SecurityDirOffset { get; init; }
-        internal uint SecurityVirtualAddress { get; init; }
-        internal uint SecuritySize { get; init; }
-    }
-
-    [StructLayout(LayoutKind.Auto)]
-    private readonly record struct PeSection(uint SizeOfRawData, uint PointerToRawData);
 }

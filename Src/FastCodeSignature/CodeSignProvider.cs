@@ -1,12 +1,15 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Text;
 using Genbox.FastCodeSignature.Abstracts;
 
 namespace Genbox.FastCodeSignature;
 
 public sealed class CodeSignProvider : IDisposable
 {
+    private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(false);
     private readonly IAllocation _allocation;
     private readonly IFormatHandler _handler;
 
@@ -19,17 +22,26 @@ public sealed class CodeSignProvider : IDisposable
     [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP007:Don\'t dispose injected", Justification = "This is the only reference to the allocation that is given to the user")]
     public void Dispose() => _allocation.Dispose();
 
+    public bool HasSignature()
+    {
+        ReadOnlySpan<byte> data = _allocation.GetSpan();
+        IContext context = _handler.GetContext(data);
+        return context.IsSigned;
+    }
+
     public SignedCms? GetSignature()
     {
-        Span<byte> data = _allocation.GetSpan();
+        ReadOnlySpan<byte> data = _allocation.GetSpan();
+        IContext context = _handler.GetContext(data);
 
-        ReadOnlySpan<byte> signature = _handler.ExtractSignature(data);
-
-        if (signature.IsEmpty)
+        if (!context.IsSigned)
             return null;
 
+        ReadOnlySpan<byte> signatureBytes = _handler.ExtractSignature(context, data);
+        Debug.Assert(!signatureBytes.IsEmpty);
+
         SignedCms signedCms = new SignedCms();
-        signedCms.Decode(signature);
+        signedCms.Decode(signatureBytes);
         return signedCms;
     }
 
@@ -37,50 +49,73 @@ public sealed class CodeSignProvider : IDisposable
     {
         Span<byte> span = _allocation.GetSpan();
 
-        if (!_handler.TryGetHash(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
-            return false;
+        if (!_handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
+            throw new InvalidOperationException("The CMS does not contain a valid hash.");
 
-        byte[] actualDigest = _handler.ComputeHash(span, hashAlgorithm);
+        IContext context = _handler.GetContext(span);
+
+        if (!context.IsSigned)
+            throw new InvalidOperationException("The file is not signed.");
+
+        byte[] actualDigest = _handler.ComputeHash(context, span, hashAlgorithm);
         return expectedDigest.SequenceEqual(actualDigest);
     }
 
     public byte[] ComputeHash(HashAlgorithmName? hashAlgorithm = null)
     {
         Span<byte> data = _allocation.GetSpan();
-
-        return _handler.ComputeHash(data, hashAlgorithm ?? HashAlgorithmName.SHA256);
+        IContext context = _handler.GetContext(data);
+        return _handler.ComputeHash(context, data, hashAlgorithm ?? HashAlgorithmName.SHA256);
     }
 
-    public Span<byte> RemoveSignature(bool truncate)
+    public bool TryRemoveSignature(bool truncate, out Span<byte> modified)
     {
         Span<byte> data = _allocation.GetSpan();
-        long delta = _handler.RemoveSignature(data);
+        IContext context = _handler.GetContext(data);
+
+        if (!context.IsSigned)
+        {
+            modified = data;
+            return false;
+        }
+
+        long delta = _handler.RemoveSignature(context, data);
 
         if (truncate)
             _allocation.SetLength((uint)(data.Length - delta));
 
-        return _allocation.GetSpan();
+        modified = _allocation.GetSpan();
+        return true;
     }
 
     public Signature CreateSignature(HashAlgorithmName? hashAlgorithm = null)
     {
         hashAlgorithm ??= HashAlgorithmName.SHA256;
-        return _handler.CreateSignature(_allocation.GetSpan(), hashAlgorithm.Value);
+
+        Span<byte> data = _allocation.GetSpan();
+        IContext context = _handler.GetContext(data);
+
+        if (context.IsSigned)
+            throw new InvalidOperationException("The file already contains a signature.");
+
+        return _handler.CreateSignature(context, data, hashAlgorithm.Value);
     }
 
-    public ReadOnlySpan<byte> WriteSignature(Signature signature)
+    public Span<byte> WriteSignature(Signature signature)
     {
-        _handler.WriteSignature(_allocation, signature);
+        Span<byte> data = _allocation.GetSpan();
+        IContext context = _handler.GetContext(data);
+
+        if (context.IsSigned)
+            throw new InvalidOperationException("The file already contains a signature.");
+
+        _handler.WriteSignature(context, _allocation, signature);
         return _allocation.GetSpan();
     }
 
     public void WriteSignatureToPemFile(string output)
     {
-        SignedCms? cms = GetSignature();
-
-        if (cms == null)
-            throw new InvalidOperationException("The source file does not have a signature");
-
-        File.WriteAllText(output, PemEncoding.WriteString("PKCS7", cms.Encode()));
+        SignedCms cms = GetSignature();
+        File.WriteAllText(output, PemEncoding.WriteString("PKCS7", cms.Encode()), Utf8Encoding);
     }
 }

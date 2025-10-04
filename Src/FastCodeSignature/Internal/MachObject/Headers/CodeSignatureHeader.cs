@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Genbox.FastCodeSignature.Internal.MachObject.Headers;
 
 [StructLayout(LayoutKind.Sequential)]
-internal readonly ref struct CodeSignatureHeader
+internal sealed class CodeSignatureHeader
 {
     internal const byte StructSize = 8;
 

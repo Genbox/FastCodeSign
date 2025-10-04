@@ -10,8 +10,8 @@ public static class CodeSign
         MmfAllocation allocation = new MmfAllocation(file);
         Span<byte> span = allocation.GetSpan();
 
-        if (!handler.IsValid(span, GetExt(file)))
-            throw new InvalidOperationException("Handler reported the file is invalid");
+        if (!handler.CanHandle(span, GetExt(file)))
+            throw new InvalidOperationException("Handler cannot handle the file.");
 
         return new CodeSignProvider(handler, allocation);
     }
@@ -21,8 +21,8 @@ public static class CodeSign
         MemoryAllocation allocation = new MemoryAllocation(data);
         Span<byte> span = allocation.GetSpan();
 
-        if (!handler.IsValid(span, null))
-            throw new InvalidOperationException("Handler reported the file is invalid");
+        if (!handler.CanHandle(span, null))
+            throw new InvalidOperationException("Handler cannot handle the file.");
 
         return new CodeSignProvider(handler, allocation);
     }

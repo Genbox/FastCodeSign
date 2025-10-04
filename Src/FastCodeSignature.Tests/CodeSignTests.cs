@@ -3,8 +3,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Abstracts;
+using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Handlers;
 using Genbox.FastCodeSignature.Internal.MachObject;
+using Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 using Genbox.FastCodeSignature.Tests.Code;
 using JetBrains.Annotations;
 using Xunit.Sdk;
@@ -18,9 +20,7 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private async Task GetSignature(TestCase tc)
     {
-        byte[] data = await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken);
-
-        using CodeSignProvider provider = tc.Factory(data);
+        using CodeSignProvider provider = tc.Factory(await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken));
         SignedCms? info = provider.GetSignature();
         Assert.NotNull(info);
 
@@ -29,6 +29,13 @@ public class CodeSignTests
               .UseDirectory("Verify")
               .DisableDiff()
               .IgnoreMember("RawData");
+    }
+
+    [Theory, MemberData(nameof(GetFiles))]
+    private void GetSignature_UnsignedFileShouldReturnNull(TestCase tc)
+    {
+        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.UnsignedFile));
+        Assert.Null(provider.GetSignature());
     }
 
     [Theory, MemberData(nameof(GetTestVectors))]
@@ -40,13 +47,16 @@ public class CodeSignTests
         if (tc.SignedFile.Contains("_normal_", StringComparison.Ordinal))
         {
             SignedCms? signedCms = provider.GetSignature();
-            Assert.NotNull(signedCms); //We should have been able to extract the signature
+            Assert.NotNull(signedCms);
             Assert.True(provider.HasValidSignature(signedCms)); //Verify the signature
         }
         else if (tc.SignedFile.Contains("_invalid-format_", StringComparison.Ordinal))
         {
-            SignedCms? signedCms = provider.GetSignature();
-            Assert.Null(signedCms); //In invalid formats, we should not be able to extract the signature
+            Assert.Throws<InvalidDataException>(() =>
+            {
+                SignedCms? res = provider.GetSignature();
+                return res ?? throw new InvalidDataException("Null");
+            });
         }
         else if (tc.SignedFile.Contains("_invalid-signature_", StringComparison.Ordinal))
         {
@@ -67,15 +77,7 @@ public class CodeSignTests
     }
 
     [Theory, MemberData(nameof(GetFiles))]
-    private void GetSignature_UnsignedFileShouldBeNull(TestCase tc)
-    {
-        byte[] data = File.ReadAllBytes(tc.UnsignedFile);
-        using CodeSignProvider provider = tc.Factory(data);
-        Assert.Null(provider.GetSignature());
-    }
-
-    [Theory, MemberData(nameof(GetFiles))]
-    private void RemoveSignature(TestCase tc)
+    private void TryRemoveSignature(TestCase tc)
     {
         using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
 
@@ -83,10 +85,8 @@ public class CodeSignTests
         Assert.NotNull(provider.GetSignature());
 
         //Remove the signature
-        Span<byte> modified = provider.RemoveSignature(true);
-        Assert.False(modified.IsEmpty);
+        Assert.True(provider.TryRemoveSignature(true, out Span<byte> modified));
 
-        File.WriteAllBytes("c:\\Temp\\Removed.dat", modified);
         byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
 
         if (tc.EqualityPatch != null)
@@ -101,11 +101,10 @@ public class CodeSignTests
     }
 
     [Theory, MemberData(nameof(GetFiles))]
-    private void RemoveSignature_FileWithNoSignatureShouldBeItself(TestCase tc)
+    private void TryRemoveSignature_FileWithoutSignatureShouldReturnFalse(TestCase tc)
     {
-        byte[] data = File.ReadAllBytes(tc.UnsignedFile);
-        using CodeSignProvider provider = tc.Factory(data);
-        Assert.Equal(data, provider.RemoveSignature(true));
+        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.UnsignedFile));
+        Assert.False(provider.TryRemoveSignature(true, out _));
     }
 
     [Theory, MemberData(nameof(GetFiles))]
@@ -116,19 +115,18 @@ public class CodeSignTests
             return;
 
         using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
-
         string hash = Convert.ToHexString(provider.ComputeHash()).ToLowerInvariant();
         Assert.Equal(tc.Hash, hash);
     }
 
     [Theory, MemberData(nameof(GetFiles))]
-    private async Task AddSignature(TestCase tc)
+    private async Task CreateSignature(TestCase tc)
     {
         using CodeSignProvider provider = tc.Factory(await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken));
-        Signature sig = provider.CreateSignature(HashAlgorithmName.SHA256);
+        Signature sig = provider.CreateSignature();
 
         await Verify(sig.SignedCms)
-              .UseFileName($"{nameof(AddSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
+              .UseFileName($"{nameof(CreateSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
               .UseDirectory("Verify")
               .DisableDiff()
               .IgnoreMember("RawData"); //We don't want to save these to verify files, but the SigningTime extension also makes it change
@@ -136,11 +134,16 @@ public class CodeSignTests
         // Assert.True(provider.HasValidSignature(sig.SignedCms));
     }
 
+    [Theory, MemberData(nameof(GetFiles))]
+    private void CreateSignature_FileWithSignatureShouldThrow(TestCase tc)
+    {
+        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
+        Assert.Throws<InvalidOperationException>(() => provider.CreateSignature());
+    }
+
     private static TheoryData<TestCase> GetTestVectors()
     {
-        string p = Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx"));
-        X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(p, "password");
-
+        X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx")), "password");
         TheoryData<TestCase> data = new TheoryData<TestCase>();
         data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellFormatHandler(cert, null, true), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
         return data;
@@ -151,10 +154,15 @@ public class CodeSignTests
         string p = Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx"));
         X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(p, "password");
 
+        RequirementSet req = RequirementSet.CreateDefault("macho_unsigned.dat", cert);
+
+        if (cert.IsAppleDeveloperCertificate())
+            req = RequirementSet.CreateAppleDevDefault("macho_unsigned.dat", cert);
+
         return
         [
             //MachO
-            TestCase.Create(MachObjectFormatHandler.Create(cert, null, "macho_unsigned.dat"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
+            TestCase.Create(new MachObjectFormatHandler(cert, null, "macho_unsigned.dat", HashAlgorithmName.SHA256, req, null), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
 
             //PowerShell
             TestCase.Create(new PowerShellModuleFormatHandler(cert, null, true), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
@@ -197,7 +205,7 @@ public class CodeSignTests
 
     private static void PatchMachO(Span<byte> data)
     {
-        MachObject macho = new MachObject(data);
+        MachOContext macho = MachOContext.Create(data);
         int segCmdOffset = macho.LinkEdit.Offset;
 
         if (macho.Is64Bit)
