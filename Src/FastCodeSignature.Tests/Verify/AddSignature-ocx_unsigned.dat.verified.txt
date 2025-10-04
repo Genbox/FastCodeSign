@@ -2,7 +2,8 @@
   Version: 3,
   ContentInfo: {
     ContentType: {
-      Value: 1.3.6.1.4.1.311.2.1.4
+      Value: 1.3.6.1.4.1.311.2.1.4,
+      FriendlyName: SPC_INDIRECT_DATA_OBJID
     },
     Content: ME0wGAYKKwYBBAGCNwIBDzAKAwIAAKAEogKAADAxMA0GCWCGSAFlAwQCAQUABCDEtl4RThSoc6rqqeDcTCaWUnDUQxTUkQb/JPgsUxsCkg==
   },
