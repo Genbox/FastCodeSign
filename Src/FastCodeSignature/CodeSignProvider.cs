@@ -51,7 +51,7 @@ public sealed class CodeSignProvider : IDisposable
         return _handler.ComputeHash(data, hashAlgorithm ?? HashAlgorithmName.SHA256);
     }
 
-    public ReadOnlySpan<byte> RemoveSignature(bool truncate)
+    public Span<byte> RemoveSignature(bool truncate)
     {
         Span<byte> data = _allocation.GetSpan();
         long delta = _handler.RemoveSignature(data);

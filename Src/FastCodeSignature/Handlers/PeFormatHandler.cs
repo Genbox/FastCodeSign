@@ -139,8 +139,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         //Remove the signature by zeroing the areas where the signature resides
         ZeroSignature(data, context);
 
-        //Left-shifting any trailing data that could be after the signature
-        return LeftShiftData(data, context.SecurityVirtualAddress, context.SecuritySize);
+        return (int)context.SecuritySize;
     }
 
     public void WriteSignature(IAllocation allocation, Signature signature)
@@ -245,6 +244,8 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
     {
         //Zero the signature
         data.Slice((int)context.SecurityVirtualAddress, (int)context.SecuritySize).Clear();
+
+        //NOTE: Could zero the checksum or recalculate it. However, .NET saves the compilation timestamp there, so we wouldn't get equality there anyway.
 
         //Zero the security directory entry (8 bytes)
         WriteInt64LittleEndian(data[(int)context.SecurityDirOffset..], 0);
