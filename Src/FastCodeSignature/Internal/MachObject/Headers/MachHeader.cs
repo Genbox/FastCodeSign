@@ -10,8 +10,8 @@ internal readonly ref struct MachHeader
     internal const byte StructSize32 = 24;
     internal const byte StructSize64 = 28;
 
-    internal uint NumberOfCommands { get; private init; }
-    internal uint SizeOfCommands { get; private init; }
+    internal required uint NumberOfCommands { get; init; }
+    internal required uint SizeOfCommands { get; init; }
 
     internal static MachHeader Read(ReadOnlySpan<byte> data, bool le) => le ? ReadLe(data) : ReadBe(data);
 

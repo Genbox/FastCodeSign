@@ -6,10 +6,10 @@ namespace Genbox.FastCodeSignature.Internal.MachObject.Headers;
 [StructLayout(LayoutKind.Auto)]
 internal readonly record struct Segment
 {
-    internal int Offset { get; private init; }
-    internal byte[] Name { get; private init; }
-    internal ulong FileOffset { get; private init; }
-    internal ulong FileSize { get; private init; }
+    internal required int Offset { get; init; }
+    internal required byte[] Name { get; init; }
+    internal required ulong FileOffset { get; init; }
+    internal required ulong FileSize { get; init; }
 
     internal static Segment Read32(ReadOnlySpan<byte> data, int offset, bool le) => le ? ReadLe32(data, offset) : ReadBe32(data, offset);
 

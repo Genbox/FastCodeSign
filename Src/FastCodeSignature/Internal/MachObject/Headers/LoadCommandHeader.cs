@@ -9,8 +9,8 @@ internal readonly record struct LoadCommandHeader
 {
     internal const byte StructSize = 8;
 
-    internal LoadCommandType Type { get; private init; }
-    internal uint Size { get; private init; }
+    internal required LoadCommandType Type { get; init; }
+    internal required uint Size { get; init; }
 
     internal static LoadCommandHeader Read(ReadOnlySpan<byte> data, bool le) => le ? ReadLe(data) : ReadBe(data);
 

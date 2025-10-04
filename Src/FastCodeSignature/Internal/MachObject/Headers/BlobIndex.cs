@@ -11,8 +11,8 @@ internal readonly struct BlobIndex
 {
     internal const byte StructSize = 8;
 
-    internal CsSlot Type { get; private init; }
-    internal uint Offset { get; private init; }
+    internal required CsSlot Type { get; init; }
+    internal required uint Offset { get; init; }
 
     // Always big endian
     internal static BlobIndex Read(ReadOnlySpan<byte> data)

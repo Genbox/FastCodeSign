@@ -10,9 +10,9 @@ internal readonly struct SuperBlobHeader
 {
     internal const byte StructSize = 12;
 
-    internal CsMagic Magic { get; private init; }
-    internal uint Length { get; private init; }
-    internal uint Count { get; private init; }
+    internal required CsMagic Magic { get; init; }
+    internal required uint Length { get; init; }
+    internal required uint Count { get; init; }
 
     // Always big endian
     internal static SuperBlobHeader Read(ReadOnlySpan<byte> data)

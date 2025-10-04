@@ -5,13 +5,13 @@ namespace Genbox.FastCodeSignature.Internal.WinPe.Headers;
 
 [DebuggerDisplay("Length: {Length}, Revision: {Revision}, CertificateType: {CertificateType}")]
 [StructLayout(LayoutKind.Sequential)]
-internal struct WinCertificate
+internal readonly struct WinCertificate
 {
     internal const byte StructSize = 8;
 
-    internal uint Length { get; init; }
-    internal ushort Revision { get; init; }
-    internal ushort CertificateType { get; init; }
+    internal required uint Length { get; init; }
+    internal required ushort Revision { get; init; }
+    internal required ushort CertificateType { get; init; }
 
     internal static WinCertificate Read(ReadOnlySpan<byte> data)
     {

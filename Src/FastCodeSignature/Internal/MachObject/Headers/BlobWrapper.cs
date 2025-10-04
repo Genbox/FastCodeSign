@@ -11,8 +11,8 @@ internal readonly struct BlobWrapper
 {
     internal const byte StructSize = 8;
 
-    internal CsMagic Type { get; private init; }
-    internal uint Length { get; private init; }
+    internal required CsMagic Type { get; init; }
+    internal required uint Length { get; init; }
 
     // Always big endian
     internal static BlobWrapper Read(ReadOnlySpan<byte> data)
