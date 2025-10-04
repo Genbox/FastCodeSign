@@ -259,7 +259,6 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         Debug.Assert(csEnd == leEnd, "The code directory end must match the link edit end");
         Debug.Assert((ulong)data.Length == leEnd, "The link edit section must end at the end of the file");
 
-        // return SuperBlob size to support file truncation
         return obj.CodeSignature.DataSize;
     }
 

@@ -1,9 +1,11 @@
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Handlers;
+using Genbox.FastCodeSignature.Internal.MachObject;
 using Genbox.FastCodeSignature.Tests.Code;
 using JetBrains.Annotations;
 using Xunit.Sdk;
@@ -85,6 +87,7 @@ public class CodeSignTests
         Span<byte> modified = provider.RemoveSignature(true);
         Assert.False(modified.IsEmpty);
 
+        File.WriteAllBytes("c:\\Temp\\Removed.dat", modified);
         byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
 
         if (tc.EqualityPatch != null)
@@ -94,7 +97,8 @@ public class CodeSignTests
         }
 
         //Make sure we don't have a signature
-        Assert.Equal(modified, unsigned.AsSpan());
+        //Only compare from start up to the unsigned size since Mach Objects have padding we don't remove
+        Assert.Equal(modified[..unsigned.Length], unsigned.AsSpan());
     }
 
     [Theory, MemberData(nameof(GetFiles))]
@@ -151,7 +155,7 @@ public class CodeSignTests
         return
         [
             //MachO
-            TestCase.Create(MachObjectFormatHandler.Create(cert, null, "macho_unsigned.dat"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6"),
+            TestCase.Create(MachObjectFormatHandler.Create(cert, null, "macho_unsigned.dat"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
 
             //PowerShell
             TestCase.Create(new PowerShellModuleFormatHandler(cert, null, true), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
@@ -190,6 +194,23 @@ public class CodeSignTests
 
         // 4) Zero out CheckSum (uint32, little-endian)
         WriteUInt32LittleEndian(data.Slice(checksumOffset, 4), 0);
+    }
+
+    private static void PatchMachO(Span<byte> data)
+    {
+        MachObject macho = new MachObject(data);
+        int segCmdOffset = macho.LinkEdit.Offset;
+
+        if (macho.Is64Bit)
+        {
+            WriteUInt64LittleEndian(data[(segCmdOffset + 32)..], 0UL); // vmsize
+            WriteUInt64LittleEndian(data[(segCmdOffset + 48)..], 0UL); // filesize
+        }
+        else
+        {
+            WriteUInt32LittleEndian(data[(segCmdOffset + 28)..], 0U); // vmsize
+            WriteUInt32LittleEndian(data[(segCmdOffset + 36)..], 0U); // filesize
+        }
     }
 
     private sealed class TestCase : IXunitSerializable
