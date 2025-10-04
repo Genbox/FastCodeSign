@@ -96,7 +96,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         if (context.HeaderIdx == -1 || context.FooterIdx == -1) // Not signed or invalid signature
             return 0;
 
-        return context.HeaderIdx;
+        return context.FooterIdx - context.HeaderIdx;
     }
 
     public void WriteSignature(IAllocation allocation, Signature signature)
