@@ -171,16 +171,10 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, hashAlgorithm);
 
         SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
-        SpcStatementType st = new SpcStatementType([new Oid("1.3.6.1.4.1.311.2.1.21", "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
+        SpcStatementType st = new SpcStatementType([new Oid(OidConstants.MsKeyPurpose, "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
 
-        AsnEncodedData[] attrs =
-        [
-            new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()),
-            new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode())
-        ];
-
-        foreach (AsnEncodedData attr in attrs)
-            signer.SignedAttributes.Add(attr);
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
 
         SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
             new SpcSipInfo(65536, SpcSipInfo.SecurityProviderGuid).Encode(),

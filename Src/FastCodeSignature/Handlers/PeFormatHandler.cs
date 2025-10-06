@@ -166,23 +166,19 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         {
             DigestAlgorithm = hashAlgorithm.ToOid()
         };
+        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, hashAlgorithm);
 
-        SpcSpOpusInfo oi = new SpcSpOpusInfo(new SpcString(Unicode: ""), new SpcLink(Url: ""));
+        SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
         SpcStatementType st = new SpcStatementType([new Oid(OidConstants.MsKeyPurpose, "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
 
-        AsnEncodedData[] attributesToSign =
-        [
-            new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()),
-            new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode())
-        ];
-
-        foreach (AsnEncodedData toSign in attributesToSign)
-            signer.SignedAttributes.Add(toSign);
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
 
         SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
             new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),
             SpcPeImageData.ObjectIdentifier,
-            signer.DigestAlgorithm, ((IFormatHandler)this).ComputeHash(context, data, OidHelper.OidToHashAlgorithm(signer.DigestAlgorithm.Value!)),
+            signer.DigestAlgorithm,
+            hash,
             null);
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
