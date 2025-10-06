@@ -19,6 +19,16 @@ namespace Genbox.FastCodeSignature.Tests;
 public class CodeSignTests
 {
     [Theory, MemberData(nameof(GetFiles))]
+    private void HasSignature(TestCase tc)
+    {
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
+        Assert.True(provider.HasSignature());
+
+        CodeSignProvider provider2 = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
+        Assert.False(provider2.HasSignature());
+    }
+
+    [Theory, MemberData(nameof(GetFiles))]
     private async Task GetSignature(TestCase tc)
     {
         CodeSignProvider provider = tc.Factory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken)));
@@ -75,6 +85,23 @@ public class CodeSignTests
         {
             Assert.Fail($"There was a test vector type that was not handled: {tc.SignedFile}");
         }
+    }
+
+    [Theory, MemberData(nameof(GetFiles))]
+    private void HasValidSignature(TestCase tc)
+    {
+        byte[] signed = File.ReadAllBytes(tc.SignedFile);
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(signed));
+
+        SignedCms? sig = provider.GetSignature();
+        Assert.NotNull(sig);
+
+        Assert.True(provider.HasValidSignature(sig));
+
+        //Modify the file to break the signature
+        signed[10] = 255;
+
+        Assert.False(provider.HasValidSignature(sig));
     }
 
     [Theory, MemberData(nameof(GetFiles))]
@@ -143,6 +170,29 @@ public class CodeSignTests
     {
         CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
         Assert.Throws<InvalidOperationException>(() => provider.CreateSignature());
+    }
+
+    [Theory, MemberData(nameof(GetFiles))]
+    private void WriteSignature(TestCase tc)
+    {
+        byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
+        MemoryAllocation allocation = new MemoryAllocation(unsigned);
+        CodeSignProvider provider = tc.Factory(allocation);
+        Signature sig = provider.CreateSignature();
+        provider.WriteSignature(sig);
+
+        //For now, we test if the WriteSignature call changed the buffer's length.
+        //We should test if signed.Length == newSigned.Length, but due to CMS differences, it would fail
+        Span<byte> newSigned = allocation.GetSpan();
+        Assert.NotEqual(unsigned.Length, newSigned.Length);
+    }
+
+    [Theory, MemberData(nameof(GetFiles))]
+    private void WriteSignature_SignedFileShouldThrow(TestCase tc)
+    {
+        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.SignedFile));
+        CodeSignProvider provider = tc.Factory(allocation);
+        Assert.Throws<InvalidOperationException>(() => provider.WriteSignature(provider.CreateSignature()));
     }
 
     private static TheoryData<TestCase> GetTestVectors()
