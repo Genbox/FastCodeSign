@@ -1,9 +1,7 @@
 #nullable enable
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Genbox.FastCodeSignature.Internal.Native.Enums;
 using Genbox.FastCodeSignature.Internal.Native.Structs;
-using Genbox.FastCodeSignature.Internal.Native.Win32;
 using Genbox.FastCodeSignature.Native.Authenticode;
 using Microsoft.Win32.SafeHandles;
 
