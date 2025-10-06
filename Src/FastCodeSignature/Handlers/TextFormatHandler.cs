@@ -35,7 +35,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         ReadOnlySpan<byte> span = data[(obj.HeaderIdx + obj.HeaderSig.Length)..(obj.FooterIdx - obj.FooterSig.Length)];
 
         //The signature is always within the ASCII range, so if we have a UTF-16 encoding, let's convert the span to UTF-8.
-        if (obj.Encoding.Equals(Encoding.Unicode))
+        if (obj.Encoding.CodePage == 1200)
         {
             //There is no byte -> byte conversion in .NET, so we need to do it ourselves.
             Span<byte> utf8Buffer = new byte[span.Length / 2];
@@ -60,8 +60,8 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
             data = data[..obj.HeaderIdx];
 
         //If the input data is UTF8, we need to convert it to UTF16.
-        if (obj.Encoding.Equals(Encoding.UTF8))
-            data = Encoding.Unicode.GetBytes(Encoding.UTF8.GetString(data)); //TODO: This is not the most efficient way to do this.
+        if (obj.Encoding.CodePage == 65001) // input UTF-8, hashing over UTF-16
+            data = Encoding.Convert(Encoding.UTF8, Encoding.Unicode, data.ToArray());
 
         using IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithm);
         hasher.AppendData(data);
@@ -95,8 +95,8 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         //In case the buffer was larger than needed
         base64 = base64[..written];
 
-        if (obj.Encoding.Equals(Encoding.Unicode))
-            base64 = obj.Encoding.GetBytes(Encoding.UTF8.GetString(base64)); //TODO: This is not the most efficient way to do this.
+        if (obj.Encoding.CodePage == 1200) // UTF-16LE
+            base64 = Encoding.Convert(Encoding.UTF8, Encoding.Unicode, base64.ToArray());
 
         int idx;
 
