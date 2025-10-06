@@ -17,9 +17,4 @@ internal sealed class MemoryAllocation(Memory<byte> data) : IAllocation
         _data[..copyLen].CopyTo(newArr);
         _data = newArr;
     }
-
-    public void Dispose()
-    {
-        // do nothing
-    }
 }

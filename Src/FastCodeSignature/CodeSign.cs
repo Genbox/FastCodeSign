@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Internal;
 
@@ -5,23 +6,27 @@ namespace Genbox.FastCodeSignature;
 
 public static class CodeSign
 {
-    public static CodeSignProvider CreateProvider(string file, IFormatHandler handler)
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Responsibility is delegated to CodeSignFileProvider")]
+    public static CodeSignFileProvider CreateProviderFromFile(string filename, IFormatHandler handler)
     {
-        MmfAllocation allocation = new MmfAllocation(file);
+        FileAllocation allocation = new FileAllocation(filename);
         Span<byte> span = allocation.GetSpan();
 
-        if (!handler.CanHandle(span, GetExt(file)))
+        if (!handler.CanHandle(span, GetExt(filename)))
             throw new InvalidOperationException("Handler cannot handle the file.");
 
-        return new CodeSignProvider(handler, allocation);
+        return new CodeSignFileProvider(handler, allocation);
     }
 
-    public static CodeSignProvider CreateProvider(Memory<byte> data, IFormatHandler handler)
+    public static CodeSignProvider CreateProvider(IAllocation allocation, IFormatHandler handler, string? filename)
     {
-        MemoryAllocation allocation = new MemoryAllocation(data);
         Span<byte> span = allocation.GetSpan();
 
-        if (!handler.CanHandle(span, null))
+        string? ext = null;
+        if (filename != null)
+            ext = GetExt(filename);
+
+        if (!handler.CanHandle(span, ext))
             throw new InvalidOperationException("Handler cannot handle the file.");
 
         return new CodeSignProvider(handler, allocation);

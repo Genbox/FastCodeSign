@@ -1,15 +1,12 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Text;
 using Genbox.FastCodeSignature.Abstracts;
 
 namespace Genbox.FastCodeSignature;
 
-public sealed class CodeSignProvider : IDisposable
+public class CodeSignProvider
 {
-    private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(false);
     private readonly IAllocation _allocation;
     private readonly IFormatHandler _handler;
 
@@ -18,9 +15,6 @@ public sealed class CodeSignProvider : IDisposable
         _handler = handler;
         _allocation = allocation;
     }
-
-    [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP007:Don\'t dispose injected", Justification = "This is the only reference to the allocation that is given to the user")]
-    public void Dispose() => _allocation.Dispose();
 
     public bool HasSignature()
     {
@@ -68,23 +62,19 @@ public sealed class CodeSignProvider : IDisposable
         return _handler.ComputeHash(context, data, hashAlgorithm ?? HashAlgorithmName.SHA256);
     }
 
-    public bool TryRemoveSignature(bool truncate, out Span<byte> modified)
+    public bool TryRemoveSignature(bool truncate)
     {
         Span<byte> data = _allocation.GetSpan();
         IContext context = _handler.GetContext(data);
 
         if (!context.IsSigned)
-        {
-            modified = data;
             return false;
-        }
 
         long delta = _handler.RemoveSignature(context, data);
 
         if (truncate)
             _allocation.SetLength((uint)(data.Length - delta));
 
-        modified = _allocation.GetSpan();
         return true;
     }
 
@@ -101,7 +91,7 @@ public sealed class CodeSignProvider : IDisposable
         return _handler.CreateSignature(context, data, hashAlgorithm.Value);
     }
 
-    public Span<byte> WriteSignature(Signature signature)
+    public void WriteSignature(Signature signature)
     {
         Span<byte> data = _allocation.GetSpan();
         IContext context = _handler.GetContext(data);
@@ -110,12 +100,5 @@ public sealed class CodeSignProvider : IDisposable
             throw new InvalidOperationException("The file already contains a signature.");
 
         _handler.WriteSignature(context, _allocation, signature);
-        return _allocation.GetSpan();
-    }
-
-    public void WriteSignatureToPemFile(string output)
-    {
-        SignedCms cms = GetSignature();
-        File.WriteAllText(output, PemEncoding.WriteString("PKCS7", cms.Encode()), Utf8Encoding);
     }
 }

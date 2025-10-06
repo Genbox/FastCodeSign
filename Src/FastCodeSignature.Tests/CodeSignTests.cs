@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Handlers;
+using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.MachObject;
 using Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 using Genbox.FastCodeSignature.Tests.Code;
@@ -20,7 +21,7 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private async Task GetSignature(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken)));
         SignedCms? info = provider.GetSignature();
         Assert.NotNull(info);
 
@@ -34,14 +35,14 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private void GetSignature_UnsignedFileShouldReturnNull(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.UnsignedFile));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
         Assert.Null(provider.GetSignature());
     }
 
     [Theory, MemberData(nameof(GetTestVectors))]
     private void GetSignature_PowerShellTestVectors(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
 
         //Normal files should all pass. They are valid files (different encoding, newlines, etc.) with signatures produced by Windows.
         if (tc.SignedFile.Contains("_normal_", StringComparison.Ordinal))
@@ -79,15 +80,18 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private void TryRemoveSignature(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
+        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.SignedFile));
+        CodeSignProvider provider = tc.Factory(allocation);
 
         //Check that we have a signature - otherwise the test will be incorrect
         Assert.NotNull(provider.GetSignature());
 
         //Remove the signature
-        Assert.True(provider.TryRemoveSignature(true, out Span<byte> modified));
+        Assert.True(provider.TryRemoveSignature(true));
 
         byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
+
+        Span<byte> modified = allocation.GetSpan();
 
         if (tc.EqualityPatch != null)
         {
@@ -103,8 +107,8 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private void TryRemoveSignature_FileWithoutSignatureShouldReturnFalse(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.UnsignedFile));
-        Assert.False(provider.TryRemoveSignature(true, out _));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
+        Assert.False(provider.TryRemoveSignature(true));
     }
 
     [Theory, MemberData(nameof(GetFiles))]
@@ -114,7 +118,7 @@ public class CodeSignTests
         if (tc.SignedFile.Contains("macho_unsigned.dat", StringComparison.Ordinal))
             return;
 
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
         string hash = Convert.ToHexString(provider.ComputeHash()).ToLowerInvariant();
         Assert.Equal(tc.Hash, hash);
     }
@@ -122,7 +126,7 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private async Task CreateSignature(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken)));
         Signature sig = provider.CreateSignature();
 
         await Verify(sig.SignedCms)
@@ -137,7 +141,7 @@ public class CodeSignTests
     [Theory, MemberData(nameof(GetFiles))]
     private void CreateSignature_FileWithSignatureShouldThrow(TestCase tc)
     {
-        using CodeSignProvider provider = tc.Factory(File.ReadAllBytes(tc.SignedFile));
+        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
         Assert.Throws<InvalidOperationException>(() => provider.CreateSignature());
     }
 
@@ -145,7 +149,7 @@ public class CodeSignTests
     {
         X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx")), "password");
         TheoryData<TestCase> data = new TheoryData<TestCase>();
-        data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellFormatHandler(cert, null, true), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
+        data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
         return data;
     }
 
@@ -169,7 +173,7 @@ public class CodeSignTests
             TestCase.Create(new PowerShellManifestFormatHandler(cert, null, true), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "5400535fab6f06957a2901fd4d20997f232aec665103111c3561d87a36a9aa89"),
             TestCase.Create(new PowerShellConsoleFormatHandler(cert, null), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
             TestCase.Create(new PowerShellXmlFormatHandler(cert, null), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
-            TestCase.Create(new PowerShellFormatHandler(cert, null, true), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
+            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
             TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(cert, null), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "8273112b41bafcde2dcaaafc9bd092ab4d27d0af26af495ab935796f45b0ae43"),
 
             //WinPe
@@ -227,7 +231,7 @@ public class CodeSignTests
         [UsedImplicitly]
         public TestCase() {}
 
-        private TestCase(Func<Memory<byte>, CodeSignProvider> factory, Type handlerType, string signedFile, string unsignedFile, string hash, Action<Span<byte>>? equalityPatch)
+        private TestCase(Func<IAllocation, CodeSignProvider> factory, Type handlerType, string signedFile, string unsignedFile, string hash, Action<Span<byte>>? equalityPatch)
         {
             Factory = factory;
             SignedFile = signedFile;
@@ -239,14 +243,14 @@ public class CodeSignTests
         }
 
         public Action<Span<byte>>? EqualityPatch { get; }
-        public Func<Memory<byte>, CodeSignProvider> Factory { get; } = null!;
+        public Func<IAllocation, CodeSignProvider> Factory { get; } = null!;
         public string SignedFile { get; } = null!;
         public string UnsignedFile { get; } = null!;
         public string Hash { get; } = null!;
 
         public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, Action<Span<byte>>? equalityPatch = null)
         {
-            return new TestCase(x => CodeSign.CreateProvider(x, handler), handler.GetType(), Path.Combine(Constants.FilesDir, signed), Path.Combine(Constants.FilesDir, unsigned), hash, equalityPatch);
+            return new TestCase(x => CodeSign.CreateProvider(x, handler, null), handler.GetType(), Path.Combine(Constants.FilesDir, signed), Path.Combine(Constants.FilesDir, unsigned), hash, equalityPatch);
         }
 
         public void Deserialize(IXunitSerializationInfo info) => _id = info.GetValue<string>(nameof(_id))!;

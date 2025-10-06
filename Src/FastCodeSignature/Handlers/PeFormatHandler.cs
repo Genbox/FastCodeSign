@@ -16,7 +16,7 @@ namespace Genbox.FastCodeSignature.Handlers;
 
 public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey) : IFormatHandler
 {
-    public bool CanHandle(ReadOnlySpan<byte> data, string? ext)
+    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
     {
         // The smallest valid PE file on Windows 7+ is:
         // x86: 252 bytes
@@ -43,7 +43,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return true;
     }
 
-    public IContext GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
+    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
 
     public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
@@ -67,7 +67,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return data.Slice((int)certDataOffset, (int)certDataLength);
     }
 
-    public byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    byte[] IFormatHandler.ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         WinPeContext obj = (WinPeContext)context;
 
@@ -116,7 +116,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return hasher.GetHashAndReset();
     }
 
-    public long RemoveSignature(IContext context, Span<byte> data)
+    long IFormatHandler.RemoveSignature(IContext context, Span<byte> data)
     {
         WinPeContext obj = (WinPeContext)context;
 
@@ -126,7 +126,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return (int)obj.SecuritySize;
     }
 
-    public void WriteSignature(IContext context, IAllocation allocation, Signature signature)
+    void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
         Span<byte> data = allocation.GetSpan();
         byte[] encodedCms = signature.SignedCms.Encode();
@@ -160,7 +160,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
     }
 
-    public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -182,8 +182,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
             new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),
             SpcPeImageData.ObjectIdentifier,
-            signer.DigestAlgorithm,
-            ComputeHash(context, data, OidHelper.OidToHashAlgorithm(signer.DigestAlgorithm.Value!)),
+            signer.DigestAlgorithm, ((IFormatHandler)this).ComputeHash(context, data, OidHelper.OidToHashAlgorithm(signer.DigestAlgorithm.Value!)),
             null);
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
@@ -192,7 +191,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         return new Signature(signed, null);
     }
 
-    public bool ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
     {
         SpcIndirectDataContent indirect = SpcIndirectDataContent.Decode(signedCms.ContentInfo.Content);
         digest = indirect.Digest;

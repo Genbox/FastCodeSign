@@ -31,17 +31,17 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId) : IFormatHandler
+public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    public bool CanHandle(ReadOnlySpan<byte> data, string? ext) => data.Length >= MachHeader.StructSize32 + LoadCommandHeader.StructSize;
+    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext) => data.Length >= MachHeader.StructSize32 + LoadCommandHeader.StructSize;
 
-    public IContext GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
+    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
 
-    public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
+    ReadOnlySpan<byte> IFormatHandler.ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
         MachOContext obj = (MachOContext)context;
 
@@ -73,7 +73,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return ReadOnlySpan<byte>.Empty; // We did not manage to find the CMS blob
     }
 
-    public byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    byte[] IFormatHandler.ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         MachOContext obj = (MachOContext)context;
 
@@ -188,7 +188,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return cdHasher.GetHashAndReset();
     }
 
-    public long RemoveSignature(IContext context, Span<byte> data)
+    long IFormatHandler.RemoveSignature(IContext context, Span<byte> data)
     {
         MachOContext obj = (MachOContext)context;
 
@@ -230,7 +230,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         return obj.CodeSignature.DataSize;
     }
 
-    public void WriteSignature(IContext context, IAllocation allocation, Signature signature)
+    void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
         MachOContext obj = (MachOContext)context;
 
@@ -288,7 +288,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         }
     }
 
-    public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -412,7 +412,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         }
     }
 
-    public bool ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
     {
         digest = null;
         algo = default;

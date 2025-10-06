@@ -13,9 +13,10 @@ using Genbox.FastCodeSignature.Internal.WinPe.Spc;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
+[SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")]
 public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding fallbackEncoding, string extension) : IFormatHandler
 {
-    public bool CanHandle(ReadOnlySpan<byte> data, string? ext)
+    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
     {
         if (ext == null)
             return true;
@@ -23,7 +24,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return ext == extension;
     }
 
-    public IContext GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding);
+    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding);
 
     public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
@@ -49,7 +50,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return DecodeUtf8Base64(span);
     }
 
-    public byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    byte[] IFormatHandler.ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         TextContext obj = (TextContext)context;
 
@@ -66,13 +67,13 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return hasher.GetHashAndReset();
     }
 
-    public long RemoveSignature(IContext context, Span<byte> data)
+    long IFormatHandler.RemoveSignature(IContext context, Span<byte> data)
     {
         TextContext obj = (TextContext)context;
         return obj.FooterIdx - obj.HeaderIdx;
     }
 
-    public void WriteSignature(IContext context, IAllocation allocation, Signature signature)
+    void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
         Span<byte> data = allocation.GetSpan();
 
@@ -152,7 +153,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         obj.FooterSig.CopyTo(data[idx..]);
     }
 
-    public bool ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
     {
         SpcIndirectDataContent indirect = SpcIndirectDataContent.Decode(signedCms.ContentInfo.Content);
         digest = indirect.Digest;
@@ -160,14 +161,14 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return true;
     }
 
-    public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
             DigestAlgorithm = hashAlgorithm.ToOid()
         };
 
-        byte[] hash = ComputeHash(context, data, hashAlgorithm);
+        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, hashAlgorithm);
 
         SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
         SpcStatementType st = new SpcStatementType([new Oid("1.3.6.1.4.1.311.2.1.21", "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);

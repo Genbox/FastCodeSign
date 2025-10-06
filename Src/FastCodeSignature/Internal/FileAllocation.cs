@@ -6,14 +6,14 @@ namespace Genbox.FastCodeSignature.Internal;
 
 [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP023:Don\'t use reference types in finalizer context")]
 [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP003:Dispose previous before re-assigning")]
-internal sealed class MmfAllocation : IAllocation
+public sealed class FileAllocation : IAllocation, IDisposable
 {
     private readonly FileStream _fileStream;
     private MemoryMappedFile _mmf;
     private unsafe byte* _ptr;
     private MemoryMappedViewAccessor _view;
 
-    public MmfAllocation(string file)
+    public FileAllocation(string file)
     {
         _fileStream = new FileStream(file, FileMode.Open, FileAccess.ReadWrite);
         CreateProvider();
