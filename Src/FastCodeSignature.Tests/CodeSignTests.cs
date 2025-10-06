@@ -161,8 +161,6 @@ public class CodeSignTests
               .UseDirectory("Verify")
               .DisableDiff()
               .IgnoreMember("RawData"); //We don't want to save these to verify files, but the SigningTime extension also makes it change
-
-        // Assert.True(provider.HasValidSignature(sig.SignedCms));
     }
 
     [Theory, MemberData(nameof(GetFiles))]

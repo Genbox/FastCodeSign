@@ -1,19 +1,42 @@
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Internal;
+using Genbox.FastCodeSignature.Internal.Helpers;
 
 namespace Genbox.FastCodeSignature.Extensions;
 
 public static class SignerInfoExtensions
 {
     /// <summary>
-    /// Countersign a SignerInfo using PKCS#9
+    /// Returns a list of RFC3161 counter-signatures
     /// </summary>
-    /// <param name="signerInfo">The signer info</param>
-    public static void Pkcs9CounterSign(this SignerInfo signerInfo)
+    /// <returns>A list of counter-signatures</returns>
+    /// <exception cref="InvalidOperationException">If the file contains invalid counter-signatures</exception>
+    public static IEnumerable<CounterSignature> GetCounterSignatures(this SignerInfo signerInfo)
     {
-        signerInfo.SignedAttributes.Add(new Pkcs9SigningTime());
+        // RFC3161 (Time-Stamp Protocol)
+        foreach (CryptographicAttributeObject attr in signerInfo.UnsignedAttributes)
+        {
+            if (attr.Oid.Value != OidConstants.MsCounterSign)
+                continue;
+
+            if (!Rfc3161TimestampToken.TryDecode(attr.Values[0].RawData, out Rfc3161TimestampToken? token, out _))
+                throw new InvalidOperationException("The counter signature does not contain a valid token.");
+
+            SignedCms cms = token.AsSignedCms();
+
+            if (cms.SignerInfos.Count == 0)
+                throw new InvalidOperationException("The counter signature does not contain any signer infos.");
+
+            X509Certificate2? cert = cms.SignerInfos[0].Certificate;
+            if (cert == null)
+                throw new InvalidOperationException("The counter signature does not contain a certificate.");
+
+            Rfc3161TimestampTokenInfo info = token.TokenInfo;
+            yield return new CounterSignature(cert, OidHelper.OidToHashAlgorithm(info.HashAlgorithmId.Value), info.Timestamp.UtcDateTime);
+        }
     }
 
     /// <summary>
