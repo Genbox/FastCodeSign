@@ -29,7 +29,10 @@ internal readonly struct WinCertificate
     internal void Write(Span<byte> data)
     {
         if (BitConverter.IsLittleEndian)
+        {
             MemoryMarshal.Write(data, this);
+            return;
+        }
 
         WriteUInt32LittleEndian(data, Length);
         WriteUInt16LittleEndian(data[4..], Revision);

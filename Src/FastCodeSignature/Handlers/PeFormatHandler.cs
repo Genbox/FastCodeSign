@@ -139,25 +139,25 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         sigLen += Pad(sigLen, 8);
 
         //Set our allocation to the correct size
-        allocation.SetLength(datLen + sigLen + 8); //8 = WIN_CERTIFICATE header
+        allocation.SetLength(datLen + WinCertificate.StructSize + sigLen);
         data = allocation.GetSpan();
 
         //Create a span to contain the WIN_CERTIFICATE structure
         WinCertificate winCert = new WinCertificate
         {
-            Length = sigLen + 8,
+            Length = WinCertificate.StructSize + sigLen,
             Revision = 0x0200, // WIN_CERT_REVISION_2_0
             CertificateType = 0x0002 // WIN_CERT_TYPE_PKCS_SIGNED_DATA
         };
 
         Span<byte> span = data[(int)datLen..];
         winCert.Write(span);
-        encodedCms.CopyTo(span[WinCertificate.StructSize..]); // bCertificate
+        encodedCms.CopyTo(span[WinCertificate.StructSize..(int)(WinCertificate.StructSize + sigLen)]);
 
         // Update the security directory entry
         WinPeContext obj = (WinPeContext)context;
         WriteUInt32LittleEndian(data[(int)obj.SecurityDirOffset..], datLen);
-        WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], sigLen + 8); //8 = WIN_CERTIFICATE header
+        WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
     }
 
     public Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)

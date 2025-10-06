@@ -302,7 +302,7 @@ public class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm?
         if (requirements != null)
             blobs.Add(CsSlot.Requirements, requirements.ToArray());
 
-        int maxSlot = blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
+        int maxSlot = blobs.Count == 0 ? 0 : blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
 
         MachOContext obj = (MachOContext)context;
         ulong linkEditEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize;
