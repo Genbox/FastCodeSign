@@ -288,7 +288,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         }
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -378,6 +378,8 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
                      </plist>
 
                      """.Replace("    ", "\t", StringComparison.Ordinal).ReplaceLineEndings("\n")))));
+
+        configureSigner?.Invoke(signer);
 
         ContentInfo contentInfo = new ContentInfo(cdBlob);
         SignedCms signed = new SignedCms(contentInfo, true);

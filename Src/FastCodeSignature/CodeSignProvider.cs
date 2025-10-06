@@ -78,7 +78,7 @@ public class CodeSignProvider
         return true;
     }
 
-    public Signature CreateSignature(HashAlgorithmName? hashAlgorithm = null)
+    public Signature CreateSignature(HashAlgorithmName? hashAlgorithm = null, Action<CmsSigner>? configureSigner = null)
     {
         hashAlgorithm ??= HashAlgorithmName.SHA256;
 
@@ -88,7 +88,7 @@ public class CodeSignProvider
         if (context.IsSigned)
             throw new InvalidOperationException("The file already contains a signature.");
 
-        return _handler.CreateSignature(context, data, hashAlgorithm.Value);
+        return _handler.CreateSignature(context, data, hashAlgorithm.Value, configureSigner);
     }
 
     public void WriteSignature(Signature signature)

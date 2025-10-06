@@ -160,12 +160,13 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
             DigestAlgorithm = hashAlgorithm.ToOid()
         };
+
         byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, hashAlgorithm);
 
         SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
@@ -173,6 +174,8 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
 
         signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
         signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
+
+        configureSigner?.Invoke(signer);
 
         SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
             new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),

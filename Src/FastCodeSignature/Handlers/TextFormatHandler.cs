@@ -6,6 +6,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSignature.Abstracts;
+using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.Helpers;
 using Genbox.FastCodeSignature.Internal.TextFile;
@@ -161,7 +162,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return true;
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -175,6 +176,8 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
 
         signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
         signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
+
+        configureSigner?.Invoke(signer);
 
         SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
             new SpcSipInfo(65536, SpcSipInfo.SecurityProviderGuid).Encode(),

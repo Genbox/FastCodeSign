@@ -31,8 +31,9 @@ public interface IFormatHandler
     /// <param name="context">The context</param>
     /// <param name="data">The data</param>
     /// <param name="hashAlgorithm">The hash algorithm to use when creating the signature</param>
+    /// <param name="configureSigner">An action to modify the CmsSigner object before signing</param>
     /// <returns>The ContentInfo object to sign in the CMS structure</returns>
-    Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm);
+    Signature CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner);
 
     /// <summary>Extracts the hash from a signed CMS structure. File formats usually save it in an attribute or as part of the ContentInfo.</summary>
     /// <param name="signedCms">The CMS structure</param>
