@@ -35,6 +35,6 @@ public static class CodeSign
     private static string? GetExt(string fileName)
     {
         int idx = fileName.LastIndexOf('.');
-        return idx == -1 ? null : fileName[(idx + 1)..];
+        return idx == -1 ? null : fileName[(idx + 1)..].ToLowerInvariant();
     }
 }

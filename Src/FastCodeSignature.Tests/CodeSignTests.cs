@@ -193,6 +193,14 @@ public class CodeSignTests
         Assert.Throws<InvalidOperationException>(() => provider.WriteSignature(provider.CreateSignature()));
     }
 
+    [Fact]
+    private void CreateProvider_AllowsUppercaseExtensions()
+    {
+        PeFormatHandler handler = new PeFormatHandler(null!, null);
+        MemoryAllocation allocation = new MemoryAllocation(new byte[255]); //We need this to pass the min size check
+        CodeSign.CreateProvider(allocation, handler, "UPPERCASE.EXE"); // Should not throw
+    }
+
     private static TheoryData<TestCase> GetTestVectors()
     {
         X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx")), "password");
