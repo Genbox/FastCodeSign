@@ -176,7 +176,7 @@ public class CodeSignTests
         byte[] unsigned = await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken);
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
         CodeSignProvider provider = tc.Factory(allocation);
-        Signature sig = provider.CreateSignature(HashAlgorithmName.SHA256, signer =>
+        provider.WriteSignature(provider.CreateSignature(HashAlgorithmName.SHA256, signer =>
         {
             for (int i = signer.SignedAttributes.Count - 1; i >= 0; i--)
             {
@@ -186,15 +186,9 @@ public class CodeSignTests
                 if (attribute.Oid.Value == "1.2.840.113549.1.9.5")
                     signer.SignedAttributes.Remove(attribute);
             }
-        });
-        provider.WriteSignature(sig);
+        }));
 
-        //For now, we test if the WriteSignature call changed the buffer's length.
-        //We should test if signed.Length == newSigned.Length, but due to CMS differences, it would fail
-        Span<byte> newSigned = allocation.GetSpan();
-        Assert.NotEqual(unsigned.Length, newSigned.Length);
-
-        await Verify(newSigned.ToArray())
+        await Verify(allocation.GetSpan().ToArray())
               .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
               .UseDirectory("Verify")
               .DisableDiff()
@@ -246,6 +240,7 @@ public class CodeSignTests
             TestCase.Create(new PowerShellConsoleFormatHandler(cert, null), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
             TestCase.Create(new PowerShellXmlFormatHandler(cert, null), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
             TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
+            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
             TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(cert, null), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "8273112b41bafcde2dcaaafc9bd092ab4d27d0af26af495ab935796f45b0ae43"),
 
             //WinPe
@@ -331,7 +326,7 @@ public class CodeSignTests
         public override string ToString()
         {
             string fileName = Path.GetFileName(SignedFile);
-            return fileName[..fileName.IndexOf('_', StringComparison.Ordinal)];
+            return fileName[..fileName.LastIndexOf('_')];
         }
     }
 }

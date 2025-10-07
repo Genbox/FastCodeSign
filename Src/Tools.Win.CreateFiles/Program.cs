@@ -22,10 +22,10 @@ internal static class Program
             SignFile(file, cert, rsa, HashAlgorithmName.SHA256);
         }
 
-        foreach (string file in Directory.GetFiles("WMI", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
-        {
-            SignFile(file, cert, rsa, HashAlgorithmName.SHA256);
-        }
+        // foreach (string file in Directory.GetFiles("WMI", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
+        // {
+        //     SignFile(file, cert, rsa, HashAlgorithmName.SHA256);
+        // }
 
         // Not working due to "Signing failed with code Unexpected cryptographic message encoding"
         // foreach (string file in Directory.GetFiles("WSH", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
