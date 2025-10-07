@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PSConsoleFile ConsoleSchemaVersion="1.0">
+  <PSVersion>5.1</PSVersion>
+
+  <!-- Snap-ins to load (older style, mostly for Windows PowerShell) -->
+  <PSSnapIns>
+    <PSSnapIn Name="Microsoft.PowerShell.Diagnostics" />
+    <PSSnapIn Name="Microsoft.PowerShell.Utility" />
+  </PSSnapIns>
+
+  <!-- Modules to auto-import -->
+  <Modules>
+    <Module Name="HelloModule" />
+  </Modules>
+</PSConsoleFile>
+
+<!-- SIG # Begin signature block -->
+<!-- MIIIiwYJKoZIhvcNAQcCoIIIfDCCCHgCAQMxDTALBglghkgBZQMEAgEwewYKKwYB -->
+<!-- BAGCNwIBBKBtBGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG -->
+<!-- KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDaSsGeSnPOmSDz -->
+<!-- EzdPgYHCfwLHUgC6d/5TU0KGaNlHlqCCBQwwggUIMIIC8KADAgECAhA3pQLjzQCT -->
+<!-- hEg3hd08XZF+MA0GCSqGSIb3DQEBCwUAMBwxGjAYBgNVBAMMEUZhc3RDb2RlU2ln -->
+<!-- bmF0dXJlMB4XDTI1MDkxMzEyMzUzNFoXDTI4MDkxMzEyNDUzM1owHDEaMBgGA1UE -->
+<!-- AwwRRmFzdENvZGVTaWduYXR1cmUwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK -->
+<!-- AoICAQDgZYDgiEz2A8YlpT8nHBZOEZyW+1KC1DQv3oTwlTJcsS3PZdOL2DhWBvtY -->
+<!-- R8MjitN8mTGflL1ZBLUQhPXQH6a7LRKP7/RfNVIdt/99K6LD6Is1MxUGc2Qw+zC3 -->
+<!-- XrcD0DLLDJpg33NfDYhzNLPcE8HyrKjHTgCURoQYGiAsYuuNHWEnorcNG6f+rrbF -->
+<!-- ZSZ18/FZC+gVHjuyXa9sFA28ZaOZqDYjVOzKgqsprKAatUb62HhTf4ZDh+csckLv -->
+<!-- xdMCTyrGWtYvwEYD4RTZbiEhj7YnOWksZn2Z7/3x2+3R9FxtG4qFCMcNkmN4o5PT -->
+<!-- 27kGjPm54y7jZFieZdU3pBG5+4ffe1jL8j+5Gq/CmoD+X6hAgzqcPHJuSJ5+e6T8 -->
+<!-- lgiYJdJAHC5DSiuYE4PJofxW7MXLkJy0cK7eYAXD+TC6R8lvk8f64NVuZryImbHP -->
+<!-- lv8WEb66yhCNyqJRERJL0ZRSvtHrSEIQDBh54e5usq/w/sxOdFDd7/Qv8ltFF43V -->
+<!-- m/U5gj9QbQQaAvQa1kw31C7zn+qJGWO95utH57zBtgeIlkLh0NuAMGThaiuFqo7t -->
+<!-- JO1nzFVbuWCaCFz32t6MiR/D9idCSd/3ySWVg2fJJp+xftxfGolQwydYYgUZjJxE -->
+<!-- 26sn81YFvAs8DK0nOyuwGbsC7DV+rgse6AEvjxW71ibNsVqXyQIDAQABo0YwRDAO -->
+<!-- BgNVHQ8BAf8EBAMCB4AwEwYDVR0lBAwwCgYIKwYBBQUHAwMwHQYDVR0OBBYEFLLF -->
+<!-- unetHr8myAvz8QXcA8iPokQNMA0GCSqGSIb3DQEBCwUAA4ICAQA03gYAHjz0Xf8p -->
+<!-- FcwjZ9sICMeTjS/56OBjDo3XjtlTRkULa4pQFcO4IIpX+VviQuB/Qs1GuC/YxYrD -->
+<!-- miG5Vvr224Jj7+5AAYAadgL1oHDOZX3HvdP3ZaRkszooRA7axfHBH1uhFAO8LqBs -->
+<!-- oV9OPUhW1m0soxvYDUmawiU++28BvLdS9E4NMIpGf6BrMpdGRnS7f5dn23EoPb1+ -->
+<!-- A61pfvBTcM9qLyzJx/c2WwFVDbhShhbW3ISOJ80W68CP1oxM0eXejHp2EsMoyXdJ -->
+<!-- TE2c7vUukB4LSzeT3A3j71tBORE1YMbYJd9hKneTw99lSFZxtyGg8Kj7wcyA6pLJ -->
+<!-- +UEjEU/A1nyaNFF2fChkC6STAdsVM/O2bood6txC/uSkjnmHmcgm0JyHqh591ngp -->
+<!-- yJvfP8C31cpP+k8Otx5M13Hp7ll2ouwq93HWGPQZx5Y68r/GlNPGIc33HAlN4mbs -->
+<!-- /l5roYf81qLzW/sCMVIT8n0kLRLiDDF8jLYHB/CpEwXr9Sb12qm745deqOaPA8yi -->
+<!-- j0s46BnlXQfOz8ONXADL6Rd9mYUirqcSQJIURjnPp+f8Y/VCjP3ak2JU2V5lpACs -->
+<!-- CoI3dZd4I8X2CuqoWwiNahD4UI3dA98Ui16kIRbI3u2ZviN4ndfxx6tSWNgoZ9Ef -->
+<!-- PU0/jdMHXw5btW+HQjNYzDqI4W0jYTGCAtUwggLRAgEBMDAwHDEaMBgGA1UEAwwR -->
+<!-- RmFzdENvZGVTaWduYXR1cmUCEDelAuPNAJOESDeF3TxdkX4wCwYJYIZIAWUDBAIB -->
+<!-- oHwwEAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQw -->
+<!-- HAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIE9t -->
+<!-- FWjc2m/t5bgNr+79J7soouNpPwzoePZzdvgpn1yeMAsGCSqGSIb3DQEBAQSCAgCN -->
+<!-- /3HkzU6Y4Zuv6zSULVJONhRihAME1qlR+0GLGXEHru6N/qo/OrN32XmG4MdNOwAR -->
+<!-- nsssqgIwo0yPl3Yd0pvNMDRq8TzZgUdxWlx4Zmmu1YnZIrgtzsrb6IboCF5C/IiY -->
+<!-- DhsnXaA31jfqVb6SD+vL1it+DXOPXrlNX43MD7Gf2VtfL5kbBcKh67CPwjCDKBWs -->
+<!-- +UzGnWwZ21k9fBGH1nyvDLAvEOMMGBO+iY8o5N8O9L01e4KjOHY4rRyNNybOAMo1 -->
+<!-- S8RPVkYRxaTQdcYIAzKlfymd3w9l0o7JV1WMUokH+buebSlBvLJioHCAuPkH2Xne -->
+<!-- tx0A7fKYfoZZfUEkl1k+vUVmNidGtXv2dEn/XDBi8ra68ZByieMS9EtZlTUhY329 -->
+<!-- yYwWxyG5TuZJfL7yxHTK+jzAyxDztDXuv21PbB5qWyQ3mKDEXcIf7mYd4bS8eZTr -->
+<!-- heW72X9jez0NTCOtkMwHAbfk9ShrY5pnyi+9xdnz8jHo3CZpBOiJhh8VLKDEL2HQ -->
+<!-- cAqVJXXTP+sNJR1cKAF2JU5U+6M0F7Ik8Hvkx/oNwB7GXSC3auOK5JGu9XViVDJo -->
+<!-- +E6mlbfeXTK+fuNT4Dv8YVujYuyAQl3SIHxCkmpCMPA0hLMZUEasfv1S4i8zNLPe -->
+<!-- tIUbdtGm1X/MgAkapGe7jJZu8edyVNJ8ACKFsfPl6Q== -->
+<!-- SIG # End signature block -->

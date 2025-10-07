@@ -171,18 +171,34 @@ public class CodeSignTests
     }
 
     [Theory, MemberData(nameof(GetFiles))]
-    private void WriteSignature(TestCase tc)
+    private async Task WriteSignature(TestCase tc)
     {
-        byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
+        byte[] unsigned = await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken);
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
         CodeSignProvider provider = tc.Factory(allocation);
-        Signature sig = provider.CreateSignature();
+        Signature sig = provider.CreateSignature(HashAlgorithmName.SHA256, signer =>
+        {
+            for (int i = signer.SignedAttributes.Count - 1; i >= 0; i--)
+            {
+                CryptographicAttributeObject attribute = signer.SignedAttributes[i];
+
+                //Remove Pkcs9SigningTime to avoid differences between test runs
+                if (attribute.Oid.Value == "1.2.840.113549.1.9.5")
+                    signer.SignedAttributes.Remove(attribute);
+            }
+        });
         provider.WriteSignature(sig);
 
         //For now, we test if the WriteSignature call changed the buffer's length.
         //We should test if signed.Length == newSigned.Length, but due to CMS differences, it would fail
         Span<byte> newSigned = allocation.GetSpan();
         Assert.NotEqual(unsigned.Length, newSigned.Length);
+
+        await Verify(newSigned.ToArray())
+              .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
+              .UseDirectory("Verify")
+              .DisableDiff()
+              .IgnoreMember("RawData");
     }
 
     [Theory, MemberData(nameof(GetFiles))]
