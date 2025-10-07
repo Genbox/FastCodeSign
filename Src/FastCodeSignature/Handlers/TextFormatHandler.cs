@@ -17,6 +17,8 @@ namespace Genbox.FastCodeSignature.Handlers;
 [SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")]
 public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding fallbackEncoding, string extension) : IFormatHandler
 {
+    private const int PerLineChars = 64;
+
     bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
     {
         if (ext == null)
@@ -76,8 +78,6 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
 
     void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
-        Span<byte> data = allocation.GetSpan();
-
         TextContext obj = (TextContext)context;
         Span<byte> startComment = obj.Encoding.GetBytes(commentStart);
         Span<byte> endComment = obj.Encoding.GetBytes(commentEnd);
@@ -85,35 +85,38 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
 
         byte[] encoded = signature.SignedCms.Encode();
 
-        int base64Length = Base64.GetMaxEncodedToUtf8Length(encoded.Length);
+        if (obj.Encoding.CodePage == 1200)
+            WriteUtf16(obj, allocation, startComment, endComment, newLine, encoded);
+        else if (obj.Encoding.CodePage == 65001)
+            WriteUtf8(obj, allocation, startComment, endComment, newLine, encoded);
+        else
+            throw new InvalidOperationException("Invalid encoding: " + obj.Encoding.CodePage);
+    }
 
-        Span<byte> base64 = base64Length < 2048 ? stackalloc byte[base64Length] : new byte[base64Length];
+    private static void WriteUtf8(TextContext obj, IAllocation allocation, ReadOnlySpan<byte> startComment, ReadOnlySpan<byte> endComment, ReadOnlySpan<byte> newLine, byte[] encoded)
+    {
+        Span<byte> data = allocation.GetSpan();
+
+        int base64Len = ((encoded.Length + 2) / 3) * 4;
+        Span<byte> base64 = base64Len <= 2048 ? stackalloc byte[base64Len] : new byte[base64Len];
 
         if (Base64.EncodeToUtf8(encoded, base64, out _, out int written) != OperationStatus.Done)
             throw new InvalidOperationException("Failed to encode signature");
 
-        //In case the buffer was larger than needed
         base64 = base64[..written];
 
-        if (obj.Encoding.CodePage == 1200) // UTF-16LE
-            base64 = Encoding.Convert(Encoding.UTF8, Encoding.Unicode, base64.ToArray());
+        int lineCount = (base64.Length + PerLineChars - 1) / PerLineChars;
 
-        int idx;
+        int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length;
+        int commentLen = ((startComment.Length + endComment.Length + newLine.Length) * lineCount) - newLine.Length; // no trailing newline after last line
 
-        if (obj.HeaderIdx == -1 || obj.FooterIdx == -1) // Not signed
-            idx = data.Length;
-        else
-            idx = obj.HeaderIdx;
+        int oldLen = data.Length;
+        allocation.SetLength((uint)(oldLen + headersLen + commentLen + base64.Length));
 
-        int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length; // Space for header/footer (already includes comments and newlines)
-        int commentLen = ((commentStart.Length + commentEnd.Length + newLine.Length) * (((base64Length + 64) - 1) / 64)) - newLine.Length; // space for comments
-
-        allocation.SetLength((uint)(idx + headersLen + commentLen + base64.Length));
-
-        //Get a new span with the updated length
         data = allocation.GetSpan();
+        int idx = oldLen;
 
-        //Write the header (includes comment)
+        // Write header
         obj.HeaderSig.CopyTo(data[idx..]);
         idx += obj.HeaderSig.Length;
 
@@ -126,15 +129,12 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
             startComment.CopyTo(data[idx..]);
             idx += startComment.Length;
 
-            // Take up to 64 bytes of base64 and write to span
-            int toWrite = Math.Min(base64Rem, 64);
-            ReadOnlySpan<byte> segment = base64.Slice(base64Offset, toWrite);
-            segment.CopyTo(data[idx..]);
+            int toWrite = Math.Min(base64Rem, PerLineChars);
+            base64.Slice(base64Offset, toWrite).CopyTo(data[idx..]);
             idx += toWrite;
 
-            if (commentEnd.Length > 0)
+            if (endComment.Length > 0)
             {
-                // Write end comment
                 endComment.CopyTo(data[idx..]);
                 idx += endComment.Length;
             }
@@ -145,6 +145,73 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
             if (base64Rem > 0)
             {
                 //Write newline
+                newLine.CopyTo(data[idx..]);
+                idx += newLine.Length;
+            }
+        }
+
+        // Write footer
+        obj.FooterSig.CopyTo(data[idx..]);
+    }
+
+    private static void WriteUtf16(TextContext obj, IAllocation allocation, ReadOnlySpan<byte> startComment, ReadOnlySpan<byte> endComment, ReadOnlySpan<byte> newLine, byte[] encoded)
+    {
+        Span<byte> data = allocation.GetSpan();
+
+        int base64CharLen = ((encoded.Length + 2) / 3) * 4;
+        Span<char> base64Chars = base64CharLen <= 2048 ? stackalloc char[base64CharLen] : new char[base64CharLen];
+
+        if (!Convert.TryToBase64Chars(encoded, base64Chars, out int charsWritten))
+            throw new InvalidOperationException("Failed to encode signature");
+
+        base64Chars = base64Chars[..charsWritten];
+
+        int lineCount = (charsWritten + PerLineChars - 1) / PerLineChars;
+
+        // We will write the Base64 chars encoded as UTF-16 bytes. Compute the total byte count for the Base64 payload up front.
+        int b64ByteLen = obj.Encoding.GetByteCount(base64Chars);
+
+        int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length;
+        int commentLen = ((startComment.Length + endComment.Length + newLine.Length) * lineCount) - newLine.Length; // no trailing newline after last line
+
+        int oldLen = data.Length;
+        allocation.SetLength((uint)(oldLen + headersLen + commentLen + b64ByteLen));
+
+        data = allocation.GetSpan();
+        int idx = oldLen;
+
+        // Write header
+        obj.HeaderSig.CopyTo(data[idx..]);
+        idx += obj.HeaderSig.Length;
+
+        int base64Rem = base64Chars.Length;
+        int base64Offset = 0;
+
+        while (base64Rem > 0)
+        {
+            // Write start comment
+            startComment.CopyTo(data[idx..]);
+            idx += startComment.Length;
+
+            int toWrite = Math.Min(base64Rem, PerLineChars);
+
+            // Encode this 64-char (or tail) chunk into UTF-16 bytes directly into output
+            ReadOnlySpan<char> chunk = base64Chars.Slice(base64Offset, toWrite);
+            int bytesWritten = obj.Encoding.GetBytes(chunk, data[idx..]);
+            idx += bytesWritten;
+
+            if (endComment.Length > 0)
+            {
+                endComment.CopyTo(data[idx..]);
+                idx += endComment.Length;
+            }
+
+            base64Rem -= toWrite;
+            base64Offset += toWrite;
+
+            if (base64Rem > 0)
+            {
+                // Write newline
                 newLine.CopyTo(data[idx..]);
                 idx += newLine.Length;
             }
