@@ -352,6 +352,8 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         foreach (X509Certificate2 appleCert in GetCerts())
             chainPolicy.CustomTrustStore.Add(appleCert);
 
+        chain.ChainPolicy = chainPolicy;
+
         if (!chain.Build(cert) && !Array.TrueForAll(chain.ChainStatus, s => s.Status is X509ChainStatusFlags.InvalidExtension or X509ChainStatusFlags.HasNotSupportedCriticalExtension))
             throw new InvalidOperationException("Unable to build certificate chain");
 
