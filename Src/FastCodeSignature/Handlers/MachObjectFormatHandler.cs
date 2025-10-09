@@ -31,7 +31,7 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId) : IFormatHandler
+public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId, bool silent = true) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
@@ -383,7 +383,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
 
         ContentInfo contentInfo = new ContentInfo(cdBlob);
         SignedCms signed = new SignedCms(contentInfo, true);
-        signed.ComputeSignature(signer);
+        signed.ComputeSignature(signer, silent);
 
         return new Signature(signed, new MachObjectInfo
         {

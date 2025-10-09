@@ -14,7 +14,7 @@ using static Genbox.FastCodeSignature.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
-public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey) : IFormatHandler
+public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, bool silent = true) : IFormatHandler
 {
     bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
     {
@@ -186,7 +186,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
         SignedCms signed = new SignedCms(contentInfo, false);
-        signed.ComputeSignature(signer);
+        signed.ComputeSignature(signer, silent);
         return new Signature(signed, null);
     }
 

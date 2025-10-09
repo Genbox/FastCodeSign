@@ -215,7 +215,7 @@ public class CodeSignTests
     {
         X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx")), "password");
         TheoryData<TestCase> data = new TheoryData<TestCase>();
-        data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
+        data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellScriptFormatHandler(cert, null, null), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
         return data;
     }
 
@@ -235,12 +235,12 @@ public class CodeSignTests
             TestCase.Create(new MachObjectFormatHandler(cert, null, "macho_unsigned.dat", HashAlgorithmName.SHA256, req, null), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
 
             //PowerShell
-            TestCase.Create(new PowerShellModuleFormatHandler(cert, null, true), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
-            TestCase.Create(new PowerShellManifestFormatHandler(cert, null, true), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "5400535fab6f06957a2901fd4d20997f232aec665103111c3561d87a36a9aa89"),
+            TestCase.Create(new PowerShellModuleFormatHandler(cert, null, null), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
+            TestCase.Create(new PowerShellManifestFormatHandler(cert, null, null), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "5400535fab6f06957a2901fd4d20997f232aec665103111c3561d87a36a9aa89"),
             TestCase.Create(new PowerShellConsoleFormatHandler(cert, null), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
             TestCase.Create(new PowerShellXmlFormatHandler(cert, null), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
-            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
-            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, true), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
+            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, null), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
+            TestCase.Create(new PowerShellScriptFormatHandler(cert, null, null), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
             TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(cert, null), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "8273112b41bafcde2dcaaafc9bd092ab4d27d0af26af495ab935796f45b0ae43"),
 
             //WinPe

@@ -15,7 +15,7 @@ using Genbox.FastCodeSignature.Internal.WinPe.Spc;
 namespace Genbox.FastCodeSignature.Handlers;
 
 [SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")]
-public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding fallbackEncoding, string extension) : IFormatHandler
+public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding? fallbackEncoding, string extension, bool silent) : IFormatHandler
 {
     private const int PerLineChars = 64;
 
@@ -27,7 +27,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
         return ext == extension;
     }
 
-    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding);
+    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding ?? Encoding.UTF8);
 
     public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
@@ -255,7 +255,7 @@ public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorit
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
         SignedCms signed = new SignedCms(contentInfo, false);
-        signed.ComputeSignature(signer);
+        signed.ComputeSignature(signer, silent);
         return new Signature(signed, null);
     }
 

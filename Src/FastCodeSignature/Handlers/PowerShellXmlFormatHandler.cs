@@ -4,4 +4,4 @@ using System.Text;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
-public sealed class PowerShellXmlFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey) : TextFormatHandler(cert, privateKey, "<!-- ", " -->", Encoding.UTF8, "ps1xml");
+public sealed class PowerShellXmlFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, bool silent = true) : TextFormatHandler(cert, privateKey, "<!-- ", " -->", Encoding.UTF8, "ps1xml", silent);
