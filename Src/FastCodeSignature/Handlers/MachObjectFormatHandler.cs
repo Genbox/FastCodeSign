@@ -37,7 +37,8 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext) => data.Length >= MachHeader.StructSize32 + LoadCommandHeader.StructSize;
+    public int MinValidSize => MachHeader.StructSize32 + LoadCommandHeader.StructSize;
+    public string[] ValidExt => [];
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
 

@@ -10,7 +10,8 @@ namespace Genbox.FastCodeSignature.Abstracts;
 /// </summary>
 public interface IFormatHandler
 {
-    bool CanHandle(ReadOnlySpan<byte> data, string? ext);
+    int MinValidSize { get; }
+    string[] ValidExt { get; }
 
     IContext GetContext(ReadOnlySpan<byte> data);
 

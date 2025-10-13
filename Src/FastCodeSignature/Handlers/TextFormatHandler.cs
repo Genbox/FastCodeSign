@@ -18,14 +18,8 @@ namespace Genbox.FastCodeSignature.Handlers;
 public abstract class TextFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string commentStart, string commentEnd, Encoding? fallbackEncoding, string extension, bool silent) : IFormatHandler
 {
     private const int PerLineChars = 64;
-
-    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
-    {
-        if (ext == null)
-            return true;
-
-        return ext == extension;
-    }
+    public int MinValidSize => 0;
+    public string[] ValidExt => [extension];
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding ?? Encoding.UTF8);
 

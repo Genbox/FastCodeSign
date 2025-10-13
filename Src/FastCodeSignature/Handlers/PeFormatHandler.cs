@@ -16,32 +16,12 @@ namespace Genbox.FastCodeSignature.Handlers;
 
 public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, bool silent = true) : IFormatHandler
 {
-    bool IFormatHandler.CanHandle(ReadOnlySpan<byte> data, string? ext)
-    {
-        // The smallest valid PE file on Windows 7+ is:
-        // x86: 252 bytes
-        // x64: 268 bytes
-        // Source: https://www.alex-ionescu.com/pe-trick-1-a-codeless-pe-binary-file-that-runs/
-        if (data.Length < 252)
-            return false;
-
-        if (ext != null
-            && ext != "exe"
-            && ext != "dll"
-            && ext != "sys"
-            && ext != "scr"
-            && ext != "ocx"
-            && ext != "cpl"
-            && ext != "mun"
-            && ext != "mui"
-            && ext != "drv"
-            && ext != "winmd"
-            && ext != "ax"
-            && ext != "efi")
-            return false;
-
-        return true;
-    }
+    // The smallest valid PE file on Windows 7+ is:
+    // x86: 252 bytes
+    // x64: 268 bytes
+    // Source: https://www.alex-ionescu.com/pe-trick-1-a-codeless-pe-binary-file-that-runs/
+    public int MinValidSize => 252;
+    public string[] ValidExt => ["exe", "dll", "sys", "scr", "ocx", "cpl", "mun", "mui", "drv", "winmd", "ax", "efi"];
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
 
