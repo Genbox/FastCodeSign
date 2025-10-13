@@ -28,7 +28,7 @@ public class SignedCmsExtTests
         Assert.Empty(info.UnsignedAttributes);
 
         //Countersign the CMS
-        await info.Rfc3161CounterSignAsync("http://timestamp.digicert.com", HashAlgorithmName.SHA256);
+        await info.CounterSignAsync("http://timestamp.digicert.com", HashAlgorithmName.SHA256);
         info = cms.SignerInfos[0]; //Do not refactor this line. We have to re-extract the signerinfo as it seems to be replaced
         Assert.Single(info.UnsignedAttributes);
 

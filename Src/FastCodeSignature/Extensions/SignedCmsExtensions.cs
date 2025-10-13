@@ -1,8 +1,4 @@
-using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Security.Cryptography.X509Certificates;
-using Genbox.FastCodeSignature.Internal;
-using Genbox.FastCodeSignature.Internal.Helpers;
 
 namespace Genbox.FastCodeSignature.Extensions;
 
@@ -27,26 +23,17 @@ public static class SignedCmsExtensions
         }
     }
 
-    /// <summary>
-    /// Microsoft supports nested signatures. This method is able to extract nested signatures.
-    /// </summary>
+    /// <summary>Extracts nested signatures from all SignerInfos in the SignedCms</summary>
     /// <returns>Nested signatures</returns>
     public static IEnumerable<SignedCms> GetNestedSignatures(this SignedCms signedCms)
     {
         if (signedCms.SignerInfos.Count == 0)
             yield break;
 
-        foreach (CryptographicAttributeObject attr in signedCms.SignerInfos[0].UnsignedAttributes)
+        foreach (var signerInfo in signedCms.SignerInfos)
         {
-            if (attr.Oid.Value != OidConstants.MsNestedSignature)
-                continue;
-
-            foreach (AsnEncodedData sig in attr.Values)
-            {
-                SignedCms nested = new SignedCms();
-                nested.Decode(sig.RawData);
-                yield return nested;
-            }
+            foreach (SignedCms sig in signerInfo.GetNestedSignatures())
+                yield return sig;
         }
     }
 }

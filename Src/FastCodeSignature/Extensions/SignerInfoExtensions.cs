@@ -39,13 +39,31 @@ public static class SignerInfoExtensions
         }
     }
 
+    /// <summary>Extracts nested signatures from a SignerInfo</summary>
+    /// <returns>Nested signatures</returns>
+    public static IEnumerable<SignedCms> GetNestedSignatures(this SignerInfo signerInfo)
+    {
+        foreach (CryptographicAttributeObject attr in signerInfo.UnsignedAttributes)
+        {
+            if (attr.Oid.Value != OidConstants.MsNestedSignature)
+                continue;
+
+            foreach (AsnEncodedData sig in attr.Values)
+            {
+                SignedCms nested = new SignedCms();
+                nested.Decode(sig.RawData);
+                yield return nested;
+            }
+        }
+    }
+
     /// <summary>
     /// Countersign a SignerInfo using RFC3161.
     /// </summary>
     /// <param name="signerInfo">The signer info</param>
     /// <param name="url">The url of the timestamp server</param>
     /// <param name="hashAlgorithm">The hashing algorithm to use</param>
-    public static async Task Rfc3161CounterSignAsync(this SignerInfo signerInfo, string url, HashAlgorithmName hashAlgorithm)
+    public static async Task CounterSignAsync(this SignerInfo signerInfo, string url, HashAlgorithmName hashAlgorithm)
     {
         using RandomNumberGenerator rng = RandomNumberGenerator.Create();
         byte[] nonce = new byte[8];
