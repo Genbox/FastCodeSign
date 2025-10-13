@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Abstracts;
 
 namespace Genbox.FastCodeSignature;
@@ -78,7 +79,7 @@ public class CodeSignProvider
         return true;
     }
 
-    public Signature CreateSignature(HashAlgorithmName? hashAlgorithm = null, Action<CmsSigner>? configureSigner = null)
+    public Signature CreateSignature(X509Certificate2 cert, AsymmetricAlgorithm? privateKey = null, HashAlgorithmName? hashAlgorithm = null, Action<CmsSigner>? configureSigner = null, bool silent = true)
     {
         hashAlgorithm ??= HashAlgorithmName.SHA256;
 
@@ -88,7 +89,7 @@ public class CodeSignProvider
         if (context.IsSigned)
             throw new InvalidOperationException("The file already contains a signature.");
 
-        return _handler.CreateSignature(context, data, hashAlgorithm.Value, configureSigner);
+        return _handler.CreateSignature(context, data, cert, privateKey, hashAlgorithm.Value, configureSigner, silent);
     }
 
     public void WriteSignature(Signature signature)

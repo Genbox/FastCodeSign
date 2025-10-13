@@ -31,7 +31,7 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, string identifier, HashAlgorithmName hash, RequirementSet? requirements, string? teamId, bool silent = true) : IFormatHandler
+public sealed class MachObjectFormatHandler(string? identifier = null, RequirementSet? requirements = null, string? teamId = null) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
@@ -39,6 +39,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
 
     public int MinValidSize => MachHeader.StructSize32 + LoadCommandHeader.StructSize;
     public string[] ValidExt => [];
+    public bool IsValidHeader(ReadOnlySpan<byte> data) => data[0] == 0xfa && data[1] == 0xde;
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
 
@@ -289,7 +290,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         }
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, X509Certificate2 cert, AsymmetricAlgorithm? privateKey, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner, bool silent)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
@@ -310,13 +311,13 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         Debug.Assert((uint)linkEditEnd == data.Length);
 
         ulong codeLimit = Align(linkEditEnd, 16); // Start of SuperBlob (16 byte aligned)
-        int cdSize = GetCodeDirectorySize(codeLimit, maxSlot, out int idOffset, out int teamIdOffset, out int hashesOffset);
+        int cdSize = GetCodeDirectorySize(hashAlgorithm, codeLimit, maxSlot, out int idOffset, out int teamIdOffset, out int hashesOffset);
 
         byte[] cdBlob = new byte[cdSize];
         blobs.Add(CsSlot.CodeDirectory, cdBlob);
 
         Span<byte> cdSpan = cdBlob.AsSpan();
-        WriteCodeDirectoryHeader(ref cdSpan, maxSlot, codeLimit, obj.Text, ExecSegFlags.MainBinary, cdSize, idOffset, teamIdOffset, hashesOffset);
+        WriteCodeDirectoryHeader(ref cdSpan, hashAlgorithm, maxSlot, codeLimit, obj.Text, ExecSegFlags.MainBinary, cdSize, idOffset, teamIdOffset, hashesOffset);
 
         uint sbSize = Align((uint)(SuperBlobHeader.StructSize // SuperBlob header size
                                    + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
@@ -334,9 +335,9 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         WriteHeaders(patch, obj, codeLimit, padLen, sbSize);
 
         byte[] cdHash;
-        using (IncrementalHash hasher = IncrementalHash.CreateHash(hash))
+        using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithm))
         {
-            byte hashSize = hash.GetSize();
+            byte hashSize = hashAlgorithm.GetSize();
 
             HashSpecialSlots(ref cdSpan, blobs, maxSlot, hasher, hashSize);
             HashCodeSlotsPatch(ref cdSpan, patch, hasher, hashSize);
@@ -362,7 +363,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         signer.SignedAttributes.Add(new Pkcs9SigningTime());
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.AppleHashAttrOid,
-            EncodeSeq(hash.ToOidString(), cdHash)));
+            EncodeSeq(hashAlgorithm.ToOidString(), cdHash)));
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.ApplePListAttrOid,
             EncodeString(Encoding.UTF8.GetBytes(
@@ -474,7 +475,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         }
     }
 
-    private void WriteCodeDirectoryHeader(ref Span<byte> span, int maxSlot, ulong codeLimit, Segment textSeg, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
+    private void WriteCodeDirectoryHeader(ref Span<byte> span, HashAlgorithmName hashAlgorithm, int maxSlot, ulong codeLimit, Segment textSeg, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
     {
         //The first header is the code directory header. It contains the size of the rest of the header.
         CodeDirectoryHeader header = new CodeDirectoryHeader
@@ -488,8 +489,8 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
             nSpecialSlots = (uint)maxSlot,
             nCodeSlots = (uint)(((codeLimit + PageSize) - 1) / PageSize),
             CodeLimit = (uint)codeLimit, // 32bit truncated code limit
-            HashSize = hash.GetSize(),
-            HashType = GetHashType(hash),
+            HashSize = hashAlgorithm.GetSize(),
+            HashType = GetHashType(hashAlgorithm),
             Platform = 0,
             PageSize = (byte)Math.Log2(PageSize),
             Spare2 = 0
@@ -608,7 +609,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
         }
     }
 
-    private int GetCodeDirectorySize(ulong codeLimit, int specialSlotCount, out int idOffset, out int teamIdOffset, out int hashesOffset)
+    private int GetCodeDirectorySize(HashAlgorithmName hashAlgorithm, ulong codeLimit, int specialSlotCount, out int idOffset, out int teamIdOffset, out int hashesOffset)
     {
         //Static sizes
         int cdSize = CodeDirectoryHeader.StructSize;
@@ -632,7 +633,7 @@ public sealed class MachObjectFormatHandler(X509Certificate2 cert, AsymmetricAlg
             teamIdOffset = 0;
 
         //Calculate the number of code slots. We need to round up to the next page size.
-        byte hashSize = hash.GetSize();
+        byte hashSize = hashAlgorithm.GetSize();
         cdSize += specialSlotCount * hashSize; //Special slot hashes
 
         hashesOffset = cdSize; //Hashes go after the special hashes

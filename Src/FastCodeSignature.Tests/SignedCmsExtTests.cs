@@ -14,13 +14,13 @@ public class SignedCmsExtTests
     private async Task GetCounterSignatures()
     {
         X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile(Path.GetFullPath(Path.Combine(Constants.FilesDir, "FastCodeSignature.pfx")), "password");
-        PeFormatHandler handler = new PeFormatHandler(cert, null);
+        PeFormatHandler handler = new PeFormatHandler();
         string path = Path.Combine(Constants.FilesDir, "Unsigned/WinPe/exe_unsigned.dat");
 
         byte[] bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
 
-        CodeSignProvider provider = CodeSign.CreateProvider(new MemoryAllocation(bytes), handler, null);
-        Signature sig = provider.CreateSignature();
+        CodeSignProvider provider = CodeSignProviderFactory.CreateProvider(new MemoryAllocation(bytes), handler, null);
+        Signature sig = provider.CreateSignature(cert);
         SignedCms cms = sig.SignedCms;
 
         SignerInfo info = cms.SignerInfos[0];

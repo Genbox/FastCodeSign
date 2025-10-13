@@ -14,7 +14,7 @@ using static Genbox.FastCodeSignature.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
-public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? privateKey, bool silent = true) : IFormatHandler
+public sealed class PeFormatHandler : IFormatHandler
 {
     // The smallest valid PE file on Windows 7+ is:
     // x86: 252 bytes
@@ -22,6 +22,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
     // Source: https://www.alex-ionescu.com/pe-trick-1-a-codeless-pe-binary-file-that-runs/
     public int MinValidSize => 252;
     public string[] ValidExt => ["exe", "dll", "sys", "scr", "ocx", "cpl", "mun", "mui", "drv", "winmd", "ax", "efi"];
+    public bool IsValidHeader(ReadOnlySpan<byte> data) => data[0] == 'M' && data[1] == 'Z';
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
 
@@ -140,7 +141,7 @@ public sealed class PeFormatHandler(X509Certificate2 cert, AsymmetricAlgorithm? 
         WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, X509Certificate2 cert, AsymmetricAlgorithm? privateKey, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner, bool silent)
     {
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
