@@ -1,14 +1,11 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Text;
-using Genbox.FastCodeSignature.Abstracts;
 using Genbox.FastCodeSignature.Allocations;
 using Genbox.FastCodeSignature.Handlers;
 using Genbox.FastCodeSignature.Internal.MachObject;
 using Genbox.FastCodeSignature.Models;
 using Genbox.FastCodeSignature.Tests.Code;
-using JetBrains.Annotations;
-using Xunit.Sdk;
 using static System.Buffers.Binary.BinaryPrimitives;
 
 namespace Genbox.FastCodeSignature.Tests;
@@ -278,45 +275,6 @@ public class CodeSignProviderTests
         {
             WriteUInt32LittleEndian(data[(segCmdOffset + 28)..], 0U); // vmsize
             WriteUInt32LittleEndian(data[(segCmdOffset + 36)..], 0U); // filesize
-        }
-    }
-
-    private sealed class TestCase : IXunitSerializable
-    {
-        private string _id = "";
-
-        [UsedImplicitly]
-        public TestCase() {}
-
-        private TestCase(Func<IAllocation, CodeSignProvider> factory, Type handlerType, string signedFile, string unsignedFile, string hash, Action<Span<byte>>? equalityPatch)
-        {
-            Factory = factory;
-            SignedFile = signedFile;
-            UnsignedFile = unsignedFile;
-            Hash = hash;
-            EqualityPatch = equalityPatch;
-
-            _id = handlerType.Name + " " + SignedFile;
-        }
-
-        public Action<Span<byte>>? EqualityPatch { get; }
-        public Func<IAllocation, CodeSignProvider> Factory { get; } = null!;
-        public string SignedFile { get; } = null!;
-        public string UnsignedFile { get; } = null!;
-        public string Hash { get; } = null!;
-
-        public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, Action<Span<byte>>? equalityPatch = null)
-        {
-            return new TestCase(x => new CodeSignProvider(handler, x), handler.GetType(), Path.Combine(Constants.FilesDir, signed), Path.Combine(Constants.FilesDir, unsigned), hash, equalityPatch);
-        }
-
-        public void Deserialize(IXunitSerializationInfo info) => _id = info.GetValue<string>(nameof(_id))!;
-        public void Serialize(IXunitSerializationInfo info) => info.AddValue(nameof(_id), _id);
-
-        public override string ToString()
-        {
-            string fileName = Path.GetFileName(SignedFile);
-            return fileName[..fileName.LastIndexOf('_')];
         }
     }
 }
