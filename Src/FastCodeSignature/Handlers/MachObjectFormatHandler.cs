@@ -7,6 +7,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSignature.Abstracts;
+using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.Helpers;
@@ -14,6 +15,7 @@ using Genbox.FastCodeSignature.Internal.MachObject;
 using Genbox.FastCodeSignature.Internal.MachObject.Headers;
 using Genbox.FastCodeSignature.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSignature.Internal.MachObject.Requirements;
+using Genbox.FastCodeSignature.Models;
 using static Genbox.FastCodeSignature.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSignature.Handlers;
@@ -31,7 +33,7 @@ namespace Genbox.FastCodeSignature.Handlers;
 //- It uses DER order of attributes (sorted by OID).
 //- It adds null parameters to digests
 
-public sealed class MachObjectFormatHandler(string? identifier = null, RequirementSet? requirements = null, string? teamId = null) : IFormatHandler
+public sealed class MachObjectFormatHandler(string identifier, RequirementSet? requirements = null, string? teamId = null) : IFormatHandler
 {
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
@@ -39,7 +41,12 @@ public sealed class MachObjectFormatHandler(string? identifier = null, Requireme
 
     public int MinValidSize => MachHeader.StructSize32 + LoadCommandHeader.StructSize;
     public string[] ValidExt => [];
-    public bool IsValidHeader(ReadOnlySpan<byte> data) => data[0] == 0xfa && data[1] == 0xde;
+
+    public bool IsValidHeader(ReadOnlySpan<byte> data)
+    {
+        uint magic = ReadUInt32BigEndian(data);
+        return magic is (uint)MachMagic.MachMagicBE or (uint)MachMagic.MachMagicLE or (uint)MachMagic.MachMagic64BE or (uint)MachMagic.MachMagic64LE;
+    }
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => MachOContext.Create(data);
 
@@ -292,6 +299,9 @@ public sealed class MachObjectFormatHandler(string? identifier = null, Requireme
 
     Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, X509Certificate2 cert, AsymmetricAlgorithm? privateKey, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner, bool silent)
     {
+        if (identifier == null!)
+            throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
+
         CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
         {
             DigestAlgorithm = hashAlgorithm.ToOid(),
@@ -301,8 +311,15 @@ public sealed class MachObjectFormatHandler(string? identifier = null, Requireme
         //Build the SuperBlob
         SortedList<CsSlot, byte[]> blobs = new SortedList<CsSlot, byte[]>();
 
-        if (requirements != null)
-            blobs.Add(CsSlot.Requirements, requirements.ToArray());
+        RequirementSet? req = requirements;
+
+        if (req == null)
+            if (cert.IsAppleDeveloperCertificate())
+                req = RequirementSet.CreateAppleDevDefault(identifier, cert);
+            else
+                req = RequirementSet.CreateDefault(identifier, cert);
+
+        blobs.Add(CsSlot.Requirements, req.ToArray());
 
         int maxSlot = blobs.Count == 0 ? 0 : blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
 

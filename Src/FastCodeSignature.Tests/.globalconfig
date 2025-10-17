@@ -1,0 +1,1 @@
+dotnet_diagnostic.xUnit1016.severity = none # MemberData must reference a public member

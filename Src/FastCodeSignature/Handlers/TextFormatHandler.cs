@@ -11,16 +11,18 @@ using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.Helpers;
 using Genbox.FastCodeSignature.Internal.TextFile;
 using Genbox.FastCodeSignature.Internal.WinPe.Spc;
+using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature.Handlers;
 
 [SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")]
-public abstract class TextFormatHandler(string commentStart, string commentEnd, Encoding? fallbackEncoding, string extension) : IFormatHandler
+public abstract class TextFormatHandler(string commentStart, string commentEnd, Encoding? fallbackEncoding) : IFormatHandler
 {
     private const int PerLineChars = 64;
-    public int MinValidSize => 0;
-    public string[] ValidExt => [extension];
-    public bool IsValidHeader(ReadOnlySpan<byte> data) => true;
+
+    public abstract int MinValidSize { get; }
+    public abstract string[] ValidExt { get; }
+    public abstract bool IsValidHeader(ReadOnlySpan<byte> data);
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding ?? Encoding.UTF8);
 

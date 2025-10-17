@@ -1,5 +1,5 @@
 using Genbox.FastCodeSignature.Abstracts;
-using Genbox.FastCodeSignature.Internal;
+using Genbox.FastCodeSignature.Allocations;
 
 namespace Genbox.FastCodeSignature;
 

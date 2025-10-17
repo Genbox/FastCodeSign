@@ -1,4 +1,5 @@
 using Genbox.FastCodeSignature.Helpers;
+using Genbox.FastCodeSignature.Models;
 using Genbox.FastCodeSignature.Tests.Code;
 
 namespace Genbox.FastCodeSignature.Tests;

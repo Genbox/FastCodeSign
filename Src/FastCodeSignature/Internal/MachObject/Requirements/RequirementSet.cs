@@ -7,7 +7,7 @@ namespace Genbox.FastCodeSignature.Internal.MachObject.Requirements;
 
 public class RequirementSet : Dictionary<RequirementType, Requirement>
 {
-    public override string ToString() => string.Join(", ", this.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
+    private RequirementSet() {}
 
     public int Size => 12 + this.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
 
@@ -37,6 +37,10 @@ public class RequirementSet : Dictionary<RequirementType, Requirement>
         EncodeTo(buffer);
         return buffer;
     }
+
+    public override string ToString() => string.Join(", ", this.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
+
+    public static RequirementSet CreateEmpty() => new RequirementSet();
 
     public static RequirementSet CreateAppleDevDefault(string identifier, X509Certificate2 cert)
     {

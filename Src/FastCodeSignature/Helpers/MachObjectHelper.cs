@@ -1,4 +1,5 @@
 using Genbox.FastCodeSignature.Internal.MachObject.Headers.Enums;
+using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature.Helpers;
 

@@ -1,4 +1,5 @@
 using System.Security.Cryptography.Pkcs;
+using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature.Extensions;
 
@@ -16,9 +17,9 @@ public static class SignedCmsExtensions
             yield break;
 
         // RFC3161 (Time-Stamp Protocol)
-        foreach (SignerInfo attr in signedCms.SignerInfos)
+        foreach (SignerInfo info in signedCms.SignerInfos)
         {
-            foreach (CounterSignature signature in attr.GetCounterSignatures())
+            foreach (CounterSignature signature in info.GetCounterSignatures())
                 yield return signature;
         }
     }

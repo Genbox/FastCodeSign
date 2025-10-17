@@ -10,6 +10,7 @@ using Genbox.FastCodeSignature.Internal.WinPe;
 using Genbox.FastCodeSignature.Internal.WinPe.Enums;
 using Genbox.FastCodeSignature.Internal.WinPe.Headers;
 using Genbox.FastCodeSignature.Internal.WinPe.Spc;
+using Genbox.FastCodeSignature.Models;
 using static Genbox.FastCodeSignature.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSignature.Handlers;
@@ -26,7 +27,7 @@ public sealed class PeFormatHandler : IFormatHandler
 
     IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => WinPeContext.Create(data);
 
-    public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
+    ReadOnlySpan<byte> IFormatHandler.ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
         WinPeContext obj = (WinPeContext)context;
 

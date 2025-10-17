@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
+using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature.Abstracts;
 
@@ -13,7 +14,6 @@ public interface IFormatHandler
 {
     int MinValidSize { get; }
     string[] ValidExt { get; }
-
     bool IsValidHeader(ReadOnlySpan<byte> data);
 
     IContext GetContext(ReadOnlySpan<byte> data);

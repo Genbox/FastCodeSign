@@ -4,6 +4,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Internal;
 using Genbox.FastCodeSignature.Internal.Helpers;
+using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature.Extensions;
 
