@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSignature.Extensions;
 using Genbox.FastCodeSignature.Handlers;
 using Genbox.FastCodeSignature.Models;
@@ -11,26 +10,34 @@ namespace Genbox.FastCodeSignature.Tests;
 public class SignedCmsExtensionsTests
 {
     [Fact]
-    private async Task GetCounterSignatures()
+    private void GetCounterSignaturesTest()
     {
-        string path = Path.Combine(Constants.FilesDir, "Unsigned/WinPe/exe_unsigned.dat");
+        string path = Path.Combine(Constants.FilesDir, "Misc/ps1_countersigned.dat");
 
-        byte[] bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+        CodeSignProvider provider = CodeSignProvider.FromFile(path, new PowerShellScriptFormatHandler(), true);
+        SignedCms? cms = provider.GetSignature();
+        Assert.NotNull(cms);
 
-        CodeSignProvider provider = CodeSignProvider.FromData(bytes, new PeFormatHandler());
-        Signature sig = provider.CreateSignature(Constants.GetCert());
-        SignedCms cms = sig.SignedCms;
+        Assert.Single(cms.GetCounterSignatures());
+    }
 
-        SignerInfo info = cms.SignerInfos[0];
+    [Fact]
+    private async Task CounterSignAsyncTest()
+    {
+        //We copy the file, as other tests use the same file, and the MMF do not like sharing
+        string src = Path.Combine(Constants.FilesDir, "Signed/PowerShell/ps1_signed.dat");
+        string dst = Path.Combine(Path.GetTempPath(), "ps1_signed.ps1");
+        File.Copy(src, dst, true);
 
-        Assert.Empty(info.UnsignedAttributes);
+        CodeSignProvider provider = CodeSignProvider.FromFile(dst, new PowerShellScriptFormatHandler());
+        SignedCms? cms = provider.GetSignature();
+        Assert.NotNull(cms);
 
-        //Countersign the CMS
-        await info.CounterSignAsync("http://timestamp.digicert.com", HashAlgorithmName.SHA256);
-        info = cms.SignerInfos[0]; //Do not refactor this line. We have to re-extract the signerinfo as it seems to be replaced
-        Assert.Single(info.UnsignedAttributes);
+        Assert.Empty(cms.SignerInfos[0].UnsignedAttributes);
+        await cms.SignerInfos[0].CounterSignAsync("http://timestamp.digicert.com", HashAlgorithmName.SHA256);
+        Assert.Single(cms.SignerInfos[0].UnsignedAttributes);
 
-        CounterSignature counterSig = Assert.Single(info.GetCounterSignatures());
+        CounterSignature counterSig = Assert.Single(cms.SignerInfos[0].GetCounterSignatures());
         Assert.NotEqual(counterSig.TimeStamp, default);
         Assert.NotNull(counterSig.Certificate);
         Assert.NotEqual(counterSig.HashAlgorithm, default);

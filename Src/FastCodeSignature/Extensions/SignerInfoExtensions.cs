@@ -17,6 +17,22 @@ public static class SignerInfoExtensions
     /// <exception cref="InvalidOperationException">If the file contains invalid counter-signatures</exception>
     public static IEnumerable<CounterSignature> GetCounterSignatures(this SignerInfo signerInfo)
     {
+        // PKCS#9 counter signatures
+        foreach (SignerInfo info in signerInfo.CounterSignerInfos)
+        {
+            DateTime signingTime = DateTime.MinValue;
+            foreach (CryptographicAttributeObject attr in info.SignedAttributes)
+            {
+                foreach (AsnEncodedData value in attr.Values)
+                {
+                    if (value is Pkcs9SigningTime time)
+                        signingTime = time.SigningTime.ToUniversalTime();
+                }
+            }
+
+            yield return new CounterSignature(info.Certificate, OidHelper.OidToHashAlgorithm(info.DigestAlgorithm.Value), signingTime);
+        }
+
         // RFC3161 (Time-Stamp Protocol)
         foreach (CryptographicAttributeObject attr in signerInfo.UnsignedAttributes)
         {
