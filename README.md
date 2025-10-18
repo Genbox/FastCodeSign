@@ -1,7 +1,7 @@
-# FastCodeSignature
+# FastCodeSign
 
-[![NuGet](https://img.shields.io/nuget/v/Genbox.FastCodeSignature.svg?style=flat-square&label=nuget)](https://www.nuget.org/packages/Genbox.FastCodeSignature/)
-[![License](https://img.shields.io/github/license/Genbox/FastCodeSignature)](https://github.com/Genbox/FastCodeSignature/blob/main/LICENSE.txt)
+[![NuGet](https://img.shields.io/nuget/v/Genbox.FastCodeSign.svg?style=flat-square&label=nuget)](https://www.nuget.org/packages/Genbox.FastCodeSign/)
+[![License](https://img.shields.io/github/license/Genbox/FastCodeSign)](https://github.com/Genbox/FastCodeSign/blob/main/LICENSE.txt)
 
 ### Description
 A cross-platform code signing library for Windows Authenticode, PowerShell and macOS code signatures.

@@ -1,4 +1,4 @@
-using Genbox.FastCodeSignature.Native.MacCodeSign;
+using Genbox.FastCodeSign.Native.MacCodeSign;
 
 namespace Genbox.Tools.Mac.CreateFiles;
 
@@ -11,7 +11,7 @@ internal static class Program
         if (!OperatingSystem.IsMacOS())
             throw new PlatformNotSupportedException("This tool only runs on MacOS");
 
-        byte[] certBytes = File.ReadAllBytes("FastCodeSignature.pfx");
+        byte[] certBytes = File.ReadAllBytes("FastCodeSign.pfx");
 
         SignFile("MachO/Default_unsigned", "MachO/Default_signed", certBytes);
     }

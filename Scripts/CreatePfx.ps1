@@ -1,9 +1,9 @@
-$pfxPath = Join-Path $PSScriptRoot "../Files/FastCodeSignature.pfx"
+$pfxPath = Join-Path $PSScriptRoot "../Files/FastCodeSign.pfx"
 
 $cert = New-SelfSignedCertificate `
     -Type CodeSigningCert `
-    -Subject 'CN=FastCodeSignature' `
-    -FriendlyName 'FastCodeSignature' `
+    -Subject 'CN=FastCodeSign' `
+    -FriendlyName 'FastCodeSign' `
     -KeyAlgorithm RSA `
     -KeyLength 4096 `
     -HashAlgorithm SHA256 `
