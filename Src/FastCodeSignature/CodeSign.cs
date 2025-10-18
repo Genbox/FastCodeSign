@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Models;
 
 namespace Genbox.FastCodeSignature;
@@ -18,6 +19,7 @@ public static class CodeSign
         CodeSignProvider provider = CodeSignProvider.FromData(data, fileName: fileName, skipExtCheck: skipExtCheck);
         Signature signature = provider.CreateSignature(cert, privateKey);
         provider.WriteSignature(signature);
-        return provider.Allocation.GetSpan();
+
+        return provider.Allocation.ToArray();
     }
 }

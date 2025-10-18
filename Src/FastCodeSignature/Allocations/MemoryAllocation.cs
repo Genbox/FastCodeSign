@@ -4,17 +4,26 @@ namespace Genbox.FastCodeSignature.Allocations;
 
 public sealed class MemoryAllocation(Memory<byte> data) : IAllocation
 {
-    private Memory<byte> _data = data; //We keep this field because we ref it in SetLength()
+    private Memory<byte>? _ext;
+    private Memory<byte> _data = data;
 
-    public Span<byte> GetSpan() => _data.Span;
+    public Span<byte> GetData() => _data.Span;
 
-    public void SetLength(uint length)
+    public Span<byte> CreateExtension(uint size)
     {
-        byte[] newArr = new byte[length];
+        if (_ext != null)
+            throw new InvalidOperationException("Extension already exists");
 
-        int copyLen = (int)Math.Min(length, _data.Length);
-
-        _data[..copyLen].CopyTo(newArr);
-        _data = newArr;
+        byte[] ext = new byte[size];
+        _ext = new Memory<byte>(ext);
+        return ext;
     }
+
+    public Span<byte> GetExtension()
+    {
+        ArgumentNullException.ThrowIfNull(_ext);
+        return _ext.Value.Span;
+    }
+
+    public void TruncateDataTo(uint newLength) => _data = _data[..(int)newLength];
 }

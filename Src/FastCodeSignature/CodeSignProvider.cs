@@ -27,12 +27,12 @@ public class CodeSignProvider
         FileAllocation allocation = new FileAllocation(filePath); //We don't dispose this here. Instead, we let CodeSignFileProvider do it
 
         string fileName = Path.GetFileName(filePath);
-        ReadOnlySpan<byte> span = allocation.GetSpan();
+        ReadOnlySpan<byte> data = allocation.GetData();
 
         if (handler == null)
-            handler = GetHandler(span, fileName, skipExtCheck);
+            handler = GetHandler(data, fileName, skipExtCheck);
         else
-            ValidateHandler(handler, span, fileName, skipExtCheck);
+            ValidateHandler(handler, data, fileName, skipExtCheck);
 
         return new CodeSignFileProvider(handler, allocation);
     }
@@ -45,26 +45,26 @@ public class CodeSignProvider
 
     public static CodeSignProvider FromAllocation(IAllocation allocation, IFormatHandler? handler = null, string? fileName = null, bool skipExtCheck = false)
     {
-        ReadOnlySpan<byte> span = allocation.GetSpan();
+        ReadOnlySpan<byte> data = allocation.GetData();
 
         if (handler == null)
-            handler = GetHandler(span, fileName, skipExtCheck);
+            handler = GetHandler(data, fileName, skipExtCheck);
         else
-            ValidateHandler(handler, span, fileName, skipExtCheck);
+            ValidateHandler(handler, data, fileName, skipExtCheck);
 
         return new CodeSignProvider(handler, allocation);
     }
 
     public bool HasSignature()
     {
-        ReadOnlySpan<byte> data = Allocation.GetSpan();
+        ReadOnlySpan<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
         return context.IsSigned;
     }
 
     public SignedCms? GetSignature()
     {
-        ReadOnlySpan<byte> data = Allocation.GetSpan();
+        ReadOnlySpan<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
 
         if (!context.IsSigned)
@@ -80,30 +80,30 @@ public class CodeSignProvider
 
     public bool HasValidSignature(SignedCms signedCms)
     {
-        Span<byte> span = Allocation.GetSpan();
+        Span<byte> data = Allocation.GetData();
 
         if (!_handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
             throw new InvalidOperationException("The CMS does not contain a valid hash.");
 
-        IContext context = _handler.GetContext(span);
+        IContext context = _handler.GetContext(data);
 
         if (!context.IsSigned)
             throw new InvalidOperationException("The file is not signed.");
 
-        byte[] actualDigest = _handler.ComputeHash(context, span, hashAlgorithm);
+        byte[] actualDigest = _handler.ComputeHash(context, data, hashAlgorithm);
         return expectedDigest.SequenceEqual(actualDigest);
     }
 
     public byte[] ComputeHash(HashAlgorithmName? hashAlgorithm = null)
     {
-        Span<byte> data = Allocation.GetSpan();
+        Span<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
         return _handler.ComputeHash(context, data, hashAlgorithm ?? HashAlgorithmName.SHA256);
     }
 
     public bool TryRemoveSignature(bool truncate)
     {
-        Span<byte> data = Allocation.GetSpan();
+        Span<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
 
         if (!context.IsSigned)
@@ -112,7 +112,7 @@ public class CodeSignProvider
         long delta = _handler.RemoveSignature(context, data);
 
         if (truncate)
-            Allocation.SetLength((uint)(data.Length - delta));
+            Allocation.TruncateDataTo((uint)(data.Length - delta));
 
         return true;
     }
@@ -121,7 +121,7 @@ public class CodeSignProvider
     {
         hashAlgorithm ??= HashAlgorithmName.SHA256;
 
-        Span<byte> data = Allocation.GetSpan();
+        Span<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
 
         if (context.IsSigned)
@@ -132,7 +132,7 @@ public class CodeSignProvider
 
     public void WriteSignature(Signature signature)
     {
-        Span<byte> data = Allocation.GetSpan();
+        Span<byte> data = Allocation.GetData();
         IContext context = _handler.GetContext(data);
 
         if (context.IsSigned)

@@ -243,8 +243,6 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
     {
         MachOContext obj = (MachOContext)context;
 
-        Span<byte> data = allocation.GetSpan();
-        int oldSize = data.Length;
         MachObjectInfo info = (MachObjectInfo)signature.SignatureInfo!;
 
         ulong codeLimit = info.CodeLimit;
@@ -254,29 +252,30 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         SortedList<CsSlot, byte[]> blobs = new SortedList<CsSlot, byte[]>(info.Blobs); //We copy the collection to avoid duplicating the signature blob on multiple calls to WriteSignature
         blobs.Add(CsSlot.Signature, signature.SignedCms.Encode());
 
+        Span<byte> data = allocation.GetData();
+
         //We need to update the header etc. before adding the CodeDirectory as it calculates page hashes, and they otherwise won't be correct.
         WriteHeaders(data, obj, codeLimit, padLen, sbSize);
 
-        allocation.SetLength((uint)(oldSize + padLen + sbSize)); //Extend the allocation with the SuperBlob
-        data = allocation.GetSpan();
+        Span<byte> ext = allocation.CreateExtension((uint)(padLen + sbSize)); //Extend the allocation with the SuperBlob
 
         //Set the span at after the file where the SB begins
-        data = data[(oldSize + padLen)..];
+        ext = ext[padLen..];
 
         // Write the SuperBlob header
-        WriteUInt32BigEndian(data[..], (uint)CsMagic.EmbeddedSignature);
-        WriteUInt32BigEndian(data[4..], (uint)(SuperBlobHeader.StructSize + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize) + BlobWrapper.StructSize)); //The BlobWrapper is for the CMS blob
-        WriteUInt32BigEndian(data[8..], (uint)blobs.Count);
-        data = data[SuperBlobHeader.StructSize..];
+        WriteUInt32BigEndian(ext[..], (uint)CsMagic.EmbeddedSignature);
+        WriteUInt32BigEndian(ext[4..], (uint)(SuperBlobHeader.StructSize + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize) + BlobWrapper.StructSize)); //The BlobWrapper is for the CMS blob
+        WriteUInt32BigEndian(ext[8..], (uint)blobs.Count);
+        ext = ext[SuperBlobHeader.StructSize..];
 
         //Write all the SuperBlob payload headers
         int dataOffset = SuperBlobHeader.StructSize + (blobs.Count * BlobIndex.StructSize);
         foreach (KeyValuePair<CsSlot, byte[]> blob in blobs)
         {
             //Write a blob index
-            WriteUInt32BigEndian(data, (uint)blob.Key);
-            WriteUInt32BigEndian(data[4..], (uint)dataOffset);
-            data = data[8..];
+            WriteUInt32BigEndian(ext, (uint)blob.Key);
+            WriteUInt32BigEndian(ext[4..], (uint)dataOffset);
+            ext = ext[8..];
             dataOffset += blob.Value.Length;
         }
 
@@ -286,14 +285,14 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
             // Wrap CMS in a blob wrapper. We do it here to avoid creating a buffer after encoding the CMS just to add a wrapper to the byte-array
             if (blob.Key == CsSlot.Signature)
             {
-                WriteUInt32BigEndian(data, (uint)CsMagic.BlobWrapper);
-                WriteUInt32BigEndian(data[4..], (uint)blob.Value.Length + 8);
-                data = data[8..];
+                WriteUInt32BigEndian(ext, (uint)CsMagic.BlobWrapper);
+                WriteUInt32BigEndian(ext[4..], (uint)blob.Value.Length + 8);
+                ext = ext[8..];
             }
 
             //Write the actual blob
-            blob.Value.CopyTo(data);
-            data = data[blob.Value.Length..];
+            blob.Value.CopyTo(ext);
+            ext = ext[blob.Value.Length..];
         }
     }
 

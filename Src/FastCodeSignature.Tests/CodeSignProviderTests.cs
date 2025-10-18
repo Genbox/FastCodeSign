@@ -3,6 +3,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Text;
 using Genbox.FastCodeSignature.Allocations;
 using Genbox.FastCodeSignature.Handlers;
+using Genbox.FastCodeSignature.Internal.Extensions;
 using Genbox.FastCodeSignature.Internal.MachObject;
 using Genbox.FastCodeSignature.Models;
 using Genbox.FastCodeSignature.Tests.Code;
@@ -112,7 +113,7 @@ public class CodeSignProviderTests
 
         byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
 
-        Span<byte> modified = allocation.GetSpan();
+        Span<byte> modified = allocation.GetData();
 
         if (tc.EqualityPatch != null)
         {
@@ -182,7 +183,7 @@ public class CodeSignProviderTests
             }
         }));
 
-        await Verify(allocation.GetSpan().ToArray())
+        await Verify(allocation.ToArray())
               .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
               .UseDirectory("Verify")
               .DisableDiff()

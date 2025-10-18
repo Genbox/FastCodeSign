@@ -110,19 +110,15 @@ public sealed class PeFormatHandler : IFormatHandler
 
     void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
     {
-        Span<byte> data = allocation.GetSpan();
         byte[] encodedCms = signature.SignedCms.Encode();
 
         //Keep a copy of the old EoF
-        uint datLen = (uint)data.Length;
-        datLen += Pad(datLen, 8);
+        uint datLen = (uint)allocation.GetData().Length;
+        uint dataPad = Pad(datLen, 8);
+        datLen += dataPad;
 
         uint sigLen = (uint)encodedCms.Length;
         sigLen += Pad(sigLen, 8);
-
-        //Set our allocation to the correct size
-        allocation.SetLength(datLen + WinCertificate.StructSize + sigLen);
-        data = allocation.GetSpan();
 
         //Create a span to contain the WIN_CERTIFICATE structure
         WinCertificate winCert = new WinCertificate
@@ -132,12 +128,17 @@ public sealed class PeFormatHandler : IFormatHandler
             CertificateType = 0x0002 // WIN_CERT_TYPE_PKCS_SIGNED_DATA
         };
 
-        Span<byte> span = data[(int)datLen..];
+        //Expand the allocation with space for our signature. Include the padding to data.
+        Span<byte> ext = allocation.CreateExtension(dataPad + WinCertificate.StructSize + sigLen);
+        Span<byte> span = ext[(int)dataPad..]; // Skip the padding
         winCert.Write(span);
-        encodedCms.CopyTo(span[WinCertificate.StructSize..(int)(WinCertificate.StructSize + sigLen)]);
+
+        //Write the CMS blob after the WinCertificate header
+        encodedCms.CopyTo(span[WinCertificate.StructSize..]);
 
         // Update the security directory entry
         WinPeContext obj = (WinPeContext)context;
+        Span<byte> data = allocation.GetData();
         WriteUInt32LittleEndian(data[(int)obj.SecurityDirOffset..], datLen);
         WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
     }

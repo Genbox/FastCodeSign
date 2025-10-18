@@ -92,8 +92,6 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
     private static void WriteUtf8(TextContext obj, IAllocation allocation, ReadOnlySpan<byte> startComment, ReadOnlySpan<byte> endComment, ReadOnlySpan<byte> newLine, byte[] encoded)
     {
-        Span<byte> data = allocation.GetSpan();
-
         int base64Len = ((encoded.Length + 2) / 3) * 4;
         Span<byte> base64 = base64Len <= 2048 ? stackalloc byte[base64Len] : new byte[base64Len];
 
@@ -107,14 +105,12 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length;
         int commentLen = ((startComment.Length + endComment.Length + newLine.Length) * lineCount) - newLine.Length; // no trailing newline after last line
 
-        int oldLen = data.Length;
-        allocation.SetLength((uint)(oldLen + headersLen + commentLen + base64.Length));
+        Span<byte> ext = allocation.CreateExtension((uint)(headersLen + commentLen + base64.Length));
 
-        data = allocation.GetSpan();
-        int idx = oldLen;
+        int idx = 0;
 
         // Write header
-        obj.HeaderSig.CopyTo(data[idx..]);
+        obj.HeaderSig.CopyTo(ext[idx..]);
         idx += obj.HeaderSig.Length;
 
         int base64Rem = base64.Length;
@@ -123,16 +119,16 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         while (base64Rem > 0)
         {
             // Write start comment
-            startComment.CopyTo(data[idx..]);
+            startComment.CopyTo(ext[idx..]);
             idx += startComment.Length;
 
             int toWrite = Math.Min(base64Rem, PerLineChars);
-            base64.Slice(base64Offset, toWrite).CopyTo(data[idx..]);
+            base64.Slice(base64Offset, toWrite).CopyTo(ext[idx..]);
             idx += toWrite;
 
             if (endComment.Length > 0)
             {
-                endComment.CopyTo(data[idx..]);
+                endComment.CopyTo(ext[idx..]);
                 idx += endComment.Length;
             }
 
@@ -142,19 +138,17 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
             if (base64Rem > 0)
             {
                 //Write newline
-                newLine.CopyTo(data[idx..]);
+                newLine.CopyTo(ext[idx..]);
                 idx += newLine.Length;
             }
         }
 
         // Write footer
-        obj.FooterSig.CopyTo(data[idx..]);
+        obj.FooterSig.CopyTo(ext[idx..]);
     }
 
     private static void WriteUtf16(TextContext obj, IAllocation allocation, ReadOnlySpan<byte> startComment, ReadOnlySpan<byte> endComment, ReadOnlySpan<byte> newLine, byte[] encoded)
     {
-        Span<byte> data = allocation.GetSpan();
-
         int base64CharLen = ((encoded.Length + 2) / 3) * 4;
         Span<char> base64Chars = base64CharLen <= 2048 ? stackalloc char[base64CharLen] : new char[base64CharLen];
 
@@ -171,14 +165,12 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length;
         int commentLen = ((startComment.Length + endComment.Length + newLine.Length) * lineCount) - newLine.Length; // no trailing newline after last line
 
-        int oldLen = data.Length;
-        allocation.SetLength((uint)(oldLen + headersLen + commentLen + b64ByteLen));
+        Span<byte> ext = allocation.CreateExtension((uint)(headersLen + commentLen + b64ByteLen));
 
-        data = allocation.GetSpan();
-        int idx = oldLen;
+        int idx = 0;
 
         // Write header
-        obj.HeaderSig.CopyTo(data[idx..]);
+        obj.HeaderSig.CopyTo(ext[idx..]);
         idx += obj.HeaderSig.Length;
 
         int base64Rem = base64Chars.Length;
@@ -187,19 +179,19 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         while (base64Rem > 0)
         {
             // Write start comment
-            startComment.CopyTo(data[idx..]);
+            startComment.CopyTo(ext[idx..]);
             idx += startComment.Length;
 
             int toWrite = Math.Min(base64Rem, PerLineChars);
 
             // Encode this 64-char (or tail) chunk into UTF-16 bytes directly into output
             ReadOnlySpan<char> chunk = base64Chars.Slice(base64Offset, toWrite);
-            int bytesWritten = obj.Encoding.GetBytes(chunk, data[idx..]);
+            int bytesWritten = obj.Encoding.GetBytes(chunk, ext[idx..]);
             idx += bytesWritten;
 
             if (endComment.Length > 0)
             {
-                endComment.CopyTo(data[idx..]);
+                endComment.CopyTo(ext[idx..]);
                 idx += endComment.Length;
             }
 
@@ -209,13 +201,13 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
             if (base64Rem > 0)
             {
                 // Write newline
-                newLine.CopyTo(data[idx..]);
+                newLine.CopyTo(ext[idx..]);
                 idx += newLine.Length;
             }
         }
 
         // Write footer
-        obj.FooterSig.CopyTo(data[idx..]);
+        obj.FooterSig.CopyTo(ext[idx..]);
     }
 
     bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
