@@ -39,6 +39,11 @@ internal sealed class TestCase : IXunitSerializable
     public override string ToString()
     {
         string fileName = Path.GetFileName(SignedFile);
+
+        //If there is one underscore, we show the entire filename
+        if (fileName.Count(x => x == '_') == 1)
+            return fileName;
+
         return fileName[..fileName.LastIndexOf('_')];
     }
 }

@@ -44,7 +44,7 @@ public sealed class PeFormatHandler : IFormatHandler
 
         // We need to skip the 8 byte header, and subtract it from the length
         uint certDataOffset = obj.SecurityVirtualAddress + 8;
-        uint certDataLength = winCert.Length - 8;
+        uint certDataLength = winCert.Length - 10;
 
         return data.Slice((int)certDataOffset, (int)certDataLength);
     }

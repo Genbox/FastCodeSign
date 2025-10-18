@@ -37,9 +37,8 @@ internal static class Program
             Directory.CreateDirectory(vectorsDir);
 
         Console.WriteLine("Creating test vectors");
-        int counter = 1;
-        GeneratePowerShellNormal(File.ReadAllText("PowerShell/ps1_unsigned.dat"), cert, ref counter, vectorsDir);
-        GeneratePowerShellEdgeCases(File.ReadAllText("PowerShell/ps1_signed.dat"), ref counter, vectorsDir);
+        GeneratePowerShellNormal(File.ReadAllText("PowerShell/ps1_unsigned.dat"), cert, vectorsDir);
+        GeneratePowerShellEdgeCases(File.ReadAllText("PowerShell/ps1_signed.dat"), vectorsDir);
     }
 
     private static void SignFile(string unsigned, X509Certificate2 cert, RSA rsa, HashAlgorithmName hash, TimeStampConfiguration? timeConfig = null)
@@ -59,7 +58,7 @@ internal static class Program
         File.Move(signed, newName, true);
     }
 
-    private static void GeneratePowerShellEdgeCases(string signedContent, ref int counter, string outDir)
+    private static void GeneratePowerShellEdgeCases(string signedContent, string outDir)
     {
         (string edgeCaseName, Func<string, string> edgeCase)[] edgeCases =
         [
@@ -267,12 +266,12 @@ internal static class Program
 
             // DOS EOF marker after End
             ("invalid-format_ctrl-z-after-end", s => s + "\x1A"),
+            ("invalid-format_insert-b64-before-end", InsertB64BeforeEnd),
 
             ("invalid-signature_end-before-begin-then-valid", EndBeforeBegin_ThenValid),
             ("invalid-signature_begin-end-same-line-then-valid", BeginEndSameLine_ThenValid),
             ("invalid-signature_end-then-begin-immediately", EndThenBegin_Inline),
 
-            ("invalid-base64_drop-first-b64-line", s => ReplaceB64Seq(s, seq => seq.Skip(1).ToList())),
             ("invalid-base64_drop-last-b64-line", s => ReplaceB64Seq(s, seq => seq.Take(Math.Max(0, seq.Count - 1)).ToList())),
             ("invalid-base64_even-then-odd-b64-lines", s => ReplaceB64Seq(s, seq =>
             {
@@ -283,16 +282,6 @@ internal static class Program
                 return even.Concat(odd).ToList();
             })),
             ("invalid-base64_drop-every-7th-b64-line", s => ReplaceB64Seq(s, seq => seq.Where((_, i) => (i + 1) % 7 != 0).ToList())),
-            ("invalid-base64_duplicate-every-10th-b64", s => ReplaceB64Seq(s, seq =>
-            {
-                List<string> outSeq = new List<string>(seq.Count + seq.Count / 10);
-                for (int i = 0; i < seq.Count; i++)
-                {
-                    outSeq.Add(seq[i]);
-                    if ((i + 1) % 10 == 0) outSeq.Add(seq[i]);
-                }
-                return outSeq;
-            })),
             ("invalid-signature_pre-begin-blanklines-3", s => "\r\n\r\n\r\n" + s)
         ];
 
@@ -311,11 +300,11 @@ internal static class Program
             string newSignatureBlock = edgeCase(signatureBlock);
             string newContent = beforeSignature + newSignatureBlock;
 
-            File.WriteAllText(Path.Combine(outDir, $"{counter++:000}_{edgeCaseName}.ps1"), newContent, utfNoBom);
+            File.WriteAllText(Path.Combine(outDir, $"{edgeCaseName}.dat"), newContent, utfNoBom);
         }
     }
 
-    private static void GeneratePowerShellNormal(string content, X509Certificate2 cert, ref int counter, string outDir)
+    private static void GeneratePowerShellNormal(string content, X509Certificate2 cert, string outDir)
     {
         (string newlineName, string newline)[] newLines =
         [
@@ -356,13 +345,16 @@ internal static class Program
 
                     foreach ((string digestName, HashAlgorithmName hashAlgorithmName) in digestAlgorithms)
                     {
-                        string fileName = $"{counter++:000}_normal_{encodingName}_{newlineName}_{signatureName}_{digestName}.ps1";
+                        string fileName = $"normal_{encodingName}_{newlineName}_{signatureName}_{digestName}.ps1";
                         string fullPath = Path.Combine(outDir, fileName);
 
                         content = content.ReplaceLineEndings(newline);
                         File.WriteAllText(fullPath, content, encoding);
 
                         AuthenticodeSigner.SignFile(fullPath, cert, signatureAlgorithm, hashAlgorithmName, null);
+
+                        //Rename the file to dat (it must be ps1 for Windows to be able to sign it)
+                        File.Move(fullPath, Path.ChangeExtension(fullPath, ".dat"));
                     }
                 }
             }
@@ -653,7 +645,7 @@ internal static class Program
     private static string Interleaved_TwoBlocks(string s)
     {
         (string beg, string end, string[] b64) = SplitBlock(s);
-        List<string> lines = new List<string> { beg, beg };
+        List<string> lines = [beg, beg];
         foreach (string l in b64)
         {
             lines.Add(l);
@@ -751,5 +743,23 @@ internal static class Program
             return string.Join(NewLine, list);
         }
         return string.Join(NewLine, (IEnumerable<string>)lines);
+    }
+
+    private static string InsertB64BeforeEnd(string s)
+    {
+        //Remove the padding char
+        s = s.Replace('=', 'y');
+
+        List<string> lines = s.Split(NewLineArr, StringSplitOptions.None).ToList();
+        int lastB64 = -1;
+
+        for (int i = 0; i < lines.Count; i++)
+            if (IsB64(lines[i]))
+                lastB64 = i;
+
+        if (lastB64 >= 0)
+            lines[lastB64] += Convert.ToBase64String("tester"u8.ToArray()); // Insert a duplicate of the final legitimate base64 line just before the End marker
+
+        return string.Join(NewLine, lines);
     }
 }

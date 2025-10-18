@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
@@ -72,6 +73,16 @@ public class CodeSignProvider
 
         ReadOnlySpan<byte> signatureBytes = _handler.ExtractSignature(context, data);
         Debug.Assert(!signatureBytes.IsEmpty);
+
+        // Extra sanity checks before delegating decoding to SignedCms
+        if (AsnDecoder.TryReadEncodedValue(signatureBytes, AsnEncodingRules.BER, out Asn1Tag tag, out _, out _, out int bytesConsumed))
+        {
+            if (!tag.HasSameClassAndValue(Asn1Tag.Sequence))
+                throw new InvalidOperationException("The ASN.1 structure is invalid");
+
+            if (signatureBytes.Length != bytesConsumed)
+                throw new InvalidDataException("There is trailing data after the ASN.1 structure");
+        }
 
         SignedCms signedCms = new SignedCms();
         signedCms.Decode(signatureBytes);

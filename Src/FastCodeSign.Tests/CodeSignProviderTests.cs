@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Text;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Internal.MachObject;
