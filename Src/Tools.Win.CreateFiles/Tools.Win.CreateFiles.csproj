@@ -15,13 +15,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 
-    <Content Include="..\..\Files\Unsigned\WMI\*">
-      <LinkBase>WMI</LinkBase>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-
-    <Content Include="..\..\Files\Unsigned\WSH\*">
-      <LinkBase>WSH</LinkBase>
+    <Content Include="..\..\Files\Unsigned\PowerShell\*">
+      <LinkBase>PowerShell</LinkBase>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 

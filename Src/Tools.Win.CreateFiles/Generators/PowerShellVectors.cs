@@ -3,34 +3,20 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSign.Native.Authenticode;
 
-namespace Genbox.Tools.Win.CreatePowerShellFiles;
+namespace Genbox.Tools.Win.CreateFiles.Generators;
 
 // This tool is able to create a set of test vectors used for checking the correctness of the PowerShell handler
 // It also creates an unsigned and signed version of a simple powershell script.
 
-internal static class Program
+internal static class PowerShellVectors
 {
     private const string BeginMarker = "# SIG # Begin signature block";
     private const string EndMarker = "# SIG # End signature block";
     private const string NewLine = "\r\n";
     private static readonly string[] NewLineArr = [NewLine];
 
-    private static void Main()
+    internal static void Generate(X509Certificate2 cert)
     {
-        if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("This tool only runs on Windows");
-
-        X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
-
-        //The default PS1 file is UTF8 without BOM, and CRLF newlines.
-        RSA rsa = cert.GetRSAPrivateKey()!;
-        HashAlgorithmName hash = HashAlgorithmName.SHA256;
-
-        foreach (string file in Directory.GetFiles("PowerShell", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
-        {
-            SignFile(file, cert, rsa, hash);
-        }
-
         const string vectorsDir = "TestVectors";
 
         if (!Directory.Exists(vectorsDir))
@@ -39,23 +25,6 @@ internal static class Program
         Console.WriteLine("Creating test vectors");
         GeneratePowerShellNormal(File.ReadAllText("PowerShell/ps1_unsigned.dat"), cert, vectorsDir);
         GeneratePowerShellEdgeCases(File.ReadAllText("PowerShell/ps1_signed.dat"), vectorsDir);
-    }
-
-    private static void SignFile(string unsigned, X509Certificate2 cert, RSA rsa, HashAlgorithmName hash, TimeStampConfiguration? timeConfig = null)
-    {
-        Console.WriteLine($"Signing {unsigned}");
-
-        //Get the extension (needed by authenticode to determine SIP provider)
-        string name = Path.GetFileName(unsigned);
-        string ext = name[..name.IndexOf('_', StringComparison.Ordinal)];
-
-        string signed = $"{unsigned.Replace("unsigned", "signed", StringComparison.Ordinal)}.{ext}";
-        File.Copy(unsigned, signed, true);
-        AuthenticodeSigner.SignFile(signed, cert, rsa, hash, timeConfig);
-
-        //Rename the file back to .dat now that it is signed
-        string newName = signed[..signed.LastIndexOf('.')];
-        File.Move(signed, newName, true);
     }
 
     private static void GeneratePowerShellEdgeCases(string signedContent, string outDir)
@@ -354,7 +323,7 @@ internal static class Program
                         AuthenticodeSigner.SignFile(fullPath, cert, signatureAlgorithm, hashAlgorithmName, null);
 
                         //Rename the file to dat (it must be ps1 for Windows to be able to sign it)
-                        File.Move(fullPath, Path.ChangeExtension(fullPath, ".dat"));
+                        File.Move(fullPath, Path.ChangeExtension(fullPath, ".dat"), true);
                     }
                 }
             }
