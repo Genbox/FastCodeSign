@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CmdletDefinitionXML xmlns="http://schemas.microsoft.com/cmdlets-over-objects/2009/11">
-  <Cmdlets>
-    <Cmdlet>
-      <CmdletMetadata Verb="Get" Noun="Hello" />
-      <Instances>
-        <InstanceCmdlet>
-          <DefaultDisplayPropertySet>
-            <DisplayProperty Name="Name" />
-            <DisplayProperty Name="Greeting" />
-          </DefaultDisplayPropertySet>
-          <Class ClassName="Hello_Class" />
-        </InstanceCmdlet>
-      </Instances>
-    </Cmdlet>
-  </Cmdlets>
-</CmdletDefinitionXML>
-
+<PowerShellMetadata xmlns="http://schemas.microsoft.com/cmdlets-over-objects/2009/11">
+  <Class ClassName="namespace/classname" ClassVersion="1.0.0">
+    <Version>1.0.0</Version>
+    <DefaultNoun>NounName</DefaultNoun>
+    <InstanceCmdlets>
+      <Cmdlet>
+        <!-- cmdlet definition(s) applying to WMI instances -->
+      </Cmdlet>
+    </InstanceCmdlets>
+    <StaticCmdlets>
+      <Cmdlet>
+        <!-- cmdlet definition(s) applying to WMI classes -->
+      </Cmdlet>
+    </StaticCmdlets>
+  </Class>
+</PowerShellMetadata>
 <!-- SIG # Begin signature block -->
 <!-- MIIIjwYJKoZIhvcNAQcCoIIIgDCCCHwCAQExDzANBglghkgBZQMEAgEFADB5Bgor -->
 <!-- BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG -->
-<!-- KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCCcxErQbr83i3K -->
-<!-- qvyb0JKrTSfQryavSVq5NXlvRbCuQ6CCBQwwggUIMIIC8KADAgECAhA3pQLjzQCT -->
+<!-- KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCE87GG4sDG8YCk -->
+<!-- b7nXX2mtMojKvHKae/Up+fJYX5YP5aCCBQwwggUIMIIC8KADAgECAhA3pQLjzQCT -->
 <!-- hEg3hd08XZF+MA0GCSqGSIb3DQEBCwUAMBwxGjAYBgNVBAMMEUZhc3RDb2RlU2ln -->
 <!-- bmF0dXJlMB4XDTI1MDkxMzEyMzUzNFoXDTI4MDkxMzEyNDUzM1owHDEaMBgGA1UE -->
 <!-- AwwRRmFzdENvZGVTaWduYXR1cmUwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK -->
@@ -51,16 +50,16 @@
 <!-- RmFzdENvZGVTaWduYXR1cmUCEDelAuPNAJOESDeF3TxdkX4wDQYJYIZIAWUDBAIB -->
 <!-- BQCgfDAQBgorBgEEAYI3AgEMMQIwADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIB -->
 <!-- BDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAvBgkqhkiG9w0BCQQxIgQg -->
-<!-- 4lQxqGjIO2OlD8zUZwpxmQvP5ZorBiVsuptFdLKSzq8wDQYJKoZIhvcNAQEBBQAE -->
-<!-- ggIAFTzDqS6wTQhL9eplD0cXao65b5x5z1BFQuYDYj63yQRSPlyOgHf2QOZZzJyD -->
-<!-- w1Bf8TY4NMTYHU0Explv93k1g7Q7BzEWN6mjka1dfo1npX4eI1kmXO9Pybh4ZWSc -->
-<!-- 8EBO//bppKPnc0eNjeVwdW6sklJWdKX6mzlASv8hQkzW0Nii68ZHBQSSTaCqZMPW -->
-<!-- 9FMpF7y81bgomvb+F9DPRjTlDQNhJKlIotlBEqupX/kZs/aByQRmZWcB0GUBUAXa -->
-<!-- gk3gtxxHWy8IubKSID8vkulqlReBhcMh+WOCKuL0YW+gkisACnNdrOH6wq+AvA3O -->
-<!-- g3T9mWgeJMq1ZTb6ZZIFsVO6jt62cJYMavs5P3Ielfcwb8VQe7s9/0cbWyVo8Uw+ -->
-<!-- gFcfFxnLRnN4VD+9Mj/mdXG2Mlqbz1H3YcRZZx0yY3IjqsPERltmmJj1QmaGwQhJ -->
-<!-- OCarEoWjJFKqs2FDerhgpNGP84qdqD8oB20iVSPHO5koxTHM5ENqrmgVRedYyJIj -->
-<!-- Y8lwBEns8h8tamFVPphVQHlZMQFqNWZPBJnunu6qEUEfsZt4Zg2K5zxSQHo/4LLD -->
-<!-- X8KMin296IG48X8pzWxm4JtsqwHJuq2tc5d+NOB5emtu0Z+Nb0yPtqDfMryaSTvD -->
-<!-- 8HNvIEAZf1N/KazSzvKmUCJH7/Y+QdnZs73TKjhQn1wCM8M= -->
+<!-- CVaXqFo5YYsHQPe7HuMyVP6gOHBzhSimIzO9TQ+BOWIwDQYJKoZIhvcNAQEBBQAE -->
+<!-- ggIAKmvF3yscJeKgnVG/pznh8ArihteU17MVrpKbvdQEXXMG4tHQ9jMIjMuXbsAU -->
+<!-- 2PR4EhiwId08jDbL8XBj/SuVTI6yr5oSDxGpuXStjMkLg5OCb+WANDst8e5gMJLv -->
+<!-- WKBUU9cSD8zx8MVSGbFGRnkUHjwYMQbpUCe9RARB+MrpnlkcBvr+HVXUVp/YPMqO -->
+<!-- wATBqEeNMzflvI5rBk4LdF43nRzTwsDc9YFR1DAscACV1YuwLnQYq/pTnpe3HtMr -->
+<!-- 4GdNIgv0acMAR6N+mwC4odOdFGv0YIQdcR0q47TVsvlU3K2lVTaKYthCtmPT9YPL -->
+<!-- QNBgc7aakc3/aJXIMALR4u7pYLSQjafGz4fy+WCGNon50gEalpDVHt7Di8w4uSV9 -->
+<!-- x793LZjPbxr8miFS/5nKU1vehhDuhVXeqt3K2TxVGrIrbelt2n1gGHPTTSN5fDuJ -->
+<!-- T1u7GAvdd8NuI2v4E6KM3HYZjGIVUjcICMDzhbdUq7gt039YYE853X2zFalFF3Q8 -->
+<!-- bxYHTwvM+9imspyAThgc5bZX+ZVYQYDZhhSDyFrixX9v3ljOLQNpqWiDj7dtnk33 -->
+<!-- 0pMSawlnHzffi5t9kzVoi7llSe0SDl/HtIlZRaBl6TwQ6ICX8HZ722UfwD1Uhq9K -->
+<!-- vWz+BqUCoJJCrLKWjQXqNKkY5ASyhczBAXNaK3paNhlCUwQ= -->
 <!-- SIG # End signature block -->

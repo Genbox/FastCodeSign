@@ -177,12 +177,12 @@ public class CodeSignProviderTests
 
             //PowerShell
             TestCase.Create(new PowerShellModuleFormatHandler(), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
-            TestCase.Create(new PowerShellManifestFormatHandler(), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "5400535fab6f06957a2901fd4d20997f232aec665103111c3561d87a36a9aa89"),
+            TestCase.Create(new PowerShellManifestFormatHandler(), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "0657a7bdf14c63131ed8675353188861a484f8a62e6e3a37d153977eaa288460"),
             TestCase.Create(new PowerShellConsoleFormatHandler(), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
             TestCase.Create(new PowerShellXmlFormatHandler(), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
             TestCase.Create(new PowerShellScriptFormatHandler(), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
             TestCase.Create(new PowerShellScriptFormatHandler(), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
-            TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "8273112b41bafcde2dcaaafc9bd092ab4d27d0af26af495ab935796f45b0ae43"),
+            TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "84f3b186e2c0c6f180a46fb9d75f69ad3288cabc729a7bf529f9f2585f960fe5"),
 
             //WinPe
             TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ax_signed.dat", "Unsigned/WinPe/ax_unsigned.dat", "deb6cb26d6c6fbdce4d0ae0245d32ddb00b248ae94a21f43194de9764766f942", PatchExe),

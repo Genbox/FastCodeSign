@@ -5,7 +5,7 @@
       Value: 1.3.6.1.4.1.311.2.1.4,
       FriendlyName: SPC_INDIRECT_DATA_OBJID
     },
-    Content: MGkwNAYKKwYBBAGCNwIBHjAmAgMBAAAEEB/MO2BZSwhOtyTSxil+81ECAQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQgVABTX6tvBpV6KQH9TSCZfyMq7GZRAxEcNWHYejapqok=
+    Content: MGkwNAYKKwYBBAGCNwIBHjAmAgMBAAAEEB/MO2BZSwhOtyTSxil+81ECAQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQgBlenvfFMYxMe2GdTUxiIYaSE+KYubjo30VOXfqoohGA=
   },
   Detached: false,
   Certificates: [
@@ -155,7 +155,7 @@
           },
           Values: [
             {
-              MessageDigest: fXkz2wAUmxdoOHISaaIJQulnZ33cca47NrptLzN/4y0=,
+              MessageDigest: 3dm44mmhfIh0/N3QPqT4r1Q43OCYeN8Wh4F3ZlljRJA=,
               Oid: {
                 Value: 1.2.840.113549.1.9.4,
                 FriendlyName: Message Digest

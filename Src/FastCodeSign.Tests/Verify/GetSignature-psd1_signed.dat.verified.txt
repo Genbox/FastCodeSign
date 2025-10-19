@@ -4,7 +4,7 @@
     ContentType: {
       Value: 1.3.6.1.4.1.311.2.1.4
     },
-    Content: MGkwNAYKKwYBBAGCNwIBHjAmAgMBAAAEEB/MO2BZSwhOtyTSxil+81ECAQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQgVABTX6tvBpV6KQH9TSCZfyMq7GZRAxEcNWHYejapqok=
+    Content: MGkwNAYKKwYBBAGCNwIBHjAmAgMBAAAEEB/MO2BZSwhOtyTSxil+81ECAQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQgBlenvfFMYxMe2GdTUxiIYaSE+KYubjo30VOXfqoohGA=
   },
   Detached: false,
   Certificates: [
@@ -154,7 +154,7 @@
           },
           Values: [
             {
-              MessageDigest: xxB5VF03I3S4lMcuLkrbmeC7H9u6S+UWc5bcdDaddFk=,
+              MessageDigest: lj+9Imkny/DoxRpPv/Lt41wXICUGHquZar5kDxt5+08=,
               Oid: {
                 Value: 1.2.840.113549.1.9.4,
                 FriendlyName: Message Digest
