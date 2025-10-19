@@ -12,12 +12,12 @@ internal static class FormatHandlerFactory
         [
             new PeFormatHandler(),
             new MachObjectFormatHandler(fileName!),
-            new PowerShellScriptFormatHandler(), //This is here because it is more likely to be chosen
             new PowerShellCmdletDefinitionXmlFormatHandler(),
             new PowerShellConsoleFormatHandler(),
             new PowerShellManifestFormatHandler(),
             new PowerShellModuleFormatHandler(),
-            new PowerShellXmlFormatHandler()
+            new PowerShellXmlFormatHandler(),
+            new PowerShellScriptFormatHandler(), //This is here because it matches everything
         ];
 
         string? ext = fileName == null ? null : PathHelper.GetExt(fileName);

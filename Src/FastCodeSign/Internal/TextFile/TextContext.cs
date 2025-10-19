@@ -5,15 +5,14 @@ namespace Genbox.FastCodeSign.Internal.TextFile;
 
 internal sealed class TextContext : IContext
 {
-    private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
-    private static readonly byte[] Utf16Bom = [0xFF, 0xFE];
     private const string MagicHeader = "SIG # Begin signature block";
     private const string MagicFooter = "SIG # End signature block";
     internal const string NewLine = "\r\n";
+    private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(false, true);
 
-    public static TextContext Create(ReadOnlySpan<byte> data, string commentStart, string commentEnd, Encoding fallbackEncoding)
+    public static TextContext Create(ReadOnlySpan<byte> data, string commentStart, string commentEnd, Encoding? encoding)
     {
-        Encoding encoding = DetectEncoding(data) ?? fallbackEncoding;
+        encoding ??= DetectEncoding(data) ?? Utf8Encoding; //We default to UTF8, but throw on invalid bytes, in case the guess was wrong
 
         Span<byte> buffer = stackalloc byte[150];
 
@@ -90,23 +89,4 @@ internal sealed class TextContext : IContext
     internal required int FooterIdx { get; init; }
     internal required byte[] FooterSig { get; init; }
     internal required Encoding Encoding { get; init; }
-
-    private static Encoding? DetectEncoding(ReadOnlySpan<byte> data)
-    {
-        //Check for BOM
-        if (data.StartsWith(Utf8Bom))
-            return Encoding.UTF8;
-
-        if (data.StartsWith(Utf16Bom))
-            return Encoding.Unicode;
-
-        //Fallback to finding the header with different encodings
-        if (data.IndexOf(Encoding.UTF8.GetBytes(MagicHeader)) >= 0)
-            return Encoding.UTF8;
-
-        if (data.IndexOf(Encoding.Unicode.GetBytes(MagicHeader)) >= 0)
-            return Encoding.Unicode;
-
-        return null;
-    }
 }

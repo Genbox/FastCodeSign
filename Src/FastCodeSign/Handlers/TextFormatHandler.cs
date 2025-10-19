@@ -16,7 +16,7 @@ using Genbox.FastCodeSign.Models;
 namespace Genbox.FastCodeSign.Handlers;
 
 [SuppressMessage("Design", "CA1033:Interface methods should be callable by child types")]
-public abstract class TextFormatHandler(string commentStart, string commentEnd, Encoding? fallbackEncoding) : IFormatHandler
+public abstract class TextFormatHandler(string commentStart, string commentEnd, Encoding? encoding) : IFormatHandler
 {
     private const int PerLineChars = 64;
 
@@ -24,7 +24,7 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
     public abstract string[] ValidExt { get; }
     public abstract bool IsValidHeader(ReadOnlySpan<byte> data);
 
-    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, fallbackEncoding ?? Encoding.UTF8);
+    IContext IFormatHandler.GetContext(ReadOnlySpan<byte> data) => TextContext.Create(data, commentStart, commentEnd, encoding);
 
     public ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {

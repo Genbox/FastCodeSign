@@ -52,7 +52,15 @@ public class TestVectors
     private static TheoryData<TestCase> GetPowerShellTestVectors()
     {
         TheoryData<TestCase> data = new TheoryData<TestCase>();
-        data.AddRange(Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell")).Select(x => TestCase.Create(new PowerShellScriptFormatHandler(Encoding.UTF8), Path.Combine("TestVectors/PowerShell", Path.GetFileName(x)), "unsiged-not-used", "93b3f04b6975d381ff0203406cd90489deb27da2dce44a89a3fada0b678bf0f4")));
+        string[] files = Directory.GetFiles(Path.Combine(Constants.FilesDir, "TestVectors/PowerShell"));
+
+        foreach (string file in files)
+        {
+            Encoding enc = file.Contains("utf16") ? Encoding.Unicode : Encoding.UTF8;
+
+            data.Add(TestCase.Create(new PowerShellScriptFormatHandler(enc), Path.Combine("TestVectors/PowerShell", Path.GetFileName(file)), "", ""));
+        }
+
         return data;
     }
 }

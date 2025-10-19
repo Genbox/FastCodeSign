@@ -11,12 +11,19 @@ using Genbox.FastCodeSign.Internal.WinPe.Enums;
 using Genbox.FastCodeSign.Internal.WinPe.Headers;
 using Genbox.FastCodeSign.Internal.WinPe.Spc;
 using Genbox.FastCodeSign.Models;
-using static Genbox.FastCodeSign.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSign.Handlers;
 
+/// <summary>
+/// Thus supports Windows Portable Executables. Exe, Dll, Sys, etc.
+/// </summary>
 public sealed class PeFormatHandler : IFormatHandler
 {
+    // See:
+    // - https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
+    // - https://download.microsoft.com/download/9/c/5/9c5b2167-8017-4bae-9fde-d599bac8184a/Authenticode_PE.docx
+    // - https://learn.microsoft.com/en-us/windows/win32/seccrypto/time-stamping-authenticode-signatures
+
     // The smallest valid PE file on Windows 7+ is:
     // x86: 252 bytes
     // x64: 268 bytes

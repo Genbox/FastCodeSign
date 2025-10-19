@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Text;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Internal.MachObject;
@@ -168,37 +169,34 @@ public class CodeSignProviderTests
         CodeSignProvider.FromData(exe, null, "UPPERCASE.EXE"); //Shouldn't throw
     }
 
-    private static TheoryData<TestCase> GetFiles()
-    {
-        return
-        [
-            //MachO
-            TestCase.Create(new MachObjectFormatHandler("macho_unsigned"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
+    private static TheoryData<TestCase> GetFiles() =>
+    [
+        //MachO
+        TestCase.Create(new MachObjectFormatHandler("macho_unsigned"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),
 
-            //PowerShell
-            TestCase.Create(new PowerShellModuleFormatHandler(), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
-            TestCase.Create(new PowerShellManifestFormatHandler(), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "0657a7bdf14c63131ed8675353188861a484f8a62e6e3a37d153977eaa288460"),
-            TestCase.Create(new PowerShellConsoleFormatHandler(), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
-            TestCase.Create(new PowerShellXmlFormatHandler(), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
-            TestCase.Create(new PowerShellScriptFormatHandler(), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
-            TestCase.Create(new PowerShellScriptFormatHandler(), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
-            TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "84f3b186e2c0c6f180a46fb9d75f69ad3288cabc729a7bf529f9f2585f960fe5"),
+        //PowerShell
+        TestCase.Create(new PowerShellModuleFormatHandler(Encoding.UTF8), "Signed/PowerShell/psm1_signed.dat", "Unsigned/PowerShell/psm1_unsigned.dat", "6e6c4873c7453644992df9ff4c72086d1b58a03fe7922f3095364fc4d226855e"),
+        TestCase.Create(new PowerShellManifestFormatHandler(Encoding.UTF8), "Signed/PowerShell/psd1_signed.dat", "Unsigned/PowerShell/psd1_unsigned.dat", "0657a7bdf14c63131ed8675353188861a484f8a62e6e3a37d153977eaa288460"),
+        TestCase.Create(new PowerShellConsoleFormatHandler(Encoding.UTF8), "Signed/PowerShell/psc1_signed.dat", "Unsigned/PowerShell/psc1_unsigned.dat", "da4ac19e4a73ce9920f313374f8181c27f02c75200ba77fe5353428668d94796"),
+        TestCase.Create(new PowerShellXmlFormatHandler(Encoding.UTF8), "Signed/PowerShell/ps1xml_signed.dat", "Unsigned/PowerShell/ps1xml_unsigned.dat", "511e2b48eef835fd13fc4144835fde056c58066502f30dcc8aa99f9fc848c0c8"),
+        TestCase.Create(new PowerShellScriptFormatHandler(Encoding.UTF8), "Signed/PowerShell/ps1_signed.dat", "Unsigned/PowerShell/ps1_unsigned.dat", "85341b6ab21bebd52db26f414978e8a2b3ce1bb9597f21b505de486cdf493d94"),
+        TestCase.Create(new PowerShellScriptFormatHandler(Encoding.Unicode), "Signed/PowerShell/ps1_utf16_signed.dat", "Unsigned/PowerShell/ps1_utf16_unsigned.dat", "a7a4ef70935b667e0d4e8213a06c32f057bdaf092a559543c12eb0a14d2108d9"),
+        TestCase.Create(new PowerShellCmdletDefinitionXmlFormatHandler(Encoding.UTF8), "Signed/PowerShell/cdxml_signed.dat", "Unsigned/PowerShell/cdxml_unsigned.dat", "84f3b186e2c0c6f180a46fb9d75f69ad3288cabc729a7bf529f9f2585f960fe5"),
 
-            //WinPe
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ax_signed.dat", "Unsigned/WinPe/ax_unsigned.dat", "deb6cb26d6c6fbdce4d0ae0245d32ddb00b248ae94a21f43194de9764766f942", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/cpl_signed.dat", "Unsigned/WinPe/cpl_unsigned.dat", "53a93ff595a2b902ff210e4da7047c5adbe2fb6b8116259856daaa0ec546c4f6", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/dll_signed.dat", "Unsigned/WinPe/dll_unsigned.dat", "b3f5fef5abce2b00c2eaa68a40dfaecb6731069410f4a4a2a6e67512b005aa3c", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/drv_signed.dat", "Unsigned/WinPe/drv_unsigned.dat", "8732e83186dbd7a4a05c3e3f3bb8d53b32a234001c0781307794735f9e080073", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/efi_signed.dat", "Unsigned/WinPe/efi_unsigned.dat", "300f3be399be71b8de2d7f5749413c2cec38dd4eecc8849d08aaf7d4f78f1799", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/exe_signed.dat", "Unsigned/WinPe/exe_unsigned.dat", "0fd6baa83538304cb6de2d149015acc0da268c8d0cc285176aa6382329ec1aa0", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/mui_signed.dat", "Unsigned/WinPe/mui_unsigned.dat", "3e5d6e235d1199ad2d63551837a8827678476609abf843718247dd40bdb37c24", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/mun_signed.dat", "Unsigned/WinPe/mun_unsigned.dat", "424c0c0a2ac2982f885b849d79f654608483bd151f26b0a261043ecff1c9d934", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ocx_signed.dat", "Unsigned/WinPe/ocx_unsigned.dat", "c4b65e114e14a873aaeaa9e0dc4c26965270d44314d49106ff24f82c531b0292", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/scr_signed.dat", "Unsigned/WinPe/scr_unsigned.dat", "8d72965b9ece78aabbca4c744b0ab69e37b01fd7546502008c74b04e3a8d023f", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/sys_signed.dat", "Unsigned/WinPe/sys_unsigned.dat", "3177faa0d1f62fc48e9cb042ebc40924cf782525cc43a8ecb0ab2b6f3924f685", PatchExe),
-            TestCase.Create(new PeFormatHandler(), "Signed/WinPe/winmd_signed.dat", "Unsigned/WinPe/winmd_unsigned.dat", "ae3bd70c2b98c68565673e880eff653fdf30a8dc6c24d2b27eb0bbf936227f97", PatchExe),
-        ];
-    }
+        //WinPe
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ax_signed.dat", "Unsigned/WinPe/ax_unsigned.dat", "deb6cb26d6c6fbdce4d0ae0245d32ddb00b248ae94a21f43194de9764766f942", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/cpl_signed.dat", "Unsigned/WinPe/cpl_unsigned.dat", "53a93ff595a2b902ff210e4da7047c5adbe2fb6b8116259856daaa0ec546c4f6", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/dll_signed.dat", "Unsigned/WinPe/dll_unsigned.dat", "b3f5fef5abce2b00c2eaa68a40dfaecb6731069410f4a4a2a6e67512b005aa3c", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/drv_signed.dat", "Unsigned/WinPe/drv_unsigned.dat", "8732e83186dbd7a4a05c3e3f3bb8d53b32a234001c0781307794735f9e080073", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/efi_signed.dat", "Unsigned/WinPe/efi_unsigned.dat", "300f3be399be71b8de2d7f5749413c2cec38dd4eecc8849d08aaf7d4f78f1799", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/exe_signed.dat", "Unsigned/WinPe/exe_unsigned.dat", "0fd6baa83538304cb6de2d149015acc0da268c8d0cc285176aa6382329ec1aa0", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/mui_signed.dat", "Unsigned/WinPe/mui_unsigned.dat", "3e5d6e235d1199ad2d63551837a8827678476609abf843718247dd40bdb37c24", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/mun_signed.dat", "Unsigned/WinPe/mun_unsigned.dat", "424c0c0a2ac2982f885b849d79f654608483bd151f26b0a261043ecff1c9d934", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ocx_signed.dat", "Unsigned/WinPe/ocx_unsigned.dat", "c4b65e114e14a873aaeaa9e0dc4c26965270d44314d49106ff24f82c531b0292", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/scr_signed.dat", "Unsigned/WinPe/scr_unsigned.dat", "8d72965b9ece78aabbca4c744b0ab69e37b01fd7546502008c74b04e3a8d023f", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/sys_signed.dat", "Unsigned/WinPe/sys_unsigned.dat", "3177faa0d1f62fc48e9cb042ebc40924cf782525cc43a8ecb0ab2b6f3924f685", PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/winmd_signed.dat", "Unsigned/WinPe/winmd_unsigned.dat", "ae3bd70c2b98c68565673e880eff653fdf30a8dc6c24d2b27eb0bbf936227f97", PatchExe),
+    ];
 
     private static void PatchExe(Span<byte> data)
     {

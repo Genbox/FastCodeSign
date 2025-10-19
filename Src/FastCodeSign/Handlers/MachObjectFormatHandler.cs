@@ -16,31 +16,33 @@ using Genbox.FastCodeSign.Internal.MachObject.Headers;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.Internal.MachObject.Requirements;
 using Genbox.FastCodeSign.Models;
-using static Genbox.FastCodeSign.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSign.Handlers;
 
-//TODO: Support 4+ GB files
-//TODO: Support adhoc signatures
-//TODO: Enable users setting:
-//      - The main binary exec segment flag
-//      - The page size
-//      - The version to produce
-//TODO: Support entitlements
-
-//Note: This is not byte-identical with macOS's CodeSign tool. Differences:
-//- It encodes in BER, not DER.
-//- It uses DER order of attributes (sorted by OID).
-//- It adds null parameters to digests
-
+/// <summary>
+/// Supports macOS Mach Object files.
+/// </summary>
+/// <param name="identifier">The identifier to use. By default, macOS codesign uses the filename of the file</param>
+/// <param name="requirements">The requirements to use. Set to null to use macOS codesign defaults</param>
+/// <param name="teamId">An optional team id. Set to null to exclude.</param>
 public sealed class MachObjectFormatHandler(string identifier, RequirementSet? requirements = null, string? teamId = null) : IFormatHandler
 {
+    // See https://github.com/aidansteele/osx-abi-macho-file-format-reference
+    // - Requirements: https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements
+    // - Entitlements: https://developer.apple.com/documentation/bundleresources/entitlements
+    // - Info.plist: https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html
+
+    // Note: This is not byte-identical with macOS's CodeSign tool. Differences:
+    // - It encodes in BER, not DER. (DER is preferred for crypto)
+    // - It uses DER order of attributes (sorted by OID).
+    // - It adds null parameters to digests (Legacy)
+
     private const int CmsSizeEst = 18_000;
     private const int PageSize = 4096;
     private const Supports UseVersion = Supports.SupportsExecSegment;
 
-    public int MinValidSize => MachHeader.StructSize32 + LoadCommandHeader.StructSize;
-    public string[] ValidExt => [];
+    public int MinValidSize => PageSize; // Since Yosemite 10.10.5 it must be at least PageSize. See https://github.com/apple-oss-distributions/xnu/blob/e3723e1f17661b24996789d8afc084c0c3303b26/bsd/kern/kern_exec.c#L873
+    public string[] ValidExt => []; // Mach Objects usually don't have extensions
 
     public bool IsValidHeader(ReadOnlySpan<byte> data)
     {

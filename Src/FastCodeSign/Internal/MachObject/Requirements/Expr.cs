@@ -2,7 +2,6 @@ using System.Formats.Asn1;
 using System.Globalization;
 using System.Text;
 using Genbox.FastCodeSign.Internal.MachObject.Requirements.Enums;
-using static Genbox.FastCodeSign.Internal.Helpers.ByteHelper;
 
 namespace Genbox.FastCodeSign.Internal.MachObject.Requirements;
 
