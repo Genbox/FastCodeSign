@@ -6,7 +6,7 @@
     <PackageVersion Include="AspNetCoreAnalyzers" Version="0.3.0" />
     <PackageVersion Include="ConfigureAwaitChecker.Analyzer" Version="5.0.0.1" />
     <PackageVersion Include="IDisposableAnalyzers" Version="4.0.8" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.227" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.234" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="NetFabric.Hyperlinq.Analyzer" Version="2.3.0" />
     <PackageVersion Include="ReflectionAnalyzers" Version="0.3.1" />
