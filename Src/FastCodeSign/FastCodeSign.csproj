@@ -16,4 +16,8 @@
     <EmbeddedResource Include="Internal\MachObject\Certificates\*.cer" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Internal\MachObject\Requirements\" />
+  </ItemGroup>
+
 </Project>

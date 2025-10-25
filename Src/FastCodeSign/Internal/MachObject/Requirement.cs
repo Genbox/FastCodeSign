@@ -1,12 +1,13 @@
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
+using Genbox.FastCodeSign.MachObject;
 
-namespace Genbox.FastCodeSign.Internal.MachObject.Requirements;
+namespace Genbox.FastCodeSign.Internal.MachObject;
 
-public class Requirement(Expr expression)
+internal class Requirement(Expr expression)
 {
-    public int Size => 12 + expression.Size;
+    internal int Size => 12 + expression.Size;
 
-    public void EncodeTo(Span<byte> buffer)
+    internal void EncodeTo(Span<byte> buffer)
     {
         WriteUInt32BigEndian(buffer, (uint)CsMagic.Requirement);
         WriteInt32BigEndian(buffer[4..], Size);

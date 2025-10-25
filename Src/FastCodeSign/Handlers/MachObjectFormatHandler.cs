@@ -14,7 +14,7 @@ using Genbox.FastCodeSign.Internal.Helpers;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
-using Genbox.FastCodeSign.Internal.MachObject.Requirements;
+using Genbox.FastCodeSign.MachObject;
 using Genbox.FastCodeSign.Models;
 
 namespace Genbox.FastCodeSign.Handlers;
@@ -25,7 +25,7 @@ namespace Genbox.FastCodeSign.Handlers;
 /// <param name="identifier">The identifier to use. By default, macOS codesign uses the filename of the file</param>
 /// <param name="requirements">The requirements to use. Set to null to use macOS codesign defaults</param>
 /// <param name="teamId">An optional team id. Set to null to exclude.</param>
-public sealed class MachObjectFormatHandler(string identifier, RequirementSet? requirements = null, string? teamId = null) : IFormatHandler
+public sealed class MachObjectFormatHandler(string identifier, RequirementSet? requirements = null, Entitlements? entitlements = null, string? teamId = null) : IFormatHandler
 {
     // See https://github.com/aidansteele/osx-abi-macho-file-format-reference
     // - Requirements: https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements
@@ -323,6 +323,11 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
 
         blobs.Add(CsSlot.Requirements, req.ToArray());
 
+        ExecSegFlags segmentFlags = ExecSegFlags.MainBinary;
+
+        if (entitlements != null)
+            AddEntitlementBlob(blobs, entitlements, ref segmentFlags);
+
         int maxSlot = blobs.Count == 0 ? 0 : blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
 
         MachOContext obj = (MachOContext)context;
@@ -336,7 +341,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         blobs.Add(CsSlot.CodeDirectory, cdBlob);
 
         Span<byte> cdSpan = cdBlob.AsSpan();
-        WriteCodeDirectoryHeader(ref cdSpan, hashAlgorithm, maxSlot, codeLimit, obj.Text, ExecSegFlags.MainBinary, cdSize, idOffset, teamIdOffset, hashesOffset);
+        WriteCodeDirectoryHeader(ref cdSpan, hashAlgorithm, maxSlot, codeLimit, obj.Text, segmentFlags, cdSize, idOffset, teamIdOffset, hashesOffset);
 
         uint sbSize = Align((uint)(SuperBlobHeader.StructSize // SuperBlob header size
                                    + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
@@ -713,6 +718,20 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
 
             memoryStream.Position = 0; //To reuse the stream
         }
+    }
+
+    private static void AddEntitlementBlob(SortedList<CsSlot, byte[]> blobs, Entitlements entitlements, ref ExecSegFlags segmentFlags)
+    {
+        if (entitlements.Contains("get-task-allow")) segmentFlags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.Contains("run-unsigned-code")) segmentFlags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.Contains("com.apple.private.cs.debugger")) segmentFlags |= ExecSegFlags.Debugger;
+        if (entitlements.Contains("dynamic-codesigning")) segmentFlags |= ExecSegFlags.Jit;
+        if (entitlements.Contains("com.apple.private.skip-library-validation")) segmentFlags |= ExecSegFlags.SkipLibraryValidation;
+        if (entitlements.Contains("com.apple.private.amfi.can-load-cdhash")) segmentFlags |= ExecSegFlags.CanLoadCdHash;
+        if (entitlements.Contains("com.apple.private.amfi.can-execute-cdhash")) segmentFlags |= ExecSegFlags.CanExecuteCdHash;
+
+        blobs.Add(CsSlot.Entitlements, entitlements.EncodeAsXml());
+        blobs.Add(CsSlot.EntitlementsDer, entitlements.EncodeAsDer());
     }
 
     private sealed class MachObjectInfo

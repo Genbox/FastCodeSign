@@ -5,8 +5,8 @@
 
 ### Description
 
-A cross-platform code signing library for Windows Authenticode, PowerShell and macOS code signatures.
-Has no external dependencies. Written with performance in mind. Has a simple one-shot API that auto-detects file format.
+A cross-platform code signing library for Windows Authenticode (Windows executables & PowerShell) and macOS code signatures.
+Has no external dependencies and has a simple one-shot API that auto-detects file format.
 
 ### Features
 

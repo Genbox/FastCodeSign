@@ -1,26 +1,39 @@
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Extensions;
+using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
-using Genbox.FastCodeSign.Internal.MachObject.Requirements.Enums;
+using Genbox.FastCodeSign.MachObject.Enums;
 
-namespace Genbox.FastCodeSign.Internal.MachObject.Requirements;
+namespace Genbox.FastCodeSign.MachObject;
 
-public class RequirementSet : Dictionary<RequirementType, Requirement>
+public class RequirementSet
 {
-    private RequirementSet() {}
+    private readonly Dictionary<RequirementType, Requirement> _values = new Dictionary<RequirementType, Requirement>();
 
-    public int Size => 12 + this.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
+    public void Add(RequirementType type, Expr expr)
+    {
+        if (!Enum.IsDefined(type))
+            throw new ArgumentException("Invalid requirement type: " + type);
+
+        ArgumentNullException.ThrowIfNull(expr);
+
+        _values.Add(type, new Requirement(expr));
+    }
+
+    public void Remove(RequirementType type) => _values.Remove(type);
+
+    private int Size => 12 + _values.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
 
     public void EncodeTo(Span<byte> buffer)
     {
         WriteUInt32BigEndian(buffer, (uint)CsMagic.Requirements);
         WriteInt32BigEndian(buffer[4..], Size);
-        WriteInt32BigEndian(buffer[8..], Count);
+        WriteInt32BigEndian(buffer[8..], _values.Count);
 
-        int offset = 12 + (Count * 8);
+        int offset = 12 + (_values.Count * 8);
 
         int i = 0;
-        foreach (KeyValuePair<RequirementType, Requirement> pair in this)
+        foreach (KeyValuePair<RequirementType, Requirement> pair in _values)
         {
             WriteUInt32BigEndian(buffer.Slice(12 + (i * 8), 4), (uint)pair.Key);
             WriteInt32BigEndian(buffer.Slice(12 + (i * 8) + 4, 4), offset);
@@ -38,7 +51,7 @@ public class RequirementSet : Dictionary<RequirementType, Requirement>
         return buffer;
     }
 
-    public override string ToString() => string.Join(", ", this.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
+    public override string ToString() => string.Join(", ", _values.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
 
     public static RequirementSet CreateEmpty() => new RequirementSet();
 
@@ -66,7 +79,9 @@ public class RequirementSet : Dictionary<RequirementType, Requirement>
             )
         );
 
-        return new RequirementSet { { RequirementType.Designated, new Requirement(expr) } };
+        RequirementSet req = new RequirementSet();
+        req.Add(RequirementType.Designated, expr);
+        return req;
     }
 
     public static RequirementSet CreateDefault(string identifier, X509Certificate2 cert)
@@ -76,11 +91,13 @@ public class RequirementSet : Dictionary<RequirementType, Requirement>
         // identifier "<ident>"
         // and certificate leaf = H"<hash>"
 
-        Expr expression = Expr.And(
+        Expr expr = Expr.And(
             Expr.Ident(identifier),
             Expr.AnchorHash(0, Convert.FromHexString(cert.Thumbprint))
         );
 
-        return new RequirementSet { { RequirementType.Designated, new Requirement(expression) } };
+        RequirementSet req = new RequirementSet();
+        req.Add(RequirementType.Designated, expr);
+        return req;
     }
 }
