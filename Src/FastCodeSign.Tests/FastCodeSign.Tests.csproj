@@ -10,4 +10,9 @@
     <PackageReference Include="Verify.DiffPlex" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Resources\*.dat" />
+    <EmbeddedResource Include="Resources\*.dat" />
+  </ItemGroup>
+
 </Project>

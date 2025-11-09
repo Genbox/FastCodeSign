@@ -1,0 +1,158 @@
+﻿{
+  files: {
+    Resources/app.asar: puBZ/nmpQK78b14Wyp21SBkwdqA=,
+    Resources/bootstrap/manifest.json: xm+mlt8ihGTf2iFEIEikK3t4E2A=,
+    Resources/build_info.json: 8bm41xVWFWl5VkUe4kqK57P9NQw=,
+    Resources/discord_asmr_message1.m4a: G8P2jbMY7/aAlfWPorbTgFcbZ7E=,
+    Resources/discord_bit_message1.m4a: IrHONrYBXBsSXPFf6SVbO6CIBqE=,
+    Resources/discord_bop_message1.m4a: qlPiYB8ycRBZsPsDMYp8CXtD7WI=,
+    Resources/discord_discodo.m4a: A/5Fkr5qhKeIv48tlLq9Kq6Nr1U=,
+    Resources/discord_ducky_message1.m4a: DRcC/ZK2oFuLNrXcnrWPNSI2YBU=,
+    Resources/discord_halloween_message1.m4a: ewDkrLYqTLY6dVhpULY8k4yShiU=,
+    Resources/discord_lofi_message1.m4a: IiQV7pCXByoHR20sJeuRoSm7JKA=,
+    Resources/discord_message1.m4a: LufIkEMjn2ryQVkW0MGVnnXnvqw=,
+    Resources/discord_message2.m4a: hUSYyaOQ8aXSLREfwa8m+5dRXJ8=,
+    Resources/discord_message3.m4a: NYfJp+OdSVp+673brygZwUvOPqo=,
+    Resources/electron.icns: a3ehdUo212G3LKB/uwBl5CtizE0=
+  },
+  files2: {
+    embedded.provisionprofile: {
+      hash2: 23+b2u8vWAUDQM1tlocjTJaAZbwRWQJcwdVFujLHKZc=
+    },
+    Frameworks/Discord Helper (GPU).app: {
+      cdhash: mB4xIhoDV7ib2g2LTyV+r7JfSQg=,
+      requirement: identifier "com.hnc.Discord.helper.GPU" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Discord Helper (Plugin).app: {
+      cdhash: AT1372xaXcRsuTjAqDX1NVT0IHE=,
+      requirement: identifier "com.hnc.Discord.helper.Plugin" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Discord Helper (Renderer).app: {
+      cdhash: PyUiHqk54r3ew5i1Pv3rUiMq6DE=,
+      requirement: identifier "com.hnc.Discord.helper.Renderer" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Discord Helper.app: {
+      cdhash: AFFa7OoSZbAzf9VteLpBgz59vtc=,
+      requirement: identifier "com.hnc.Discord.helper" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Electron Framework.framework: {
+      cdhash: RM1NEC+fdpEgWcAW6LnNGKj+2Dg=,
+      requirement: identifier "com.github.Electron.framework" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Mantle.framework: {
+      cdhash: QWCMmJbESizH2a8RVOXu7TI1eI4=,
+      requirement: identifier "org.mantle.Mantle" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/ReactiveObjC.framework: {
+      cdhash: 3PIkYXxHIfRRCkuPA7cD+VLKX7I=,
+      requirement: identifier "com.electron.reactive" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Frameworks/Squirrel.framework: {
+      cdhash: T2LSmKzVfamVK3ZrerGv0xbSyfQ=,
+      requirement: identifier "com.github.Squirrel" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "53Q6R32WPB"
+    },
+    Resources/app.asar: {
+      hash2: QE5SULQbmkuiKOHTItKEHv5VgvsEd07EbFs0DSr0Egg=
+    },
+    Resources/bootstrap/manifest.json: {
+      hash2: e1IBsq+/r1nHxQdsjQbk6p7XVkhGnvbGEkB0ri7QWhk=
+    },
+    Resources/build_info.json: {
+      hash2: UAFx/L+JdTqyVI+BTHr3icXPmL+D+lGYyNSoduau7Js=
+    },
+    Resources/discord_asmr_message1.m4a: {
+      hash2: U9OnNlBw8fSESl57FccCGPPXdtIjvwGKMZp57Htaoug=
+    },
+    Resources/discord_bit_message1.m4a: {
+      hash2: WY4ksyC2p5F8JyKlfwW09TWt1LUYJ9Q2v2SQZjO4+UM=
+    },
+    Resources/discord_bop_message1.m4a: {
+      hash2: mOlXNd7EWPnVVcgheCMnvXfNT/CoEwFSugd21LHywoM=
+    },
+    Resources/discord_discodo.m4a: {
+      hash2: 22c0g0IQqWY51AZpumDXH/JpUDN4iQfcREPcAX9RukM=
+    },
+    Resources/discord_ducky_message1.m4a: {
+      hash2: 5TBaA/PPafTaOb+PVzWR9gx/ubFSu837QfAGavK6STI=
+    },
+    Resources/discord_halloween_message1.m4a: {
+      hash2: 1DRCIZEt36IDL54xC5/tIG3MaVdRqltFMegkNhU5iHw=
+    },
+    Resources/discord_lofi_message1.m4a: {
+      hash2: 5sD0XTMoyekhBylCNBUD0cA0yVDbszIv+eQJQwk+mts=
+    },
+    Resources/discord_message1.m4a: {
+      hash2: c2vB6WC6AkSmJULziUVPHqP38w//yqmI9nMEKJHp7qU=
+    },
+    Resources/discord_message2.m4a: {
+      hash2: eI+jsrHrtuI+hLf77HaiVsi9jJss214ySTa9jhy91G8=
+    },
+    Resources/discord_message3.m4a: {
+      hash2: MzvzsVraz5KdvR8nOqy+mpq9oELDDJ65PlO5Vnc0z3U=
+    },
+    Resources/electron.icns: {
+      hash2: HxmnEcjxaL6KG5efj/KNl4hqCivwGPwdd/+mT6VtKv8=
+    }
+  },
+  rules: {
+    ^Resources/: true,
+    ^Resources/.*\.lproj/: {
+      optional: true,
+      weight: 1000.0
+    },
+    ^Resources/.*\.lproj/locversion.plist$: {
+      omit: true,
+      weight: 1100.0
+    },
+    ^Resources/Base\.lproj/: {
+      weight: 1010.0
+    },
+    ^version.plist$: true
+  },
+  rules2: {
+    .*\.dSYM($|/): {
+      weight: 11.0
+    },
+    ^.*: true,
+    ^(.*/)?\.DS_Store$: {
+      omit: true,
+      weight: 2000.0
+    },
+    ^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/: {
+      nested: true,
+      weight: 10.0
+    },
+    ^[^/]+$: {
+      nested: true,
+      weight: 10.0
+    },
+    ^embedded\.provisionprofile$: {
+      weight: 20.0
+    },
+    ^Info\.plist$: {
+      omit: true,
+      weight: 20.0
+    },
+    ^PkgInfo$: {
+      omit: true,
+      weight: 20.0
+    },
+    ^Resources/: {
+      weight: 20.0
+    },
+    ^Resources/.*\.lproj/: {
+      optional: true,
+      weight: 1000.0
+    },
+    ^Resources/.*\.lproj/locversion.plist$: {
+      omit: true,
+      weight: 1100.0
+    },
+    ^Resources/Base\.lproj/: {
+      weight: 1010.0
+    },
+    ^version\.plist$: {
+      weight: 20.0
+    }
+  }
+}

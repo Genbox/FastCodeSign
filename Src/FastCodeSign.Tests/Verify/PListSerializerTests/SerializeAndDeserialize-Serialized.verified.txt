@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>string-test</key>
+    <string>asd</string>
+    <key>bool-test</key>
+    <true />
+    <key>float-test</key>
+    <real>1</real>
+    <key>double-test</key>
+    <real>1</real>
+    <key>byte-array-test</key>
+    <data>AQIDBA==</data>
+    <key>string-array-test</key>
+    <array>
+      <string>string1</string>
+      <string>string2</string>
+    </array>
+    <key>dict-test</key>
+    <dict>
+      <key>sub-dict-string-test</key>
+      <string>value</string>
+      <key>sub-dict-bool-test</key>
+      <true />
+    </dict>
+  </dict>
+</plist>

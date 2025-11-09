@@ -1,0 +1,15 @@
+﻿{
+  bool-test: true,
+  byte-array-test: AQIDBA==,
+  dict-test: {
+    sub-dict-bool-test: true,
+    sub-dict-string-test: value
+  },
+  double-test: 1.0,
+  float-test: 1.0,
+  string-array-test: [
+    string1,
+    string2
+  ],
+  string-test: asd
+}

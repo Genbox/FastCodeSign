@@ -1,0 +1,54 @@
+﻿{
+  CFBundleDisplayName: Discord,
+  CFBundleExecutable: Discord,
+  CFBundleIconFile: electron.icns,
+  CFBundleIdentifier: com.hnc.Discord,
+  CFBundleInfoDictionaryVersion: 6.0,
+  CFBundleName: Discord,
+  CFBundlePackageType: APPL,
+  CFBundleShortVersionString: 0.0.360,
+  CFBundleURLTypes: [
+    {
+      CFBundleURLName: Discord,
+      CFBundleURLSchemes: [
+        discord
+      ]
+    }
+  ],
+  CFBundleVersion: 0.0.360,
+  CoreSpotlightContinuation: true,
+  DTCompiler: com.apple.compilers.llvm.clang.1_0,
+  DTSDKBuild: 23C53,
+  DTSDKName: macosx14.2,
+  DTXcode: 1620,
+  DTXcodeBuild: 16C5032a,
+  ElectronAsarIntegrity: {
+    Resources/default_app.asar: {
+      algorithm: SHA256,
+      hash: 8cc2b60c620acbd304efdd2404da335736f355beaf1fd4a7cdb87b428dd49146
+    }
+  },
+  LSApplicationCategoryType: public.app-category.developer-tools,
+  LSEnvironment: {
+    MallocNanoZone: 0
+  },
+  LSMinimumSystemVersion: 11.0,
+  NSAppTransportSecurity: {
+    NSAllowsArbitraryLoads: true
+  },
+  NSBluetoothAlwaysUsageDescription: This app needs access to Bluetooth,
+  NSBluetoothPeripheralUsageDescription: This app needs access to Bluetooth,
+  NSCameraUsageDescription: This app needs access to the camera,
+  NSHighResolutionCapable: true,
+  NSMainNibFile: MainMenu,
+  NSMicrophoneUsageDescription: This app needs access to the microphone,
+  NSPrefersDisplaySafeAreaCompatibilityMode: false,
+  NSPrincipalClass: AtomApplication,
+  NSQuitAlwaysKeepsWindows: false,
+  NSRequiresAquaSystemAppearance: false,
+  NSSupportsAutomaticGraphicsSwitching: true,
+  NSUserActivityTypes: [
+    INSendMessageIntent,
+    com.discord.view-channel
+  ]
+}
