@@ -10,13 +10,7 @@ public class PListSerializerTests
     [InlineData("Discord-Info.dat")]
     private async Task Deserialize(string resourceName)
     {
-        await using Stream? stream = typeof(PListSerializerTests).Assembly.GetManifestResourceStream("Genbox.FastCodeSign.Tests.Resources." + resourceName);
-        Assert.NotNull(stream);
-
-        using MemoryStream ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-
-        Dictionary<string, object> obj = PListSerializer.Deserialize(ms.ToArray());
+        Dictionary<string, object> obj = PListSerializer.Deserialize(await File.ReadAllBytesAsync("Resources/" + resourceName));
         Assert.NotNull(obj);
 
         await Verify(obj)

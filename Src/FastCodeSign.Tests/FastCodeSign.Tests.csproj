@@ -11,8 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Resources\*.dat" />
-    <EmbeddedResource Include="Resources\*.dat" />
+    <None Update="Resources\*.dat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
