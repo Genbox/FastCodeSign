@@ -1,6 +1,5 @@
 ﻿using System.Formats.Asn1;
-using System.Text;
-using System.Xml;
+using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 
 namespace Genbox.FastCodeSign.MachObject;
@@ -29,58 +28,12 @@ public class Entitlements
         if (_values.Count == 0)
             return [];
 
-        using MemoryStream ms = new MemoryStream();
-        using XmlWriter writer = XmlWriter.Create(ms, new XmlWriterSettings
+        Span<byte> xmlBytes;
+        using (MemoryStream ms = new MemoryStream())
         {
-            Indent = true,
-            IndentChars = "  ",
-            Encoding = new UTF8Encoding(false)
-        });
-
-        writer.WriteStartDocument(); // <?xml version="1.0" encoding="UTF-8"?>
-        writer.WriteDocType(
-            name: "plist",
-            pubid: "-//Apple//DTD PLIST 1.0//EN",
-            sysid: "http://www.apple.com/DTDs/PropertyList-1.0.dtd",
-            subset: null
-        );
-
-        writer.WriteStartElement("plist");
-        writer.WriteAttributeString("version", "1.0");
-
-        writer.WriteStartElement("dict");
-
-        foreach (KeyValuePair<string, object> pair in _values)
-        {
-            writer.WriteElementString("key", pair.Key.ToLowerInvariant());
-
-            switch (pair.Value)
-            {
-                case string strVal:
-                    writer.WriteElementString("string", strVal);
-                    break;
-                case bool boolVal:
-                    writer.WriteStartElement(boolVal ? "true" : "false");
-                    writer.WriteEndElement();
-                    break;
-                case string[] strArrVal:
-                    writer.WriteStartElement("array");
-
-                    foreach (string str in strArrVal)
-                        writer.WriteElementString("string", str);
-
-                    writer.WriteEndElement();
-                    break;
-                default:
-                    throw new InvalidOperationException("Unsupported entitlement type: " + pair.Value.GetType().Name);
-            }
+            PListSerializer.Serialize(_values, ms);
+            xmlBytes = ms.GetBuffer().AsSpan(0, (int)ms.Length);
         }
-
-        writer.WriteEndElement(); // </dict>
-        writer.WriteEndElement(); // </plist>
-        writer.WriteEndDocument();
-
-        Span<byte> xmlBytes = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
         byte[] buffer = new byte[8 + xmlBytes.Length];
         WriteUInt32BigEndian(buffer, (uint)CsMagic.Entitlements);
