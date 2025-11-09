@@ -1,3 +1,4 @@
+using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.Models;
 
@@ -14,7 +15,7 @@ public static class MachObjectHelper
     public static FatObject[] GetThinMachObjects(ReadOnlySpan<byte> data)
     {
         if (data.Length < 8)
-            throw new InvalidDataException("Truncated Mach-O / FAT header.");
+            throw new InvalidDataException("Truncated Mach object header.");
 
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
 
@@ -87,7 +88,17 @@ public static class MachObjectHelper
                 offset += 4;
             }
 
-            thins[i] = new FatObject(cpuType, cpuSubType, sOffset, sSize, sAlign);
+            CpuType cpuTypeEnum = (CpuType)cpuType;
+
+            Enum cpuSubTypeEnum = cpuTypeEnum switch
+            {
+                CpuType.X86 or CpuType.X86_64 => (X8664CpuSubType)cpuSubType,
+                CpuType.ARM => (ArmCpuSubType)cpuSubType,
+                CpuType.ARM64 or CpuType.ARM64_32 => (Arm64CpuSubType)cpuSubType,
+                _ => CpuSubType.Any
+            };
+
+            thins[i] = new FatObject(cpuTypeEnum, cpuSubTypeEnum, sOffset, sSize, sAlign);
         }
 
         return thins;
