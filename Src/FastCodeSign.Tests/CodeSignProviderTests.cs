@@ -12,42 +12,42 @@ namespace Genbox.FastCodeSign.Tests;
 
 public class CodeSignProviderTests
 {
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void HasSignature(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
         Assert.True(provider.HasSignature());
 
-        CodeSignProvider provider2 = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
+        CodeSignProvider provider2 = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Unsigned)));
         Assert.False(provider2.HasSignature());
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private async Task GetSignature(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.SignedFile, TestContext.Current.CancellationToken)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.Signed, TestContext.Current.CancellationToken)));
         SignedCms? info = provider.GetSignature();
         Assert.NotNull(info);
 
         await Verify(info)
-              .UseFileName($"{nameof(GetSignature)}-{Path.GetFileName(tc.SignedFile)}")
+              .UseFileName($"{nameof(GetSignature)}-{Path.GetFileName(tc.Signed)}")
               .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData");
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void GetSignature_UnsignedFileShouldReturnNull(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Unsigned)));
         Assert.Null(provider.GetSignature());
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void HasValidSignature(TestCase tc)
     {
-        byte[] signed = File.ReadAllBytes(tc.SignedFile);
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(signed));
+        byte[] signed = File.ReadAllBytes(tc.Signed);
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(signed));
 
         SignedCms? sig = provider.GetSignature();
         Assert.NotNull(sig);
@@ -60,11 +60,11 @@ public class CodeSignProviderTests
         Assert.False(provider.HasValidSignature(sig));
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void TryRemoveSignature(TestCase tc)
     {
-        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.SignedFile));
-        CodeSignProvider provider = tc.Factory(allocation);
+        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.Signed));
+        CodeSignProvider provider = tc.ProviderFactory(allocation);
 
         //Check that we have a signature - otherwise the test will be incorrect
         Assert.NotNull(provider.GetSignature());
@@ -72,7 +72,7 @@ public class CodeSignProviderTests
         //Remove the signature
         Assert.True(provider.TryRemoveSignature(true));
 
-        byte[] unsigned = File.ReadAllBytes(tc.UnsignedFile);
+        byte[] unsigned = File.ReadAllBytes(tc.Unsigned);
 
         Span<byte> modified = allocation.GetSpan();
 
@@ -87,51 +87,51 @@ public class CodeSignProviderTests
         Assert.Equal(modified[..unsigned.Length], unsigned.AsSpan());
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void TryRemoveSignature_FileWithoutSignatureShouldReturnFalse(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.UnsignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Unsigned)));
         Assert.False(provider.TryRemoveSignature(true));
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void ComputeHash(TestCase tc)
     {
         //MachObject does not support stable hashing, so we skip it.
-        if (tc.SignedFile.Contains("macho_unsigned.dat", StringComparison.Ordinal))
+        if (tc.Signed.Contains("macho_unsigned.dat", StringComparison.Ordinal))
             return;
 
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
         string hash = Convert.ToHexString(provider.ComputeHash()).ToLowerInvariant();
         Assert.Equal(tc.Hash, hash);
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private async Task CreateSignature(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken)));
         Signature sig = provider.CreateSignature(Constants.GetCert());
 
         await Verify(sig.SignedCms)
-              .UseFileName($"{nameof(CreateSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
+              .UseFileName($"{nameof(CreateSignature)}-{Path.GetFileName(tc.Unsigned)}")
               .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData"); //We don't want to save these to verify files, but the SigningTime extension also makes it change
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void CreateSignature_FileWithSignatureShouldThrow(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
         Assert.Throws<InvalidOperationException>(() => provider.CreateSignature(Constants.GetCert()));
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private async Task WriteSignature(TestCase tc)
     {
-        byte[] unsigned = await File.ReadAllBytesAsync(tc.UnsignedFile, TestContext.Current.CancellationToken);
+        byte[] unsigned = await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken);
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
-        CodeSignProvider provider = tc.Factory(allocation);
+        CodeSignProvider provider = tc.ProviderFactory(allocation);
         provider.WriteSignature(provider.CreateSignature(Constants.GetCert(), null, HashAlgorithmName.SHA256, signer =>
         {
             for (int i = signer.SignedAttributes.Count - 1; i >= 0; i--)
@@ -145,17 +145,17 @@ public class CodeSignProviderTests
         }));
 
         await Verify(allocation.GetSpan().ToArray())
-              .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
+              .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.Unsigned)}")
               .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData");
     }
 
-    [Theory, MemberData(nameof(GetFiles))]
+    [Theory, MemberData(nameof(GetTestCases))]
     private void WriteSignature_SignedFileShouldThrow(TestCase tc)
     {
-        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.SignedFile));
-        CodeSignProvider provider = tc.Factory(allocation);
+        MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.Signed));
+        CodeSignProvider provider = tc.ProviderFactory(allocation);
         Assert.Throws<InvalidOperationException>(() => provider.WriteSignature(provider.CreateSignature(null!)));
     }
 
@@ -169,7 +169,7 @@ public class CodeSignProviderTests
         CodeSignProvider.FromData(exe, null, "UPPERCASE.EXE"); //Shouldn't throw
     }
 
-    private static TheoryData<TestCase> GetFiles() =>
+    private static TheoryData<TestCase> GetTestCases() =>
     [
         //MachO
         TestCase.Create(new MachObjectFormatHandler("macho_unsigned"), "Signed/MachO/macho_signed.dat", "Unsigned/MachO/macho_unsigned.dat", "37fcc449bdbf230e99432cf1cd2375ecf873b48c18c72a4e9123df18938244d6", PatchMachO),

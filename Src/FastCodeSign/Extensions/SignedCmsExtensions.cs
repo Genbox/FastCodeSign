@@ -31,7 +31,7 @@ public static class SignedCmsExtensions
         if (signedCms.SignerInfos.Count == 0)
             yield break;
 
-        foreach (var signerInfo in signedCms.SignerInfos)
+        foreach (SignerInfo signerInfo in signedCms.SignerInfos)
         {
             foreach (SignedCms sig in signerInfo.GetNestedSignatures())
                 yield return sig;

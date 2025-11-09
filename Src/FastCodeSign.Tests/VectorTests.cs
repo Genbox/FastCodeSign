@@ -7,14 +7,14 @@ using Genbox.FastCodeSign.Tests.Code;
 
 namespace Genbox.FastCodeSign.Tests;
 
-public class TestVectors
+public class VectorTests
 {
     [Theory, MemberData(nameof(GetPowerShellTestVectors))]
     private void PowerShellTestVectors(TestCase tc)
     {
-        CodeSignProvider provider = tc.Factory(new MemoryAllocation(File.ReadAllBytes(tc.SignedFile)));
+        CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
 
-        string filename = Path.GetFileName(tc.SignedFile);
+        string filename = Path.GetFileName(tc.Signed);
 
         //Normal files should all pass. They are valid files (different encoding, newlines, etc.) with signatures produced by Windows.
         if (filename.StartsWith("normal_", StringComparison.Ordinal))

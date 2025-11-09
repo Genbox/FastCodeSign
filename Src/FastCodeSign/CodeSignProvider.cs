@@ -31,7 +31,7 @@ public class CodeSignProvider
         ReadOnlySpan<byte> span = allocation.GetSpan();
 
         if (handler == null)
-            handler = GetHandler(span, fileName, skipExtCheck);
+            handler = GetFormatHandler(span, fileName, skipExtCheck);
         else
             ValidateHandler(handler, span, fileName, skipExtCheck);
 
@@ -49,7 +49,7 @@ public class CodeSignProvider
         ReadOnlySpan<byte> span = allocation.GetSpan();
 
         if (handler == null)
-            handler = GetHandler(span, fileName, skipExtCheck);
+            handler = GetFormatHandler(span, fileName, skipExtCheck);
         else
             ValidateHandler(handler, span, fileName, skipExtCheck);
 
@@ -152,7 +152,7 @@ public class CodeSignProvider
         _handler.WriteSignature(context, Allocation, signature);
     }
 
-    private static IFormatHandler GetHandler(ReadOnlySpan<byte> span, string? fileName, bool skipExtCheck)
+    private static IFormatHandler GetFormatHandler(ReadOnlySpan<byte> span, string? fileName, bool skipExtCheck)
     {
         IFormatHandler? factory = FormatHandlerFactory.Get(span, fileName, skipExtCheck);
 
