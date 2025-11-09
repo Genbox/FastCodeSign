@@ -31,7 +31,7 @@ public class CodeSignProviderTests
 
         await Verify(info)
               .UseFileName($"{nameof(GetSignature)}-{Path.GetFileName(tc.SignedFile)}")
-              .UseDirectory("Verify")
+              .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData");
     }
@@ -114,7 +114,7 @@ public class CodeSignProviderTests
 
         await Verify(sig.SignedCms)
               .UseFileName($"{nameof(CreateSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
-              .UseDirectory("Verify")
+              .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData"); //We don't want to save these to verify files, but the SigningTime extension also makes it change
     }
@@ -146,7 +146,7 @@ public class CodeSignProviderTests
 
         await Verify(allocation.GetSpan().ToArray())
               .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.UnsignedFile)}")
-              .UseDirectory("Verify")
+              .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
               .IgnoreMember("RawData");
     }
