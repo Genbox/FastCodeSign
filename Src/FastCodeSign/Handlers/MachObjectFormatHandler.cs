@@ -14,7 +14,7 @@ using Genbox.FastCodeSign.Internal.Helpers;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
-using Genbox.FastCodeSign.MachObject;
+using Genbox.FastCodeSign.MachObjects;
 using Genbox.FastCodeSign.Models;
 
 namespace Genbox.FastCodeSign.Handlers;

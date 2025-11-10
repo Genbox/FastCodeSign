@@ -1,4 +1,4 @@
-namespace Genbox.FastCodeSign.MachObject.Enums;
+namespace Genbox.FastCodeSign.MachObjects.Enums;
 
 // https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/requirement.h#L160
 public enum ExprOp

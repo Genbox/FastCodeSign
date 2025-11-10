@@ -1,5 +1,5 @@
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
-using Genbox.FastCodeSign.MachObject;
+using Genbox.FastCodeSign.MachObjects;
 
 namespace Genbox.FastCodeSign.Internal.MachObject;
 

@@ -2,9 +2,9 @@ using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Extensions;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
-using Genbox.FastCodeSign.MachObject.Enums;
+using Genbox.FastCodeSign.MachObjects.Enums;
 
-namespace Genbox.FastCodeSign.MachObject;
+namespace Genbox.FastCodeSign.MachObjects;
 
 public class RequirementSet
 {

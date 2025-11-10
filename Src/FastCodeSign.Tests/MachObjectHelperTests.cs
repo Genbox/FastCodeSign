@@ -10,7 +10,7 @@ public class MachObjectHelperTests
     [Fact]
     private void GetThinMachObjects32Test()
     {
-        FatObject[] slices = MachObjectHelper.GetThinMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat32_3slices.dat")));
+        MachObject[] slices = MachObjectHelper.GetMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat32_3slices.dat")));
         Assert.Equal(3, slices.Length);
 
         Assert.Equal(CpuType.ARM64, slices[0].CpuType);
@@ -35,7 +35,7 @@ public class MachObjectHelperTests
     [Fact]
     public void GetThinMachObjects64Test()
     {
-        FatObject[] slices = MachObjectHelper.GetThinMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat64_3slices.dat")));
+        MachObject[] slices = MachObjectHelper.GetMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat64_3slices.dat")));
         Assert.Equal(3, slices.Length);
 
         Assert.Equal(CpuType.ARM64, slices[0].CpuType);

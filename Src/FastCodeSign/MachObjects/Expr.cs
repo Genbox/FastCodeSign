@@ -1,9 +1,9 @@
 using System.Formats.Asn1;
 using System.Globalization;
 using System.Text;
-using Genbox.FastCodeSign.MachObject.Enums;
+using Genbox.FastCodeSign.MachObjects.Enums;
 
-namespace Genbox.FastCodeSign.MachObject;
+namespace Genbox.FastCodeSign.MachObjects;
 
 // Dumper: https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/reqdumper.cpp#L137
 // Maker: https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/reqmaker.cpp

@@ -2,7 +2,7 @@
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 
-namespace Genbox.FastCodeSign.MachObject;
+namespace Genbox.FastCodeSign.MachObjects;
 
 public class Entitlements
 {

@@ -12,7 +12,7 @@ public static class MachObjectHelper
     /// <param name="data">The fat mach object file data</param>
     /// <returns>Offset and sizes of each thin object file</returns>
     /// <exception cref="InvalidDataException">Thrown on invalid files</exception>
-    public static FatObject[] GetThinMachObjects(ReadOnlySpan<byte> data)
+    public static MachObject[] GetMachObjects(ReadOnlySpan<byte> data)
     {
         if (data.Length < 8)
             throw new InvalidDataException("Truncated Mach object header.");
@@ -48,7 +48,7 @@ public static class MachObjectHelper
         if (fatCount == 0)
             throw new InvalidDataException("Empty fat file.");
 
-        FatObject[] thins = new FatObject[fatCount];
+        MachObject[] objs = new MachObject[fatCount];
 
         int offset = 8;
         int archSize = is64Bit ? 32 : 20;
@@ -98,9 +98,9 @@ public static class MachObjectHelper
                 _ => CpuSubType.Any
             };
 
-            thins[i] = new FatObject(cpuTypeEnum, cpuSubTypeEnum, sOffset, sSize, sAlign);
+            objs[i] = new MachObject(cpuTypeEnum, cpuSubTypeEnum, sOffset, sSize, sAlign);
         }
 
-        return thins;
+        return objs;
     }
 }
