@@ -18,6 +18,6 @@ public class CodeSignTests
     [Fact]
     private void SignDataTest()
     {
-        CodeSign.SignData(File.ReadAllBytes(_srcFile), Constants.GetCert(), null, "macho_unsigned");
+        CodeSign.SignData(File.ReadAllBytes(_srcFile), Constants.GetCert(), "macho_unsigned");
     }
 }

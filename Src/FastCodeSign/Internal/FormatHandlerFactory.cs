@@ -11,7 +11,7 @@ internal static class FormatHandlerFactory
         IFormatHandler[] handlers =
         [
             new PeFormatHandler(),
-            new MachObjectFormatHandler(fileName!),
+            new MachObjectFormatHandler(),
             new PowerShellCmdletDefinitionXmlFormatHandler(),
             new PowerShellConsoleFormatHandler(),
             new PowerShellManifestFormatHandler(),

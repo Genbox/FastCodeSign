@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Internal;
@@ -21,7 +20,7 @@ public class CodeSignProvider
         Allocation = allocation;
     }
 
-    public IAllocation Allocation { get; }
+    internal IAllocation Allocation { get; }
 
     public static CodeSignFileProvider FromFile(string filePath, IFormatHandler? handler = null, bool skipExtCheck = false)
     {
@@ -128,17 +127,15 @@ public class CodeSignProvider
         return true;
     }
 
-    public Signature CreateSignature(X509Certificate2 cert, AsymmetricAlgorithm? privateKey = null, HashAlgorithmName? hashAlgorithm = null, Action<CmsSigner>? configureSigner = null, bool silent = true)
+    public Signature CreateSignature(SignOptions signOptions, IFormatOptions? formatOptions = null, Action<CmsSigner>? configureSigner = null)
     {
-        hashAlgorithm ??= HashAlgorithmName.SHA256;
-
         Span<byte> data = Allocation.GetSpan();
         IContext context = _handler.GetContext(data);
 
         if (context.IsSigned)
             throw new InvalidOperationException("The file already contains a signature.");
 
-        return _handler.CreateSignature(context, data, cert, privateKey, hashAlgorithm.Value, configureSigner, silent);
+        return _handler.CreateSignature(context, data, signOptions, formatOptions, configureSigner);
     }
 
     public void WriteSignature(Signature signature)

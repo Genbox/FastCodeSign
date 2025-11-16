@@ -3,7 +3,6 @@ using System.Buffers.Text;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Internal;
@@ -226,14 +225,14 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         return true;
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, X509Certificate2 cert, AsymmetricAlgorithm? privateKey, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner, bool silent)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, SignOptions signOptions, IFormatOptions? formatOptions, Action<CmsSigner>? configureSigner)
     {
-        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
+        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, signOptions.Certificate, signOptions.PrivateKey)
         {
-            DigestAlgorithm = hashAlgorithm.ToOid()
+            DigestAlgorithm = signOptions.HashAlgorithm.ToOid()
         };
 
-        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, hashAlgorithm);
+        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, signOptions.HashAlgorithm);
 
         SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
         SpcStatementType st = new SpcStatementType([new Oid(OidConstants.MsKeyPurpose, "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
@@ -252,7 +251,7 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
         ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
         SignedCms signed = new SignedCms(contentInfo, false);
-        signed.ComputeSignature(signer, silent);
+        signed.ComputeSignature(signer, signOptions.Silent);
         return new Signature(signed, null);
     }
 

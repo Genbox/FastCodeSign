@@ -22,10 +22,7 @@ namespace Genbox.FastCodeSign.Handlers;
 /// <summary>
 /// Supports macOS Mach Object files.
 /// </summary>
-/// <param name="identifier">The identifier to use. By default, macOS codesign uses the filename of the file</param>
-/// <param name="requirements">The requirements to use. Set to null to use macOS codesign defaults</param>
-/// <param name="teamId">An optional team id. Set to null to exclude.</param>
-public sealed class MachObjectFormatHandler(string identifier, RequirementSet? requirements = null, Entitlements? entitlements = null, string? teamId = null) : IFormatHandler
+public sealed class MachObjectFormatHandler : IFormatHandler
 {
     // See https://github.com/aidansteele/osx-abi-macho-file-format-reference
     // - Requirements: https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements
@@ -55,6 +52,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
     ReadOnlySpan<byte> IFormatHandler.ExtractSignature(IContext context, ReadOnlySpan<byte> data)
     {
         MachOContext obj = (MachOContext)context;
+        Debug.Assert(obj.CodeSignature != null);
 
         //Read the SuperBlob
         ReadOnlySpan<byte> sbSpan = data.Slice((int)obj.CodeSignature.DataOffset, (int)obj.CodeSignature.DataSize);
@@ -87,6 +85,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
     byte[] IFormatHandler.ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
     {
         MachOContext obj = (MachOContext)context;
+        Debug.Assert(obj.CodeSignature != null);
 
         //If there is no signature, we cannot just hash the file, since Mach Object signatures require external files such as entitlement and requirements
         //We cannot require the caller to provide this data, so we simply tell them we are unable to hash unsigned files. That's what macOS's CodeSign does also.
@@ -202,6 +201,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
     long IFormatHandler.RemoveSignature(IContext context, Span<byte> data)
     {
         MachOContext obj = (MachOContext)context;
+        Debug.Assert(obj.CodeSignature != null);
 
         //Remove the LC_CODE_SIGNATURE command from the list of load commands. It is the last command in the list.
         const uint size = LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize;
@@ -253,7 +253,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         int padLen = info.PaddingLength;
         uint sbSize = info.SuperBlockSize;
 
-        SortedList<CsSlot, byte[]> blobs = new SortedList<CsSlot, byte[]>(info.Blobs); //We copy the collection to avoid duplicating the signature blob on multiple calls to WriteSignature
+        SortedList<CsSlot, ReadOnlyMemory<byte>> blobs = new SortedList<CsSlot, ReadOnlyMemory<byte>>(info.Blobs); //We copy the collection to avoid duplicating the signature blob on multiple calls to WriteSignature
         blobs.Add(CsSlot.Signature, signature.SignedCms.Encode());
 
         //We need to update the header etc. before adding the CodeDirectory as it calculates page hashes, and they otherwise won't be correct.
@@ -273,7 +273,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
 
         //Write all the SuperBlob payload headers
         int dataOffset = SuperBlobHeader.StructSize + (blobs.Count * BlobIndex.StructSize);
-        foreach (KeyValuePair<CsSlot, byte[]> blob in blobs)
+        foreach (KeyValuePair<CsSlot, ReadOnlyMemory<byte>> blob in blobs)
         {
             //Write a blob index
             WriteUInt32BigEndian(data, (uint)blob.Key);
@@ -283,7 +283,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
 
         //Write the payloads
-        foreach (KeyValuePair<CsSlot, byte[]> blob in blobs)
+        foreach (KeyValuePair<CsSlot, ReadOnlyMemory<byte>> blob in blobs)
         {
             // Wrap CMS in a blob wrapper. We do it here to avoid creating a buffer after encoding the CMS just to add a wrapper to the byte-array
             if (blob.Key == CsSlot.Signature)
@@ -294,54 +294,130 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
             }
 
             //Write the actual blob
-            blob.Value.CopyTo(data);
+            blob.Value.Span.CopyTo(data);
             data = data[blob.Value.Length..];
         }
     }
 
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, X509Certificate2 cert, AsymmetricAlgorithm? privateKey, HashAlgorithmName hashAlgorithm, Action<CmsSigner>? configureSigner, bool silent)
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, SignOptions signOptions, IFormatOptions? formatOptions, Action<CmsSigner>? configureSigner)
+    {
+        MachOContext obj = (MachOContext)context;
+        MachObjectFormatOptions opt = formatOptions == null ? throw new InvalidOperationException("You must set format options with a valid identifier") : (MachObjectFormatOptions)formatOptions;
+
+        string identifier = opt.Identifier;
+
+        if (identifier == null!)
+            throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
+
+        RequirementSet? req = opt.Requirements;
+
+        if (req == null)
+            if (signOptions.Certificate.IsAppleDeveloperCertificate())
+                req = RequirementSet.CreateAppleDevDefault(identifier, signOptions.Certificate);
+            else
+                req = RequirementSet.CreateDefault(identifier, signOptions.Certificate);
+
+        byte[] requirementsBytes = req.ToArray();
+
+        Entitlements? entitlements = opt.Entitlements;
+
+        ExecSegFlags segmentFlags = ExecSegFlags.MainBinary;
+        byte[]? entitlementsXmlBytes = null;
+        byte[]? entitlementsDerBytes = null;
+
+        if (entitlements != null)
+        {
+            segmentFlags |= GetExecSegFlags(entitlements);
+            entitlementsXmlBytes = entitlements.EncodeAsXml();
+            entitlementsDerBytes = entitlements.EncodeAsDer();
+        }
+
+        using MemoryStream ms = new MemoryStream();
+
+        Dictionary<string, object>? resourceSeal = opt.ResourcesPropertyList;
+        byte[]? resourcesBytes = null;
+
+        if (resourceSeal != null)
+        {
+            ms.Position = 0;
+            PListSerializer.Serialize(resourceSeal, ms);
+            resourcesBytes = ms.ToArray();
+        }
+
+        Dictionary<string, object>? propertyList = opt.InfoPropertyList;
+        byte[]? infoBytes = null;
+
+        if (propertyList != null)
+        {
+            ms.Position = 0;
+            PListSerializer.Serialize(propertyList, ms);
+            infoBytes = ms.ToArray();
+        }
+
+        return CreateSignature(obj, data, signOptions, identifier, opt.TeamId, segmentFlags, requirementsBytes, entitlementsXmlBytes, entitlementsDerBytes, resourcesBytes, infoBytes, configureSigner);
+    }
+
+    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    {
+        digest = null;
+        algo = default;
+
+        if (signedCms.SignerInfos.Count == 0)
+            return false;
+
+        SignerInfo si = signedCms.SignerInfos[0]; //We assume a single signer
+
+        CryptographicAttributeObject? attr = si.SignedAttributes
+                                               .Cast<CryptographicAttributeObject>()
+                                               .FirstOrDefault(a => a.Oid.Value == OidConstants.AppleHashAttrOid);
+
+        if (attr is null || attr.Values.Count == 0)
+            return false;
+
+        AsnReader reader = new AsnReader(attr.Values[0].RawData, AsnEncodingRules.DER);
+        AsnReader seq = reader.ReadSequence();
+        algo = OidHelper.OidToHashAlgorithm(seq.ReadObjectIdentifier());
+        digest = seq.ReadOctetString();
+        return true;
+    }
+
+    internal static Signature CreateSignature(MachOContext context, ReadOnlySpan<byte> data, SignOptions signOptions, string identifier, string? teamId, ExecSegFlags segFlags, ReadOnlyMemory<byte> requirements, ReadOnlyMemory<byte> entitlementsXml, ReadOnlyMemory<byte> entitlementsDer, ReadOnlyMemory<byte> resources, ReadOnlyMemory<byte> info, Action<CmsSigner>? configureSigner)
     {
         if (identifier == null!)
             throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
 
-        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, privateKey)
-        {
-            DigestAlgorithm = hashAlgorithm.ToOid(),
-            IncludeOption = X509IncludeOption.None
-        };
-
         //Build the SuperBlob
-        SortedList<CsSlot, byte[]> blobs = new SortedList<CsSlot, byte[]>();
+        SortedList<CsSlot, ReadOnlyMemory<byte>> blobs = new SortedList<CsSlot, ReadOnlyMemory<byte>>();
 
-        RequirementSet? req = requirements;
+        if (!requirements.IsEmpty)
+            blobs.Add(CsSlot.Requirements, requirements);
 
-        if (req == null)
-            if (cert.IsAppleDeveloperCertificate())
-                req = RequirementSet.CreateAppleDevDefault(identifier, cert);
-            else
-                req = RequirementSet.CreateDefault(identifier, cert);
+        if (!entitlementsDer.IsEmpty)
+            blobs.Add(CsSlot.EntitlementsDer, entitlementsDer);
 
-        blobs.Add(CsSlot.Requirements, req.ToArray());
+        if (!entitlementsXml.IsEmpty)
+            blobs.Add(CsSlot.EntitlementsDer, entitlementsXml);
 
-        ExecSegFlags segmentFlags = ExecSegFlags.MainBinary;
+        if (!resources.IsEmpty)
+            blobs.Add(CsSlot.ResourceDir, resources);
 
-        if (entitlements != null)
-            AddEntitlementBlob(blobs, entitlements, ref segmentFlags);
+        if (!info.IsEmpty)
+            blobs.Add(CsSlot.Info, info);
 
         int maxSlot = blobs.Count == 0 ? 0 : blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
 
-        MachOContext obj = (MachOContext)context;
-        ulong linkEditEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize;
+        ulong linkEditEnd = context.LinkEdit.FileOffset + context.LinkEdit.FileSize;
         Debug.Assert((uint)linkEditEnd == data.Length);
 
         ulong codeLimit = Align(linkEditEnd, 16); // Start of SuperBlob (16 byte aligned)
-        int cdSize = GetCodeDirectorySize(hashAlgorithm, codeLimit, maxSlot, out int idOffset, out int teamIdOffset, out int hashesOffset);
+        HashAlgorithmName hashAlgo = signOptions.HashAlgorithm;
+        int cdSize = GetCodeDirectorySize(hashAlgo, identifier, teamId, codeLimit, maxSlot, out int idOffset, out int teamIdOffset, out int hashesOffset);
 
         byte[] cdBlob = new byte[cdSize];
         blobs.Add(CsSlot.CodeDirectory, cdBlob);
 
         Span<byte> cdSpan = cdBlob.AsSpan();
-        WriteCodeDirectoryHeader(ref cdSpan, hashAlgorithm, maxSlot, codeLimit, obj.Text, segmentFlags, cdSize, idOffset, teamIdOffset, hashesOffset);
+        WriteCodeDirectoryHeader(ref cdSpan, identifier, teamId, hashAlgo, maxSlot, codeLimit, context.Text, segFlags, cdSize, idOffset, teamIdOffset, hashesOffset);
 
         uint sbSize = Align((uint)(SuperBlobHeader.StructSize // SuperBlob header size
                                    + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
@@ -351,17 +427,17 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         //Create a temporary storage for patching the header (paged aligned to make things easier down the road)
 
         //The length is headerSize + sizeOfCommands + loadCommandHeaderSize + codeSignatureHeaderSize
-        byte[] patch = new byte[Align((uint)((obj.Is64Bit ? 32 : 28) + obj.MachHeader.SizeOfCommands + LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize), PageSize)];
+        byte[] patch = new byte[Align((uint)((context.Is64Bit ? 32 : 28) + context.MachHeader.SizeOfCommands + LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize), PageSize)];
         data[..patch.Length].CopyTo(patch);
         data = data[patch.Length..]; //Advance data by the page size
 
         int padLen = checked((int)(codeLimit - linkEditEnd));
-        WriteHeaders(patch, obj, codeLimit, padLen, sbSize);
+        WriteHeaders(patch, context, codeLimit, padLen, sbSize);
 
         byte[] cdHash;
-        using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithm))
+        using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgo))
         {
-            byte hashSize = hashAlgorithm.GetSize();
+            byte hashSize = hashAlgo.GetSize();
 
             HashSpecialSlots(ref cdSpan, blobs, maxSlot, hasher, hashSize);
             HashCodeSlotsPatch(ref cdSpan, patch, hasher, hashSize);
@@ -371,6 +447,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
             cdHash = hasher.GetHashAndReset();
         }
 
+        X509Certificate2 cert = signOptions.Certificate;
         using X509Chain chain = new X509Chain();
         X509ChainPolicy chainPolicy = new X509ChainPolicy { TrustMode = X509ChainTrustMode.CustomRootTrust };
         chainPolicy.CustomTrustStore.Add(cert); //We add itself because it might be self-signed
@@ -383,11 +460,17 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         if (!chain.Build(cert) && !Array.TrueForAll(chain.ChainStatus, s => s.Status is X509ChainStatusFlags.InvalidExtension or X509ChainStatusFlags.HasNotSupportedCriticalExtension))
             throw new InvalidOperationException("Unable to build certificate chain");
 
+        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert, signOptions.PrivateKey)
+        {
+            DigestAlgorithm = hashAlgo.ToOid(),
+            IncludeOption = X509IncludeOption.None
+        };
+
         signer.Certificates.AddRange(chain.ChainElements.Select(x => x.Certificate).ToArray());
         signer.SignedAttributes.Add(new Pkcs9SigningTime());
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.AppleHashAttrOid,
-            EncodeSeq(hashAlgorithm.ToOidString(), cdHash)));
+            EncodeSeq(hashAlgo.ToOidString(), cdHash)));
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.ApplePListAttrOid,
             EncodeString(Encoding.UTF8.GetBytes(
@@ -411,7 +494,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
 
         ContentInfo contentInfo = new ContentInfo(cdBlob);
         SignedCms signed = new SignedCms(contentInfo, true);
-        signed.ComputeSignature(signer, silent);
+        signed.ComputeSignature(signer, signOptions.Silent);
 
         return new Signature(signed, new MachObjectInfo
         {
@@ -442,28 +525,18 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
     }
 
-    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    internal static ExecSegFlags GetExecSegFlags(Entitlements entitlements)
     {
-        digest = null;
-        algo = default;
+        ExecSegFlags flags = ExecSegFlags.MainBinary;
+        if (entitlements.Contains("get-task-allow")) flags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.Contains("run-unsigned-code")) flags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.Contains("com.apple.private.cs.debugger")) flags |= ExecSegFlags.Debugger;
+        if (entitlements.Contains("dynamic-codesigning")) flags |= ExecSegFlags.Jit;
+        if (entitlements.Contains("com.apple.private.skip-library-validation")) flags |= ExecSegFlags.SkipLibraryValidation;
+        if (entitlements.Contains("com.apple.private.amfi.can-load-cdhash")) flags |= ExecSegFlags.CanLoadCdHash;
+        if (entitlements.Contains("com.apple.private.amfi.can-execute-cdhash")) flags |= ExecSegFlags.CanExecuteCdHash;
 
-        if (signedCms.SignerInfos.Count == 0)
-            return false;
-
-        SignerInfo si = signedCms.SignerInfos[0]; //We assume a single signer
-
-        CryptographicAttributeObject? attr = si.SignedAttributes
-                                               .Cast<CryptographicAttributeObject>()
-                                               .FirstOrDefault(a => a.Oid.Value == OidConstants.AppleHashAttrOid);
-
-        if (attr is null || attr.Values.Count == 0)
-            return false;
-
-        AsnReader reader = new AsnReader(attr.Values[0].RawData, AsnEncodingRules.DER);
-        AsnReader seq = reader.ReadSequence();
-        algo = OidHelper.OidToHashAlgorithm(seq.ReadObjectIdentifier());
-        digest = seq.ReadOctetString();
-        return true;
+        return flags;
     }
 
     private static void WriteHeaders(Span<byte> span, MachOContext obj, ulong codeLimit, int padLength, uint sbSize)
@@ -499,7 +572,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
     }
 
-    private void WriteCodeDirectoryHeader(ref Span<byte> span, HashAlgorithmName hashAlgorithm, int maxSlot, ulong codeLimit, Segment textSeg, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
+    private static void WriteCodeDirectoryHeader(ref Span<byte> span, string identifier, string? teamId, HashAlgorithmName hashAlgorithm, int maxSlot, ulong codeLimit, Segment textSeg, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
     {
         //The first header is the code directory header. It contains the size of the rest of the header.
         CodeDirectoryHeader header = new CodeDirectoryHeader
@@ -568,7 +641,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
     }
 
-    private static void HashSpecialSlots(ref Span<byte> span, SortedList<CsSlot, byte[]> blobs, int maxSlot, IncrementalHash hasher, byte hashSize)
+    private static void HashSpecialSlots(ref Span<byte> span, SortedList<CsSlot, ReadOnlyMemory<byte>> blobs, int maxSlot, IncrementalHash hasher, byte hashSize)
     {
         //Write each of the special slots hashes
         for (int i = maxSlot; i > 0; i--)
@@ -580,7 +653,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
                 continue;
             }
 
-            hasher.AppendData(blobs[(CsSlot)i]);
+            hasher.AppendData(blobs[(CsSlot)i].Span);
             hasher.GetHashAndReset().AsSpan(0, hashSize).CopyTo(span);
             span = span[hashSize..];
         }
@@ -633,7 +706,7 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
     }
 
-    private int GetCodeDirectorySize(HashAlgorithmName hashAlgorithm, ulong codeLimit, int specialSlotCount, out int idOffset, out int teamIdOffset, out int hashesOffset)
+    private static int GetCodeDirectorySize(HashAlgorithmName hashAlgorithm, string identifier, string? teamId, ulong codeLimit, int specialSlotCount, out int idOffset, out int teamIdOffset, out int hashesOffset)
     {
         //Static sizes
         int cdSize = CodeDirectoryHeader.StructSize;
@@ -720,25 +793,11 @@ public sealed class MachObjectFormatHandler(string identifier, RequirementSet? r
         }
     }
 
-    private static void AddEntitlementBlob(SortedList<CsSlot, byte[]> blobs, Entitlements entitlements, ref ExecSegFlags segmentFlags)
-    {
-        if (entitlements.Contains("get-task-allow")) segmentFlags |= ExecSegFlags.AllowUnsigned;
-        if (entitlements.Contains("run-unsigned-code")) segmentFlags |= ExecSegFlags.AllowUnsigned;
-        if (entitlements.Contains("com.apple.private.cs.debugger")) segmentFlags |= ExecSegFlags.Debugger;
-        if (entitlements.Contains("dynamic-codesigning")) segmentFlags |= ExecSegFlags.Jit;
-        if (entitlements.Contains("com.apple.private.skip-library-validation")) segmentFlags |= ExecSegFlags.SkipLibraryValidation;
-        if (entitlements.Contains("com.apple.private.amfi.can-load-cdhash")) segmentFlags |= ExecSegFlags.CanLoadCdHash;
-        if (entitlements.Contains("com.apple.private.amfi.can-execute-cdhash")) segmentFlags |= ExecSegFlags.CanExecuteCdHash;
-
-        blobs.Add(CsSlot.Entitlements, entitlements.EncodeAsXml());
-        blobs.Add(CsSlot.EntitlementsDer, entitlements.EncodeAsDer());
-    }
-
     private sealed class MachObjectInfo
     {
         public required uint SuperBlockSize { get; init; }
         public required ulong CodeLimit { get; init; }
         public required int PaddingLength { get; init; }
-        public required SortedList<CsSlot, byte[]> Blobs { get; init; }
+        public required SortedList<CsSlot, ReadOnlyMemory<byte>> Blobs { get; init; }
     }
 }
