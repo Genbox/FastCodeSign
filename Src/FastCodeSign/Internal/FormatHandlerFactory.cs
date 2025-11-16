@@ -6,7 +6,7 @@ namespace Genbox.FastCodeSign.Internal;
 
 internal static class FormatHandlerFactory
 {
-    public static IFormatHandler? Get(ReadOnlySpan<byte> span, string? fileName, bool skipExtCheck)
+    public static IFormatHandler? Get(ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)
     {
         IFormatHandler[] handlers =
         [
@@ -19,8 +19,6 @@ internal static class FormatHandlerFactory
             new PowerShellXmlFormatHandler(),
             new PowerShellScriptFormatHandler(), //This is here because it matches everything
         ];
-
-        string? ext = fileName == null ? null : PathHelper.GetExt(fileName);
 
         foreach (IFormatHandler handler in handlers)
         {

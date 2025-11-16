@@ -27,12 +27,14 @@ public class CodeSignProvider
         FileAllocation allocation = new FileAllocation(filePath); //We don't dispose this here. Instead, we let CodeSignFileProvider do it
 
         string fileName = Path.GetFileName(filePath);
+        string? ext = PathHelper.GetExt(fileName);
+
         ReadOnlySpan<byte> span = allocation.GetSpan();
 
         if (handler == null)
-            handler = GetFormatHandler(span, fileName, skipExtCheck);
+            handler = GetFormatHandler(span, ext, skipExtCheck);
         else
-            ValidateHandler(handler, span, fileName, skipExtCheck);
+            ValidateHandler(handler, span, ext, skipExtCheck);
 
         return new CodeSignFileProvider(handler, allocation);
     }
@@ -46,11 +48,12 @@ public class CodeSignProvider
     public static CodeSignProvider FromAllocation(IAllocation allocation, IFormatHandler? handler = null, string? fileName = null, bool skipExtCheck = false)
     {
         ReadOnlySpan<byte> span = allocation.GetSpan();
+        string? ext = fileName == null ? null : PathHelper.GetExt(fileName);
 
         if (handler == null)
-            handler = GetFormatHandler(span, fileName, skipExtCheck);
+            handler = GetFormatHandler(span, ext, skipExtCheck);
         else
-            ValidateHandler(handler, span, fileName, skipExtCheck);
+            ValidateHandler(handler, span, ext, skipExtCheck);
 
         return new CodeSignProvider(handler, allocation);
     }
@@ -149,9 +152,9 @@ public class CodeSignProvider
         _handler.WriteSignature(context, Allocation, signature);
     }
 
-    private static IFormatHandler GetFormatHandler(ReadOnlySpan<byte> span, string? fileName, bool skipExtCheck)
+    private static IFormatHandler GetFormatHandler(ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)
     {
-        IFormatHandler? factory = FormatHandlerFactory.Get(span, fileName, skipExtCheck);
+        IFormatHandler? factory = FormatHandlerFactory.Get(span, ext, skipExtCheck);
 
         if (factory == null)
             throw new InvalidOperationException("Unable to find a valid handler");
@@ -159,10 +162,8 @@ public class CodeSignProvider
         return factory;
     }
 
-    private static void ValidateHandler(IFormatHandler handler, ReadOnlySpan<byte> span, string? fileName, bool skipExtCheck)
+    private static void ValidateHandler(IFormatHandler handler, ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)
     {
-        string? ext = fileName == null ? null : PathHelper.GetExt(fileName);
-
         if (span.Length < handler.MinValidSize)
             throw new InvalidDataException($"The provided data is {span.Length} bytes. The data must be at least {handler.MinValidSize} bytes.");
 
