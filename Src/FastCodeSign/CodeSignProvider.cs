@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
+using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Internal;
 using Genbox.FastCodeSign.Internal.Helpers;
 using Genbox.FastCodeSign.Models;
@@ -13,10 +14,12 @@ namespace Genbox.FastCodeSign;
 public class CodeSignProvider
 {
     private readonly IFormatHandler _handler;
+    private readonly string? _fileName;
 
-    internal CodeSignProvider(IFormatHandler handler, IAllocation allocation)
+    internal CodeSignProvider(IFormatHandler handler, IAllocation allocation, string? fileName)
     {
         _handler = handler;
+        _fileName = fileName;
         Allocation = allocation;
     }
 
@@ -36,7 +39,7 @@ public class CodeSignProvider
         else
             ValidateHandler(handler, span, ext, skipExtCheck);
 
-        return new CodeSignFileProvider(handler, allocation);
+        return new CodeSignFileProvider(handler, allocation, fileName);
     }
 
     public static CodeSignProvider FromData(byte[] data, IFormatHandler? handler = null, string? fileName = null, bool skipExtCheck = false)
@@ -55,7 +58,7 @@ public class CodeSignProvider
         else
             ValidateHandler(handler, span, ext, skipExtCheck);
 
-        return new CodeSignProvider(handler, allocation);
+        return new CodeSignProvider(handler, allocation, fileName);
     }
 
     public bool HasSignature()
@@ -137,6 +140,10 @@ public class CodeSignProvider
 
         if (context.IsSigned)
             throw new InvalidOperationException("The file already contains a signature.");
+
+        //Small hack to transfer the filename to the MachObjectFormatHandler if user didn't set the format options, but provided a filename.
+        if (formatOptions == null && _fileName != null && _handler is MachObjectFormatHandler machHandler)
+            return ((IFormatHandler)machHandler).CreateSignature(context, data, signOptions, new MachObjectFormatOptions { Identifier = _fileName }, configureSigner);
 
         return _handler.CreateSignature(context, data, signOptions, formatOptions, configureSigner);
     }

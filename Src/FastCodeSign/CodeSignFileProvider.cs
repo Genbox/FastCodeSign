@@ -7,7 +7,7 @@ public sealed class CodeSignFileProvider : CodeSignProvider, IDisposable
 {
     private readonly FileAllocation _allocation;
 
-    internal CodeSignFileProvider(IFormatHandler handler, FileAllocation allocation) : base(handler, allocation)
+    internal CodeSignFileProvider(IFormatHandler handler, FileAllocation allocation, string fileName) : base(handler, allocation, fileName)
     {
         _allocation = allocation;
     }

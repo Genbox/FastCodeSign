@@ -24,7 +24,7 @@ internal sealed class TestCase : XUnitTest
     public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, IFormatOptions? formatOptions = null, Action<Span<byte>>? equalityPatch = null)
     {
         return new TestCase(
-            x => new CodeSignProvider(handler, x),
+            x => new CodeSignProvider(handler, x, Path.GetFileName(unsigned)),
             handler.GetType(),
             Path.Combine(Constants.FilesDir, signed),
             Path.Combine(Constants.FilesDir, unsigned),
