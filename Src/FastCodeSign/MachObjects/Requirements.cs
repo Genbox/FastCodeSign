@@ -6,7 +6,7 @@ using Genbox.FastCodeSign.MachObjects.Enums;
 
 namespace Genbox.FastCodeSign.MachObjects;
 
-public class RequirementSet
+public class Requirements
 {
     private readonly Dictionary<RequirementType, Requirement> _values = new Dictionary<RequirementType, Requirement>();
 
@@ -53,9 +53,9 @@ public class RequirementSet
 
     public override string ToString() => string.Join(", ", _values.Select(x => $"{x.Key.ToString().ToLowerInvariant()} => {x.Value}"));
 
-    public static RequirementSet CreateEmpty() => new RequirementSet();
+    public static Requirements CreateEmpty() => new Requirements();
 
-    public static RequirementSet CreateAppleDevDefault(string identifier, X509Certificate2 cert)
+    public static Requirements CreateAppleDevDefault(string identifier, X509Certificate2 cert)
     {
         ArgumentException.ThrowIfNullOrEmpty(identifier);
 
@@ -79,12 +79,12 @@ public class RequirementSet
             )
         );
 
-        RequirementSet req = new RequirementSet();
+        Requirements req = new Requirements();
         req.Add(RequirementType.Designated, expr);
         return req;
     }
 
-    public static RequirementSet CreateDefault(string identifier, X509Certificate2 cert)
+    public static Requirements CreateDefault(string identifier, X509Certificate2 cert)
     {
         ArgumentException.ThrowIfNullOrEmpty(identifier);
 
@@ -96,7 +96,7 @@ public class RequirementSet
             Expr.AnchorHash(0, Convert.FromHexString(cert.Thumbprint))
         );
 
-        RequirementSet req = new RequirementSet();
+        Requirements req = new Requirements();
         req.Add(RequirementType.Designated, expr);
         return req;
     }

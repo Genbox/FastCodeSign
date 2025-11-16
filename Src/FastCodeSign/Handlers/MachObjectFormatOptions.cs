@@ -13,7 +13,7 @@ public class MachObjectFormatOptions : IFormatOptions
     /// <summary>
     /// The requirements to embed into the signature. Set to null to use macOS defaults.
     /// </summary>
-    public RequirementSet? Requirements { get; set; }
+    public Requirements? Requirements { get; set; }
 
     /// <summary>
     /// The entitlements to embed into the signature.

@@ -309,13 +309,13 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         if (identifier == null!)
             throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
 
-        RequirementSet? req = opt.Requirements;
+        Requirements? req = opt.Requirements;
 
         if (req == null)
             if (signOptions.Certificate.IsAppleDeveloperCertificate())
-                req = RequirementSet.CreateAppleDevDefault(identifier, signOptions.Certificate);
+                req = Requirements.CreateAppleDevDefault(identifier, signOptions.Certificate);
             else
-                req = RequirementSet.CreateDefault(identifier, signOptions.Certificate);
+                req = Requirements.CreateDefault(identifier, signOptions.Certificate);
 
         byte[] requirementsBytes = req.ToArray();
 
