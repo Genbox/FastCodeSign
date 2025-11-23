@@ -107,7 +107,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         for (int i = 0; i < sbHeader.Count; i++)
         {
-            BlobIndex blobIdx = BlobIndex.Read(sbSpan[(SuperBlobHeader.StructSize + (i * BlobWrapper.StructSize))..]);
+            BlobIndex blobIdx = BlobIndex.Read(sbSpan[(SuperBlobHeader.StructSize + (i * BlobIndex.StructSize))..]);
             slots.Add(blobIdx);
 
             if (blobIdx.Type != CsSlot.CodeDirectory)
@@ -153,12 +153,16 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //We assume we can read from offset 0 to the offset where special hashes begin.
         cdHasher.AppendData(cdSpan[..(int)(hashOff - (nSpecial * hashSize))]); //Go from hash offset, then backwards the number of special hashes
 
-        ReadOnlySpan<byte> emptyHash = stackalloc byte[hashSize];
+        int specialHashOffset = (int)(hashOff - (nSpecial * hashSize));
+
+        if (specialHashOffset < 0 || specialHashOffset + (nSpecial * hashSize) > cdSpan.Length)
+            throw new InvalidDataException("The CodeDirectory contains invalid special hash offsets.");
 
         //Then we go through the blobs, find special slots, and hash the content, then add the hash to cdHasher
         for (int i = (int)nSpecial; i > 0; i--)
         {
             ReadOnlySpan<byte> blobSpan = ReadOnlySpan<byte>.Empty;
+            int specialIndex = (int)(nSpecial - i);
 
             foreach (BlobIndex blobIndex in slots)
             {
@@ -170,7 +174,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             }
 
             if (blobSpan.IsEmpty)
-                cdHasher.AppendData(emptyHash);
+                cdHasher.AppendData(cdSpan.Slice(specialHashOffset + (specialIndex * hashSize), hashSize));
             else
             {
                 BlobWrapper blobHeader = BlobWrapper.Read(blobSpan);
