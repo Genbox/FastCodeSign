@@ -1,16 +1,19 @@
 ﻿using System.Text;
 using Genbox.FastCodeSign.Internal.MachObject;
+using Genbox.FastCodeSign.Tests.Code;
 
 namespace Genbox.FastCodeSign.Tests;
 
 public class PListSerializerTests
 {
     [Theory]
-    [InlineData("Discord-CodeResources.dat")]
-    [InlineData("Discord-Info.dat")]
+    [InlineData("Discord-PList-CodeResources.dat")]
+    [InlineData("Discord-PList-Info.dat")]
     private async Task Deserialize(string resourceName)
     {
-        Dictionary<string, object> obj = PListSerializer.Deserialize(await File.ReadAllBytesAsync("Resources/" + resourceName));
+        string fullPath = Path.Combine(Constants.FilesDir, "Misc", "Plists", resourceName);
+
+        Dictionary<string, object> obj = PListSerializer.Deserialize(await File.ReadAllBytesAsync(fullPath));
         Assert.NotNull(obj);
 
         await Verify(obj)
