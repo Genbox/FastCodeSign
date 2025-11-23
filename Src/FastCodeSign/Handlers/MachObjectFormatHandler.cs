@@ -400,7 +400,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             blobs.Add(CsSlot.EntitlementsDer, entitlementsDer);
 
         if (!entitlementsXml.IsEmpty)
-            blobs.Add(CsSlot.EntitlementsDer, entitlementsXml);
+            blobs.Add(CsSlot.Entitlements, entitlementsXml);
 
         if (!resources.IsEmpty)
             blobs.Add(CsSlot.ResourceDir, resources);
