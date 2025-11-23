@@ -8,6 +8,7 @@ public class PListSerializerTests
 {
     [Theory]
     [InlineData("Discord-PList-CodeResources.dat")]
+    [InlineData("Discord-PList-CodeResources-Empty.dat")]
     [InlineData("Discord-PList-Info.dat")]
     private async Task Deserialize(string resourceName)
     {

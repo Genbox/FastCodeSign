@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using System.Xml;
@@ -100,7 +100,11 @@ internal static class PListSerializer
 
     private static Dictionary<string, object> ReadDict(XmlReader reader)
     {
+        bool isEmpty = reader.IsEmptyElement;
         reader.ReadStartElement("dict");
+
+        if (isEmpty)
+            return [];
 
         Dictionary<string, object> dict = new Dictionary<string, object>(StringComparer.Ordinal);
 

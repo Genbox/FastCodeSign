@@ -1,0 +1,63 @@
+﻿{
+  rules: {
+    ^Resources/: true,
+    ^Resources/.*\.lproj/: {
+      optional: true,
+      weight: 1000.0
+    },
+    ^Resources/.*\.lproj/locversion.plist$: {
+      omit: true,
+      weight: 1100.0
+    },
+    ^Resources/Base\.lproj/: {
+      weight: 1010.0
+    },
+    ^version.plist$: true
+  },
+  rules2: {
+    .*\.dSYM($|/): {
+      weight: 11.0
+    },
+    ^.*: true,
+    ^(.*/)?\.DS_Store$: {
+      omit: true,
+      weight: 2000.0
+    },
+    ^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/: {
+      nested: true,
+      weight: 10.0
+    },
+    ^[^/]+$: {
+      nested: true,
+      weight: 10.0
+    },
+    ^embedded\.provisionprofile$: {
+      weight: 20.0
+    },
+    ^Info\.plist$: {
+      omit: true,
+      weight: 20.0
+    },
+    ^PkgInfo$: {
+      omit: true,
+      weight: 20.0
+    },
+    ^Resources/: {
+      weight: 20.0
+    },
+    ^Resources/.*\.lproj/: {
+      optional: true,
+      weight: 1000.0
+    },
+    ^Resources/.*\.lproj/locversion.plist$: {
+      omit: true,
+      weight: 1100.0
+    },
+    ^Resources/Base\.lproj/: {
+      weight: 1010.0
+    },
+    ^version\.plist$: {
+      weight: 20.0
+    }
+  }
+}
