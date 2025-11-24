@@ -8,7 +8,20 @@ namespace Genbox.FastCodeSign.Tests;
 public class MachObjectHelperTests
 {
     [Fact]
-    private void GetThinMachObjects32Test()
+    private void ThinFileReturnsSelf()
+    {
+        byte[] data = File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Signed/MachO/macho_signed.dat"));
+        MachObject[] slices = MachObjectHelper.GetMachObjects(data);
+        MachObject slice = Assert.Single(slices);
+
+        Assert.Equal((ulong)0, slice.Offset);
+        Assert.Equal((ulong)data.Length, slice.Size);
+        Assert.Equal(CpuType.X86_64, slice.CpuType);
+        Assert.Equal(X8664CpuSubType.All, slice.CpuSubType);
+    }
+
+    [Fact]
+    private void GetMachObjects32()
     {
         MachObject[] slices = MachObjectHelper.GetMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat32_3slices.dat")));
         Assert.Equal(3, slices.Length);
@@ -33,7 +46,7 @@ public class MachObjectHelperTests
     }
 
     [Fact]
-    public void GetThinMachObjects64Test()
+    public void GetMachObjects64()
     {
         MachObject[] slices = MachObjectHelper.GetMachObjects(File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Misc/fat64_3slices.dat")));
         Assert.Equal(3, slices.Length);

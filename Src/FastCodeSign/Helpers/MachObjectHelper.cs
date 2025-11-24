@@ -7,15 +7,15 @@ namespace Genbox.FastCodeSign.Helpers;
 public static class MachObjectHelper
 {
     /// <summary>
-    /// Parse a Fat Mach Object file into thin object files offsets and sizes.
+    /// Parse a Fat Mach Object file into thin object files offsets and sizes. If there is no fat header, it returns an object that spans the entire file.
     /// </summary>
     /// <param name="data">The fat mach object file data</param>
     /// <returns>Offset and sizes of each thin object file</returns>
     /// <exception cref="InvalidDataException">Thrown on invalid files</exception>
     public static MachObject[] GetMachObjects(ReadOnlySpan<byte> data)
     {
-        if (data.Length < 8)
-            throw new InvalidDataException("Truncated Mach object header.");
+        if (data.Length < 12)
+            throw new InvalidDataException("Truncated mach object header");
 
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
 
@@ -24,11 +24,29 @@ public static class MachObjectHelper
         switch (magic)
         {
             case MachMagic.MachMagicBE:
-            case MachMagic.MachMagicLE:
             case MachMagic.MachMagic64BE:
-            case MachMagic.MachMagic64LE:
+            {
                 //The file is already a thin object.
-                return [];
+                uint cpuType = ReadUInt32BigEndian(data[4..]);
+                uint cpuSubType = ReadUInt32BigEndian(data[8..]);
+
+                CpuType cpuTypeEnum = (CpuType)cpuType;
+                Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
+
+                return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
+            }
+            case MachMagic.MachMagicLE:
+            case MachMagic.MachMagic64LE:
+            {
+                //The file is already a thin object.
+                uint cpuType = ReadUInt32LittleEndian(data[4..]);
+                uint cpuSubType = ReadUInt32LittleEndian(data[8..]);
+
+                CpuType cpuTypeEnum = (CpuType)cpuType;
+                Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
+
+                return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
+            }
             case MachMagic.FatMagicBE:
             case MachMagic.FatMagicLE:
                 is64Bit = false;
@@ -46,7 +64,7 @@ public static class MachObjectHelper
         uint fatCount = ReadUInt32BigEndian(data[4..]);
 
         if (fatCount == 0)
-            throw new InvalidDataException("Empty fat file.");
+            throw new InvalidDataException("Empty fat file");
 
         MachObject[] objs = new MachObject[fatCount];
 
@@ -56,12 +74,12 @@ public static class MachObjectHelper
         for (uint i = 0; i < fatCount; i++)
         {
             if (offset + archSize > data.Length)
-                throw new InvalidDataException("Truncated FAT arch entry.");
+                throw new InvalidDataException("Truncated fat entry");
 
-            uint cpuType = ReadUInt32BigEndian(data.Slice(offset, 4));
+            uint cpuType = ReadUInt32BigEndian(data[offset..]);
             offset += 4;
 
-            uint cpuSubType = ReadUInt32BigEndian(data.Slice(offset, 4));
+            uint cpuSubType = ReadUInt32BigEndian(data[offset..]);
             offset += 4;
 
             ulong sOffset, sSize;
@@ -69,38 +87,39 @@ public static class MachObjectHelper
 
             if (is64Bit)
             {
-                sOffset = ReadUInt64BigEndian(data.Slice(offset, 8));
+                sOffset = ReadUInt64BigEndian(data[offset..]);
                 offset += 8;
-                sSize = ReadUInt64BigEndian(data.Slice(offset, 8));
+                sSize = ReadUInt64BigEndian(data[offset..]);
                 offset += 8;
-                sAlign = ReadUInt32BigEndian(data.Slice(offset, 4));
+                sAlign = ReadUInt32BigEndian(data[offset..]);
                 offset += 4;
 
                 offset += 4; //This is the reserved field
             }
             else
             {
-                sOffset = ReadUInt32BigEndian(data.Slice(offset, 4));
+                sOffset = ReadUInt32BigEndian(data[offset..]);
                 offset += 4;
-                sSize = ReadUInt32BigEndian(data.Slice(offset, 4));
+                sSize = ReadUInt32BigEndian(data[offset..]);
                 offset += 4;
-                sAlign = ReadUInt32BigEndian(data.Slice(offset, 4));
+                sAlign = ReadUInt32BigEndian(data[offset..]);
                 offset += 4;
             }
 
             CpuType cpuTypeEnum = (CpuType)cpuType;
-
-            Enum cpuSubTypeEnum = cpuTypeEnum switch
-            {
-                CpuType.X86 or CpuType.X86_64 => (X8664CpuSubType)cpuSubType,
-                CpuType.ARM => (ArmCpuSubType)cpuSubType,
-                CpuType.ARM64 or CpuType.ARM64_32 => (Arm64CpuSubType)cpuSubType,
-                _ => CpuSubType.Any
-            };
+            Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
 
             objs[i] = new MachObject(cpuTypeEnum, cpuSubTypeEnum, sOffset, sSize, sAlign);
         }
 
         return objs;
     }
+
+    private static Enum CpuSubTypeToEnum(CpuType cpuTypeEnum, uint cpuSubType) => cpuTypeEnum switch
+    {
+        CpuType.X86 or CpuType.X86_64 => (X8664CpuSubType)cpuSubType,
+        CpuType.ARM => (ArmCpuSubType)cpuSubType,
+        CpuType.ARM64 or CpuType.ARM64_32 => (Arm64CpuSubType)cpuSubType,
+        _ => CpuSubType.Any
+    };
 }
