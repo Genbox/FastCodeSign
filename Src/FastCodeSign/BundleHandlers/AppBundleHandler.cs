@@ -58,7 +58,6 @@ public sealed class AppBundleHandler : IBundleHandler
 
         if (resourceSeal != null)
         {
-            ms.Position = 0;
             ms.SetLength(0);
             PListSerializer.Serialize(resourceSeal, ms);
             resourcesBytes = ms.ToArray();
@@ -69,7 +68,6 @@ public sealed class AppBundleHandler : IBundleHandler
 
         if (propertyList != null)
         {
-            ms.Position = 0;
             ms.SetLength(0);
             PListSerializer.Serialize(propertyList, ms);
             infoBytes = ms.ToArray();

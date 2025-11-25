@@ -343,7 +343,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         if (resourceSeal != null)
         {
-            ms.Position = 0;
+            ms.SetLength(0);
             PListSerializer.Serialize(resourceSeal, ms);
             resourcesBytes = ms.ToArray();
         }
@@ -353,7 +353,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         if (propertyList != null)
         {
-            ms.Position = 0;
+            ms.SetLength(0);
             PListSerializer.Serialize(propertyList, ms);
             infoBytes = ms.ToArray();
         }
@@ -785,15 +785,13 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         foreach (string resourceName in assembly.GetManifestResourceNames())
         {
-            if (!resourceName.StartsWith("Genbox.FastCodeSign.Internal.MachObject.Certificates.", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Loading different file than expected");
+            Debug.Assert(resourceName.StartsWith("Genbox.FastCodeSign.Internal.MachObject.Certificates.", StringComparison.OrdinalIgnoreCase));
 
+            memoryStream.SetLength(0); //Reuse the buffer
             using (Stream? manifestStream = assembly.GetManifestResourceStream(resourceName))
                 manifestStream!.CopyTo(memoryStream);
 
             yield return X509CertificateLoader.LoadCertificate(memoryStream.ToArray());
-
-            memoryStream.Position = 0; //To reuse the stream
         }
     }
 
