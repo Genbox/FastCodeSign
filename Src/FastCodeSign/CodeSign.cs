@@ -29,4 +29,15 @@ public static class CodeSign
         provider.WriteSignature(signature);
         return provider.Allocation.GetSpan();
     }
+
+    public static void SignBundle(string path, X509Certificate2 cert) => SignBundle(path, new SignOptions
+    {
+        Certificate = cert,
+    });
+
+    public static void SignBundle(string path, SignOptions signOptions)
+    {
+        CodeSignBundleProvider provider = CodeSignProvider.FromBundle(path);
+        provider.CreateSignature(signOptions);
+    }
 }

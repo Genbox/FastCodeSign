@@ -42,6 +42,16 @@ public class CodeSignProvider
         return new CodeSignFileProvider(handler, allocation, fileName);
     }
 
+    public static CodeSignBundleProvider FromBundle(string path, IBundleHandler? handler = null)
+    {
+        if (handler == null)
+            handler = GetBundleHandler(path);
+        else
+            ValidateBundleHandler(handler, path);
+
+        return new CodeSignBundleProvider(handler, path);
+    }
+
     public static CodeSignProvider FromData(byte[] data, IFormatHandler? handler = null, string? fileName = null, bool skipExtCheck = false)
     {
         MemoryAllocation allocation = new MemoryAllocation(data);
@@ -169,6 +179,16 @@ public class CodeSignProvider
         return factory;
     }
 
+    private static IBundleHandler GetBundleHandler(string path)
+    {
+        IBundleHandler? factory = BundleHandlerFactory.Get(path);
+
+        if (factory == null)
+            throw new InvalidOperationException("Unable to find a valid handler");
+
+        return factory;
+    }
+
     private static void ValidateHandler(IFormatHandler handler, ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)
     {
         if (span.Length < handler.MinValidSize)
@@ -179,5 +199,11 @@ public class CodeSignProvider
 
         if (!handler.IsValidHeader(span))
             throw new InvalidDataException("The header is not valid.");
+    }
+
+    private static void ValidateBundleHandler(IBundleHandler handler, string path)
+    {
+        if (!handler.IsBundlePath(path))
+            throw new InvalidDataException($"The provided handler does not support the files in '{path}'");
     }
 }

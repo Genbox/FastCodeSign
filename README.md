@@ -95,3 +95,15 @@ PowerShell files:
 * xap: Silverlight Application file
 * msi: Windows Installer file
 * cab: Windows Cabinet file
+
+### Mach Object signatures
+This library does not support signing applications for platforms older than OS X Maverick (10.9, released in 2013) and iOS 15 (released in 2021).
+See Apple's [new code signature format](https://developer.apple.com/documentation/Xcode/using-the-latest-code-signature-format) document for details.
+
+* Only SHA256 is used for hashing
+
+#### macOS App bundles
+
+* Only bundles with executables are supported
+* Resource rulees are not produced when signing. Apple deprecated resource rules in OS X Maverick. See [macOS Code Signing in Depth](https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG206) for details.
+* Validation and signing only uses `files2` which uses SHA256

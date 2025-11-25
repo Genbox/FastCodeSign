@@ -13,11 +13,14 @@ public sealed class FileAllocation : IAllocation, IDisposable
     private unsafe byte* _ptr;
     private MemoryMappedViewAccessor _view;
 
-    public FileAllocation(string file)
+    public FileAllocation(string filePath)
     {
-        _fileStream = new FileStream(file, FileMode.Open, FileAccess.ReadWrite);
+        FilePath = filePath;
+        _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite);
         CreateProvider();
     }
+
+    public string FilePath { get; }
 
     public unsafe Span<byte> GetSpan()
     {
