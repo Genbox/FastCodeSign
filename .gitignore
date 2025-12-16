@@ -8,6 +8,7 @@
 *.snupkg
 
 # Others
+*.pfx
 *.publishsettings
 
 # SQL Server files
