@@ -60,7 +60,25 @@ internal struct WINTRUST_DATA : IDisposable
 
     public void Dispose()
     {
-        if (UnionData != IntPtr.Zero)
+        if (UnionData == IntPtr.Zero)
+            return;
+
+        try
+        {
+            switch (dwUnionChoice)
+            {
+                case WTD_CHOICE.WTD_CHOICE_FILE:
+                    Marshal.DestroyStructure<WINTRUST_FILE_INFO>(UnionData);
+                    break;
+                case WTD_CHOICE.WTD_CHOICE_CATALOG:
+                    Marshal.DestroyStructure<WINTRUST_CATALOG_INFO>(UnionData);
+                    break;
+            }
+        }
+        finally
+        {
             Marshal.FreeHGlobal(UnionData);
+            UnionData = IntPtr.Zero;
+        }
     }
 }
