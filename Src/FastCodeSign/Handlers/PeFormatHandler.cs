@@ -37,8 +37,16 @@ public sealed class PeFormatHandler : IFormatHandler
     {
         WinPeContext obj = (WinPeContext)context;
 
+        if (obj.SecuritySize < WinCertificate.StructSize)
+            return ReadOnlySpan<byte>.Empty;
+
+        if (obj.SecurityVirtualAddress > (uint)data.Length || obj.SecuritySize > (uint)data.Length || obj.SecurityVirtualAddress + obj.SecuritySize > (uint)data.Length)
+            return ReadOnlySpan<byte>.Empty;
+
+        ReadOnlySpan<byte> winCertTable = data.Slice((int)obj.SecurityVirtualAddress, (int)obj.SecuritySize);
+
         //There is a WIN_CERTIFICATE struct here. See https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-win_certificate
-        WinCertificate winCert = WinCertificate.Read(data.Slice((int)obj.SecurityVirtualAddress, (int)obj.SecuritySize));
+        WinCertificate winCert = WinCertificate.Read(winCertTable);
 
         //See https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-win_certificate
 
