@@ -65,7 +65,13 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
     long IFormatHandler.RemoveSignature(IContext context, Span<byte> data)
     {
         TextContext obj = (TextContext)context;
-        return obj.FooterIdx - obj.HeaderIdx;
+        int length = obj.FooterIdx - obj.HeaderIdx;
+
+        if (length <= 0)
+            return 0;
+
+        data.Slice(obj.HeaderIdx, length).Clear();
+        return length;
     }
 
     void IFormatHandler.WriteSignature(IContext context, IAllocation allocation, Signature signature)
