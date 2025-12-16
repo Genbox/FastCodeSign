@@ -25,7 +25,7 @@ internal static class FormatHandlerFactory
             if (span.Length < handler.MinValidSize)
                 continue; //Too small to be valid
 
-            if (!skipExtCheck && ext != null && !handler.ValidExt.Contains(ext))
+            if (!skipExtCheck && ext != null && handler.ValidExt.Length != 0 && !handler.ValidExt.Contains(ext))
                 continue;
 
             if (!handler.IsValidHeader(span))

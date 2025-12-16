@@ -194,7 +194,7 @@ public class CodeSignProvider
         if (span.Length < handler.MinValidSize)
             throw new InvalidDataException($"The provided data is {span.Length} bytes. The data must be at least {handler.MinValidSize} bytes.");
 
-        if (!skipExtCheck && ext != null && !handler.ValidExt.Contains(ext))
+        if (!skipExtCheck && ext != null && handler.ValidExt.Length != 0 && !handler.ValidExt.Contains(ext))
             throw new InvalidDataException($"The extension '{ext}' is not valid.");
 
         if (!handler.IsValidHeader(span))
