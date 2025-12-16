@@ -198,38 +198,40 @@ public sealed class AppBundleHandler : IBundleHandler
 
         // Check if the signature in the mach object is valid
         IFormatHandler handler = new MachObjectFormatHandler();
-        using FileAllocation allocation = new FileAllocation(obj.BundleExecutablePath);
-        Span<byte> span = allocation.GetSpan();
-
-        MachObject[] objs = MachObjectHelper.GetMachObjects(span);
-
-        foreach (MachObject machObject in objs)
+        using (FileAllocation allocation = new FileAllocation(obj.BundleExecutablePath))
         {
-            ReadOnlySpan<byte> objSpan = machObject.GetSpan(span);
-            IContext objContext = handler.GetContext(objSpan);
+            Span<byte> span = allocation.GetSpan();
 
-            ReadOnlySpan<byte> signatureBytes = handler.ExtractSignature(objContext, objSpan);
-            Debug.Assert(!signatureBytes.IsEmpty);
+            MachObject[] objs = MachObjectHelper.GetMachObjects(span);
 
-            // Extra sanity checks before delegating decoding to SignedCms
-            if (AsnDecoder.TryReadEncodedValue(signatureBytes, AsnEncodingRules.BER, out Asn1Tag tag, out _, out _, out int bytesConsumed))
+            foreach (MachObject machObject in objs)
             {
-                if (!tag.HasSameClassAndValue(Asn1Tag.Sequence))
-                    throw new InvalidOperationException("The ASN.1 structure is invalid");
+                ReadOnlySpan<byte> objSpan = machObject.GetSpan(span);
+                IContext objContext = handler.GetContext(objSpan);
 
-                if (signatureBytes.Length != bytesConsumed)
-                    throw new InvalidDataException("There is trailing data after the ASN.1 structure");
+                ReadOnlySpan<byte> signatureBytes = handler.ExtractSignature(objContext, objSpan);
+                Debug.Assert(!signatureBytes.IsEmpty);
+
+                // Extra sanity checks before delegating decoding to SignedCms
+                if (AsnDecoder.TryReadEncodedValue(signatureBytes, AsnEncodingRules.BER, out Asn1Tag tag, out _, out _, out int bytesConsumed))
+                {
+                    if (!tag.HasSameClassAndValue(Asn1Tag.Sequence))
+                        throw new InvalidOperationException("The ASN.1 structure is invalid");
+
+                    if (signatureBytes.Length != bytesConsumed)
+                        throw new InvalidDataException("There is trailing data after the ASN.1 structure");
+                }
+
+                SignedCms signedCms = new SignedCms();
+                signedCms.Decode(signatureBytes);
+
+                if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
+                    throw new InvalidOperationException("The CMS does not contain a valid hash.");
+
+                byte[] actualDigest = handler.ComputeHash(objContext, objSpan, hashAlgorithm);
+                if (!expectedDigest.SequenceEqual(actualDigest))
+                    return false;
             }
-
-            SignedCms signedCms = new SignedCms();
-            signedCms.Decode(signatureBytes);
-
-            if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
-                throw new InvalidOperationException("The CMS does not contain a valid hash.");
-
-            byte[] actualDigest = handler.ComputeHash(objContext, objSpan, hashAlgorithm);
-            if (!expectedDigest.SequenceEqual(actualDigest))
-                return false;
         }
 
         return VerifyResourceSeal(obj);
