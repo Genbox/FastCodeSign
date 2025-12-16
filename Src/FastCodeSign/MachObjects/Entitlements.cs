@@ -1,4 +1,4 @@
-﻿using System.Formats.Asn1;
+using System.Formats.Asn1;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 
@@ -15,7 +15,7 @@ public class Entitlements
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
         ArgumentNullException.ThrowIfNull(value);
 
-        if (value is not (bool or string or string[]))
+        if (value is not (bool or string or string[] or int))
             throw new ArgumentException("Invalid entitlement value type: " + value.GetType().Name);
 
         _values.Add(identifier, value);
@@ -87,9 +87,9 @@ public class Entitlements
 
         byte[] buffer = new byte[8 + asn1Bytes.Length];
         WriteUInt32BigEndian(buffer, (uint)CsMagic.EntitlementsDer);
-        WriteUInt32BigEndian(buffer[4..], (uint)asn1Bytes.Length);
+        WriteUInt32BigEndian(buffer[4..], (uint)buffer.Length);
         asn1Bytes.CopyTo(buffer.AsSpan(8, asn1Bytes.Length));
 
-        return asn1Bytes;
+        return buffer;
     }
 }
