@@ -571,6 +571,8 @@ public sealed class AppBundleHandler : IBundleHandler
                 FileSystemInfo fsi = isDir ? new DirectoryInfo(entry) : new FileInfo(entry);
                 if (fsi.LinkTarget != null)
                     files2Value.Add("symlink", fsi.LinkTarget);
+                else
+                    throw new InvalidDataException($"Unable to resolve symlink target for '{relative}'.");
             }
             else
             {
