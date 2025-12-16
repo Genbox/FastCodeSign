@@ -54,8 +54,14 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         MachOContext obj = (MachOContext)context;
         Debug.Assert(obj.CodeSignature != null);
 
+        if (obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (uint)data.Length)
+            throw new InvalidDataException("The code signature data is truncated.");
+
         //Read the SuperBlob
         ReadOnlySpan<byte> sbSpan = data.Slice((int)obj.CodeSignature.DataOffset, (int)obj.CodeSignature.DataSize);
+        if (sbSpan.Length < SuperBlobHeader.StructSize)
+            throw new InvalidDataException("The code signature superblob is truncated.");
+
         SuperBlobHeader sbHeader = SuperBlobHeader.Read(sbSpan);
 
         if (sbHeader.Magic != CsMagic.EmbeddedSignature || sbHeader.Count == 0) //Not embedded or there are no slots in the SuperBlob
@@ -64,16 +70,26 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //Read the index structures right after the SuperBlob header
         for (int i = 0; i < sbHeader.Count; i++)
         {
-            BlobIndex blobIndex = BlobIndex.Read(sbSpan[(SuperBlobHeader.StructSize + (i * BlobIndex.StructSize))..]);
+            int indexOffset = SuperBlobHeader.StructSize + (i * BlobIndex.StructSize);
+            if (indexOffset + BlobIndex.StructSize > sbSpan.Length)
+                throw new InvalidDataException("The code signature blob index is truncated.");
+
+            BlobIndex blobIndex = BlobIndex.Read(sbSpan[indexOffset..]);
 
             if (blobIndex.Type != CsSlot.Signature)
                 continue;
+
+            if (blobIndex.Offset > sbSpan.Length || blobIndex.Offset + BlobWrapper.StructSize > (uint)sbSpan.Length)
+                throw new InvalidDataException("The code signature blob is truncated.");
 
             ReadOnlySpan<byte> blobSpan = sbSpan[(int)blobIndex.Offset..];
             BlobWrapper bh = BlobWrapper.Read(blobSpan);
 
             if (bh.Type != CsMagic.BlobWrapper) //Guard against corrupt files
                 return ReadOnlySpan<byte>.Empty;
+
+            if (bh.Length > blobSpan.Length)
+                throw new InvalidDataException("The code signature blob is truncated.");
 
             // The CMS ASN1 is the payload of the wrapper
             return blobSpan.Slice(BlobWrapper.StructSize, (int)bh.Length - BlobWrapper.StructSize); //Length includes the header. We don't need the header.
@@ -86,6 +102,9 @@ public sealed class MachObjectFormatHandler : IFormatHandler
     {
         MachOContext obj = (MachOContext)context;
         Debug.Assert(obj.CodeSignature != null);
+
+        if (obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (uint)data.Length)
+            throw new InvalidDataException("The code signature data is truncated.");
 
         //If there is no signature, we cannot just hash the file, since Mach Object signatures require external files such as entitlement and requirements
         //We cannot require the caller to provide this data, so we simply tell them we are unable to hash unsigned files. That's what macOS's CodeSign does also.
