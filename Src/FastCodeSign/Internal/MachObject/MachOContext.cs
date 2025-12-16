@@ -40,7 +40,7 @@ internal class MachOContext : IContext
             {
                 case LoadCommandType.SEGMENT:
 
-                    if (linkEdit != null)
+                    if (linkEdit != null && text != null)
                         break; //We have found what we need
 
                     Segment seg32Header = Segment.Read32(data[tempOffset..], tempOffset, le);
@@ -53,7 +53,7 @@ internal class MachOContext : IContext
                     break;
                 case LoadCommandType.SEGMENT_64:
 
-                    if (linkEdit != null)
+                    if (linkEdit != null && text != null)
                         break; //We have found what we need
 
                     Segment seg64Header = Segment.Read64(data[tempOffset..], tempOffset, le);
