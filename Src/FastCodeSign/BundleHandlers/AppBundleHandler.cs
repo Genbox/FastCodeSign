@@ -97,7 +97,7 @@ public sealed class AppBundleHandler : IBundleHandler
         AppBundleInfo info = (AppBundleInfo)signature.BundleInfo!;
 
         // Write the Content/_CodeSignature/CodeResources file if we have it
-        string codeSigPath = Path.Combine(obj.BundlePath, "_CodeSignature");
+        string codeSigPath = Path.Combine(obj.BundlePath, "Contents", "_CodeSignature");
 
         if (!Directory.Exists(codeSigPath))
             Directory.CreateDirectory(codeSigPath);
