@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Internal.MachObject.Headers;
 
@@ -11,19 +12,10 @@ internal sealed class CodeSignatureHeader
     internal required uint DataOffset { get; init; }
     internal required uint DataSize { get; init; }
 
-    internal static CodeSignatureHeader Read(ReadOnlySpan<byte> data, int offset, bool le) => le ? ReadLe(data, offset) : ReadBe(data, offset);
-
-    private static CodeSignatureHeader ReadLe(ReadOnlySpan<byte> data, int offset) => new CodeSignatureHeader
+    internal static CodeSignatureHeader Read(ReadOnlySpan<byte> data, int offset, bool le) => new CodeSignatureHeader
     {
         Offset = offset,
-        DataOffset = ReadUInt32LittleEndian(data),
-        DataSize = ReadUInt32LittleEndian(data[4..])
-    };
-
-    private static CodeSignatureHeader ReadBe(ReadOnlySpan<byte> data, int offset) => new CodeSignatureHeader
-    {
-        Offset = offset,
-        DataOffset = ReadUInt32BigEndian(data),
-        DataSize = ReadUInt32BigEndian(data[4..])
+        DataOffset = ReadU32(data, le),
+        DataSize = ReadU32(data[4..], le)
     };
 }

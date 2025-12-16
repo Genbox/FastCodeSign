@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Internal.MachObject.Headers;
 
@@ -12,17 +13,9 @@ internal readonly struct MachHeader
     internal required uint NumberOfCommands { get; init; }
     internal required uint SizeOfCommands { get; init; }
 
-    internal static MachHeader Read(ReadOnlySpan<byte> data, bool le) => le ? ReadLe(data) : ReadBe(data);
-
-    private static MachHeader ReadLe(ReadOnlySpan<byte> data) => new MachHeader
+    internal static MachHeader Read(ReadOnlySpan<byte> data, bool le) => new MachHeader
     {
-        NumberOfCommands = ReadUInt32LittleEndian(data[12..]),
-        SizeOfCommands = ReadUInt32LittleEndian(data[16..])
-    };
-
-    private static MachHeader ReadBe(ReadOnlySpan<byte> data) => new MachHeader
-    {
-        NumberOfCommands = ReadUInt32BigEndian(data[12..]),
-        SizeOfCommands = ReadUInt32BigEndian(data[16..])
+        NumberOfCommands = ReadU32(data[12..], le),
+        SizeOfCommands = ReadU32(data[16..], le)
     };
 }

@@ -1,6 +1,7 @@
 using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.Models;
+using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Helpers;
 
@@ -26,28 +27,10 @@ public static class MachObjectHelper
         {
             case MachMagic.MachMagicBE:
             case MachMagic.MachMagic64BE:
-            {
-                //The file is already a thin object.
-                uint cpuType = ReadUInt32BigEndian(data[4..]);
-                uint cpuSubType = ReadUInt32BigEndian(data[8..]);
-
-                CpuType cpuTypeEnum = (CpuType)cpuType;
-                Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
-
-                return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
-            }
+                return CreateThinObject(data, false);
             case MachMagic.MachMagicLE:
             case MachMagic.MachMagic64LE:
-            {
-                //The file is already a thin object.
-                uint cpuType = ReadUInt32LittleEndian(data[4..]);
-                uint cpuSubType = ReadUInt32LittleEndian(data[8..]);
-
-                CpuType cpuTypeEnum = (CpuType)cpuType;
-                Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
-
-                return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
-            }
+                return CreateThinObject(data, true);
             case MachMagic.FatMagicBE:
                 is64Bit = false;
                 le = false;
@@ -123,8 +106,16 @@ public static class MachObjectHelper
 
         return objs;
 
-        static uint ReadU32(ReadOnlySpan<byte> span, bool le) => le ? ReadUInt32LittleEndian(span) : ReadUInt32BigEndian(span);
-        static ulong ReadU64(ReadOnlySpan<byte> span, bool le) => le ? ReadUInt64LittleEndian(span) : ReadUInt64BigEndian(span);
+        static MachObject[] CreateThinObject(ReadOnlySpan<byte> data, bool le)
+        {
+            uint cpuType = ReadU32(data[4..], le);
+            uint cpuSubType = ReadU32(data[8..], le);
+
+            CpuType cpuTypeEnum = (CpuType)cpuType;
+            Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
+
+            return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
+        }
     }
 
     private static Enum CpuSubTypeToEnum(CpuType cpuTypeEnum, uint cpuSubType) => cpuTypeEnum switch

@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Text;
-using System.Text.Unicode;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Internal;
 using Genbox.FastCodeSign.Internal.Extensions;

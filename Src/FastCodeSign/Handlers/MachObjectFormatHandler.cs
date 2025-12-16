@@ -16,6 +16,7 @@ using Genbox.FastCodeSign.Internal.MachObject.Headers;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.MachObjects;
 using Genbox.FastCodeSign.Models;
+using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Handlers;
 
@@ -234,8 +235,8 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         //Update Mach Object header
         bool le = obj.IsLittleEndian;
-        WriteU32(data, 16, obj.MachHeader.NumberOfCommands - 1, le);
-        WriteU32(data, 20, obj.MachHeader.SizeOfCommands - size, le);
+        WriteU32(data[16..], obj.MachHeader.NumberOfCommands - 1, le);
+        WriteU32(data[20..], obj.MachHeader.SizeOfCommands - size, le);
 
         //Note: This leaves a 16-byte gap at the end of the load commands, but that's fine.
 
@@ -244,13 +245,13 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         if (obj.Is64Bit)
         {
-            WriteU64(data, obj.LinkEdit.Offset + 32, Align(newFileSize, 16384), le); // vmsize
-            WriteU64(data, obj.LinkEdit.Offset + 48, newFileSize, le); // filesize
+            WriteU64(data[(obj.LinkEdit.Offset + 32)..], Align(newFileSize, 16384), le); // vmsize
+            WriteU64(data[(obj.LinkEdit.Offset + 48)..], newFileSize, le); // filesize
         }
         else
         {
-            WriteU32(data, obj.LinkEdit.Offset + 28, (uint)Align(newFileSize, 16384), le); // vmsize
-            WriteU32(data, obj.LinkEdit.Offset + 36, (uint)newFileSize, le); // filesize
+            WriteU32(data[(obj.LinkEdit.Offset + 28)..], (uint)Align(newFileSize, 16384), le); // vmsize
+            WriteU32(data[(obj.LinkEdit.Offset + 36)..], (uint)newFileSize, le); // filesize
         }
 
         ulong leEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize; //End of __LINKEDIT
@@ -565,31 +566,31 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         bool le = obj.IsLittleEndian;
 
         // Bump counts in the mach object header
-        WriteU32(span, 16, obj.MachHeader.NumberOfCommands + 1, le);
-        WriteU32(span, 20, obj.MachHeader.SizeOfCommands + LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
+        WriteU32(span[16..], obj.MachHeader.NumberOfCommands + 1, le);
+        WriteU32(span[20..], obj.MachHeader.SizeOfCommands + LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
 
         // We need to insert the new load command right after the header
         int headerSize = obj.Is64Bit ? 32 : 28;
         int headerEnd = headerSize + (int)obj.MachHeader.SizeOfCommands;
 
         //Write CodeSignature
-        WriteU32(span, headerEnd + 0, (uint)LoadCommandType.CODE_SIGNATURE, le);
-        WriteU32(span, headerEnd + 4, LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
-        WriteU32(span, headerEnd + 8, (uint)codeLimit, le); //Offset
-        WriteU32(span, headerEnd + 12, sbSize, le); //Length
+        WriteU32(span[(headerEnd + 0)..], (uint)LoadCommandType.CODE_SIGNATURE, le);
+        WriteU32(span[(headerEnd + 4)..], LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
+        WriteU32(span[(headerEnd + 8)..], (uint)codeLimit, le); //Offset
+        WriteU32(span[(headerEnd + 12)..], sbSize, le); //Length
 
         //Update LinkEdit header with new size
         ulong newLinkEditSize = obj.LinkEdit.FileSize + (uint)padLength + sbSize;
 
         if (obj.Is64Bit)
         {
-            WriteU64(span, obj.LinkEdit.Offset + 32, Align(newLinkEditSize, 16384), le); // vmsize
-            WriteU64(span, obj.LinkEdit.Offset + 48, newLinkEditSize, le); // filesize
+            WriteU64(span[(obj.LinkEdit.Offset + 32)..], Align(newLinkEditSize, 16384), le); // vmsize
+            WriteU64(span[(obj.LinkEdit.Offset + 48)..], newLinkEditSize, le); // filesize
         }
         else
         {
-            WriteU32(span, obj.LinkEdit.Offset + 28, checked((uint)Align(newLinkEditSize, 16384)), le); // vmsize
-            WriteU32(span, obj.LinkEdit.Offset + 36, checked((uint)newLinkEditSize), le); // filesize
+            WriteU32(span[(obj.LinkEdit.Offset + 28)..], checked((uint)Align(newLinkEditSize, 16384)), le); // vmsize
+            WriteU32(span[(obj.LinkEdit.Offset + 36)..], checked((uint)newLinkEditSize), le); // filesize
         }
     }
 
@@ -777,22 +778,6 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         4 => HashAlgorithmName.SHA384,
         _ => throw new NotSupportedException($"Unsupported hash algorithm: {hashType}")
     };
-
-    private static void WriteU32(Span<byte> span, int offset, uint value, bool le)
-    {
-        if (le)
-            WriteUInt32LittleEndian(span.Slice(offset, 4), value);
-        else
-            WriteUInt32BigEndian(span.Slice(offset, 4), value);
-    }
-
-    private static void WriteU64(Span<byte> span, int offset, ulong value, bool le)
-    {
-        if (le)
-            WriteUInt64LittleEndian(span.Slice(offset, 8), value);
-        else
-            WriteUInt64BigEndian(span.Slice(offset, 8), value);
-    }
 
     private static IEnumerable<X509Certificate2> GetCerts()
     {

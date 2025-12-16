@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
+using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Internal.MachObject.Headers;
 
@@ -12,17 +13,9 @@ internal readonly record struct LoadCommandHeader
     internal required LoadCommandType Type { get; init; }
     internal required uint Size { get; init; }
 
-    internal static LoadCommandHeader Read(ReadOnlySpan<byte> data, bool le) => le ? ReadLe(data) : ReadBe(data);
-
-    private static LoadCommandHeader ReadLe(ReadOnlySpan<byte> data) => new LoadCommandHeader
+    internal static LoadCommandHeader Read(ReadOnlySpan<byte> data, bool le) => new LoadCommandHeader
     {
-        Type = (LoadCommandType)ReadUInt32LittleEndian(data),
-        Size = ReadUInt32LittleEndian(data[4..])
-    };
-
-    private static LoadCommandHeader ReadBe(ReadOnlySpan<byte> data) => new LoadCommandHeader
-    {
-        Type = (LoadCommandType)ReadUInt32BigEndian(data),
-        Size = ReadUInt32BigEndian(data[4..])
+        Type = (LoadCommandType)ReadU32(data, le),
+        Size = ReadU32(data[4..], le)
     };
 }
