@@ -30,11 +30,12 @@ public static class Authenticode
 
     public static WinVerifyTrustResult VerifyFileWithCab(string fileName, out byte[] hash)
     {
+        string fullPath = Path.GetFullPath(fileName);
         WINTRUST_CATALOG_INFO catalogInfo = default;
 
         try
         {
-            using FileStream stream = File.OpenRead(fileName);
+            using FileStream stream = File.OpenRead(fullPath);
             using SafeContextHandle contextHandle = GetContextHandle(HashAlgorithmName.SHA256);
             hash = GetPeHash(contextHandle, stream.SafeFileHandle);
 
@@ -49,7 +50,7 @@ public static class Authenticode
             catalogInfo = new WINTRUST_CATALOG_INFO();
             catalogInfo.cbStruct = (uint)Marshal.SizeOf(catalogInfo);
             catalogInfo.pcwszCatalogFilePath = catInfo.wszCatalogFile;
-            catalogInfo.pcwszMemberFilePath = fileName;
+            catalogInfo.pcwszMemberFilePath = fullPath;
             catalogInfo.pcwszMemberTag = Convert.ToHexStringLower(hash);
             catalogInfo.cbCalculatedFileHash = (uint)hash.Length;
             catalogInfo.hCatAdmin = contextHandle.DangerousGetHandle();
@@ -70,6 +71,7 @@ public static class Authenticode
 
     public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, out string? signer, out byte[]? certificate, out byte[]? hash)
     {
+        string fullPath = Path.GetFullPath(fileName);
         signer = null;
         certificate = null;
         hash = null;
@@ -78,7 +80,7 @@ public static class Authenticode
 
         try
         {
-            using FileStream stream = File.OpenRead(fileName);
+            using FileStream stream = File.OpenRead(fullPath);
             using SafeContextHandle contextHandle = GetContextHandle(HashAlgorithmName.SHA256);
             hash = GetPeHash(contextHandle, stream.SafeFileHandle);
 
@@ -93,7 +95,7 @@ public static class Authenticode
             catalogInfo = new WINTRUST_CATALOG_INFO();
             catalogInfo.cbStruct = (uint)Marshal.SizeOf(catalogInfo);
             catalogInfo.pcwszCatalogFilePath = catInfo.wszCatalogFile;
-            catalogInfo.pcwszMemberFilePath = fileName;
+            catalogInfo.pcwszMemberFilePath = fullPath;
             catalogInfo.pcwszMemberTag = Convert.ToHexStringLower(hash);
             catalogInfo.cbCalculatedFileHash = (uint)hash.Length;
             catalogInfo.hCatAdmin = contextHandle.DangerousGetHandle();
