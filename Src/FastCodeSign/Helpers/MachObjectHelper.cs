@@ -20,6 +20,7 @@ public static class MachObjectHelper
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
 
         bool is64Bit;
+        bool le;
 
         switch (magic)
         {
@@ -48,12 +49,20 @@ public static class MachObjectHelper
                 return [new MachObject(cpuTypeEnum, cpuSubTypeEnum, 0, (ulong)data.Length, 0)];
             }
             case MachMagic.FatMagicBE:
+                is64Bit = false;
+                le = false;
+                break;
             case MachMagic.FatMagicLE:
                 is64Bit = false;
+                le = true;
                 break;
             case MachMagic.FatMagic64BE:
+                is64Bit = true;
+                le = false;
+                break;
             case MachMagic.FatMagic64LE:
                 is64Bit = true;
+                le = true;
                 break;
             default:
                 throw new InvalidOperationException("The file is not a valid mach object");
@@ -61,7 +70,7 @@ public static class MachObjectHelper
 
         //See https://github.com/apple-oss-distributions/xnu/blob/e3723e1f17661b24996789d8afc084c0c3303b26/EXTERNAL_HEADERS/mach-o/fat.h#L51
 
-        uint fatCount = ReadUInt32BigEndian(data[4..]);
+        uint fatCount = ReadU32(data[4..], le);
 
         if (fatCount == 0)
             throw new InvalidDataException("Empty fat file");
@@ -76,10 +85,10 @@ public static class MachObjectHelper
             if (offset + archSize > data.Length)
                 throw new InvalidDataException("Truncated fat entry");
 
-            uint cpuType = ReadUInt32BigEndian(data[offset..]);
+            uint cpuType = ReadU32(data[offset..], le);
             offset += 4;
 
-            uint cpuSubType = ReadUInt32BigEndian(data[offset..]);
+            uint cpuSubType = ReadU32(data[offset..], le);
             offset += 4;
 
             ulong sOffset, sSize;
@@ -87,22 +96,22 @@ public static class MachObjectHelper
 
             if (is64Bit)
             {
-                sOffset = ReadUInt64BigEndian(data[offset..]);
+                sOffset = ReadU64(data[offset..], le);
                 offset += 8;
-                sSize = ReadUInt64BigEndian(data[offset..]);
+                sSize = ReadU64(data[offset..], le);
                 offset += 8;
-                sAlign = ReadUInt32BigEndian(data[offset..]);
+                sAlign = ReadU32(data[offset..], le);
                 offset += 4;
 
                 offset += 4; //This is the reserved field
             }
             else
             {
-                sOffset = ReadUInt32BigEndian(data[offset..]);
+                sOffset = ReadU32(data[offset..], le);
                 offset += 4;
-                sSize = ReadUInt32BigEndian(data[offset..]);
+                sSize = ReadU32(data[offset..], le);
                 offset += 4;
-                sAlign = ReadUInt32BigEndian(data[offset..]);
+                sAlign = ReadU32(data[offset..], le);
                 offset += 4;
             }
 
@@ -113,6 +122,9 @@ public static class MachObjectHelper
         }
 
         return objs;
+
+        static uint ReadU32(ReadOnlySpan<byte> span, bool le) => le ? ReadUInt32LittleEndian(span) : ReadUInt32BigEndian(span);
+        static ulong ReadU64(ReadOnlySpan<byte> span, bool le) => le ? ReadUInt64LittleEndian(span) : ReadUInt64BigEndian(span);
     }
 
     private static Enum CpuSubTypeToEnum(CpuType cpuTypeEnum, uint cpuSubType) => cpuTypeEnum switch
