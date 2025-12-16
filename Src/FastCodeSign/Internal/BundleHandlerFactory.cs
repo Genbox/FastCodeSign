@@ -1,18 +1,18 @@
-﻿using Genbox.FastCodeSign.Abstracts;
+using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.BundleHandlers;
 
 namespace Genbox.FastCodeSign.Internal;
 
 internal static class BundleHandlerFactory
 {
+    private static readonly IBundleHandler[] Handlers =
+    [
+        new AppBundleHandler(),
+    ];
+
     public static IBundleHandler? Get(string path)
     {
-        IBundleHandler[] handlers =
-        [
-            new AppBundleHandler(),
-        ];
-
-        foreach (IBundleHandler handler in handlers)
+        foreach (IBundleHandler handler in Handlers)
         {
             if (!handler.IsBundlePath(path))
                 continue;

@@ -6,21 +6,21 @@ namespace Genbox.FastCodeSign.Internal;
 
 internal static class FormatHandlerFactory
 {
+    private static readonly IFormatHandler[] Handlers =
+    [
+        new PeFormatHandler(),
+        new MachObjectFormatHandler(),
+        new PowerShellCmdletDefinitionXmlFormatHandler(),
+        new PowerShellConsoleFormatHandler(),
+        new PowerShellManifestFormatHandler(),
+        new PowerShellModuleFormatHandler(),
+        new PowerShellXmlFormatHandler(),
+        new PowerShellScriptFormatHandler(), //This is here because it matches everything
+    ];
+
     public static IFormatHandler? Get(ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)
     {
-        IFormatHandler[] handlers =
-        [
-            new PeFormatHandler(),
-            new MachObjectFormatHandler(),
-            new PowerShellCmdletDefinitionXmlFormatHandler(),
-            new PowerShellConsoleFormatHandler(),
-            new PowerShellManifestFormatHandler(),
-            new PowerShellModuleFormatHandler(),
-            new PowerShellXmlFormatHandler(),
-            new PowerShellScriptFormatHandler(), //This is here because it matches everything
-        ];
-
-        foreach (IFormatHandler handler in handlers)
+        foreach (IFormatHandler handler in Handlers)
         {
             if (span.Length < handler.MinValidSize)
                 continue; //Too small to be valid
