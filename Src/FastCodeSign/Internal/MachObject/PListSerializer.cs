@@ -71,6 +71,9 @@ internal static class PListSerializer
             case "string":
                 return reader.ReadElementContentAsString();
 
+            case "integer":
+                return XmlConvert.ToInt64(reader.ReadElementContentAsString("integer", ""));
+
             case "true":
                 reader.ReadStartElement("true");
                 return true;
@@ -179,6 +182,38 @@ internal static class PListSerializer
                 writer.WriteElementString("string", strVal);
                 break;
 
+            case sbyte sbyteVal:
+                writer.WriteElementString("integer", sbyteVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case byte byteVal:
+                writer.WriteElementString("integer", byteVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case short shortVal:
+                writer.WriteElementString("integer", shortVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case ushort ushortVal:
+                writer.WriteElementString("integer", ushortVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case int intVal:
+                writer.WriteElementString("integer", intVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case uint uintVal:
+                writer.WriteElementString("integer", uintVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case long longVal:
+                writer.WriteElementString("integer", longVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
+            case ulong ulongVal:
+                writer.WriteElementString("integer", ulongVal.ToString(NumberFormatInfo.InvariantInfo));
+                break;
+
             case bool boolVal:
                 writer.WriteStartElement(boolVal ? "true" : "false"); // <true/> / <false/>
                 writer.WriteEndElement();
@@ -204,13 +239,13 @@ internal static class PListSerializer
 
             case double doubleVal:
                 writer.WriteStartElement("real");
-                writer.WriteString(doubleVal.ToString("R", CultureInfo.InvariantCulture));
+                writer.WriteString(doubleVal.ToString("R", NumberFormatInfo.InvariantInfo));
                 writer.WriteEndElement();
                 break;
 
             case float floatVal:
                 writer.WriteStartElement("real");
-                writer.WriteString(floatVal.ToString("R", CultureInfo.InvariantCulture));
+                writer.WriteString(floatVal.ToString("R", NumberFormatInfo.InvariantInfo));
                 writer.WriteEndElement();
                 break;
 
