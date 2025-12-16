@@ -61,7 +61,7 @@ internal sealed class TextContext : IContext
             // - <newline> must be at least 2 chars long
             int minSize = commentStart.Length + 4 + commentEnd.Length + 2;
 
-            if (Equals(encoding, Encoding.Unicode))
+            if (Equals(encoding, Encoding.Unicode) || Equals(encoding, Encoding.BigEndianUnicode))
                 minSize *= 2;
 
             if (footerIdx - headerIdx < minSize)

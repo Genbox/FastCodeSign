@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Text;
+using System.Text.Unicode;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Internal;
 using Genbox.FastCodeSign.Internal.Extensions;
@@ -33,19 +34,14 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         ReadOnlySpan<byte> span = data[(obj.HeaderIdx + obj.HeaderSig.Length)..(obj.FooterIdx - obj.FooterSig.Length)];
 
         //The signature is always within the ASCII range, so if we have a UTF-16 encoding, let's convert the span to UTF-8.
-        if (obj.Encoding.CodePage == 1200)
-        {
-            //There is no byte -> byte conversion in .NET, so we need to do it ourselves.
-            Span<byte> utf8Buffer = new byte[span.Length / 2];
 
-            // UTF-16LE: [ascii, 0x00] per char.
-            int offset = 0;
-            for (int i = 0; i < span.Length; i += 2)
-                utf8Buffer[offset++] = span[i];
+        if (obj.Encoding.CodePage == 1200) // UTF-16LE
+            return ConvertUtf16ToAscii(span, true);
 
-            span = utf8Buffer;
-        }
+        if (obj.Encoding.CodePage == 1201) // UTF-16BE
+            return ConvertUtf16ToAscii(span, false);
 
+        // Assume already UTF-8 / ASCII bytes
         return DecodeUtf8Base64(span);
     }
 
@@ -314,5 +310,42 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
         }
 
         return decoded[..totalWritten];
+    }
+
+    private ReadOnlySpan<byte> ConvertUtf16ToAscii(ReadOnlySpan<byte> utf16Bytes, bool littleEndian)
+    {
+        //There is no byte -> byte conversion in .NET, so we need to do it ourselves.
+
+        if ((utf16Bytes.Length & 1) != 0)
+            throw new FormatException("UTF-16 payload must have an even byte length.");
+
+        int charCount = utf16Bytes.Length / 2;
+
+        // Rent to avoid allocating for large payloads.
+        byte[] rented = ArrayPool<byte>.Shared.Rent(charCount);
+
+        try
+        {
+            Span<byte> ascii = rented.AsSpan(0, charCount);
+
+            if (littleEndian)
+            {
+                // UTF-16LE: [ascii, 0x00]
+                for (int i = 0, j = 0; i < utf16Bytes.Length; i += 2, j++)
+                    ascii[j] = utf16Bytes[i];
+            }
+            else
+            {
+                // UTF-16BE: [0x00, ascii]
+                for (int i = 0, j = 0; i < utf16Bytes.Length; i += 2, j++)
+                    ascii[j] = utf16Bytes[i + 1];
+            }
+
+            return DecodeUtf8Base64(ascii);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
     }
 }
