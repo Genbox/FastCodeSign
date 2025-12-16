@@ -38,7 +38,17 @@ public abstract class Expr
     public static Expr NamedCode(string code) => new NamedExpr(ExprOp.NamedCode, Encoding.ASCII.GetBytes(code));
     public static Expr Platform(MachPlatform platform) => new PlatformExpr(platform);
 
-    private static ReadOnlySpan<byte> GetData(ReadOnlySpan<byte> expr) => expr.Slice(4, ReadInt32BigEndian(expr));
+    private static ReadOnlySpan<byte> GetData(ReadOnlySpan<byte> expr)
+    {
+        if (expr.Length < 8)
+            throw new InvalidDataException("Truncated expression.");
+
+        int length = ReadInt32BigEndian(expr[4..]);
+        if (length < 0 || expr.Length < 8 + length)
+            throw new InvalidDataException("Invalid expression length.");
+
+        return expr.Slice(8, length);
+    }
 
     private static ReadOnlySpan<byte> GetMatchData(ReadOnlySpan<byte> expr, MatchOperation matchOperation)
     {
@@ -322,7 +332,7 @@ public abstract class Expr
 
             int offset = 8 + Align(_fieldBytes.Length, 4);
             WriteInt32BigEndian(buffer.Slice(offset, 4), matchValue.Length);
-            _fieldBytes.CopyTo(buffer.Slice(offset + 4, matchValue.Length));
+            matchValue.CopyTo(buffer.Slice(offset + 4, matchValue.Length));
             buffer.Slice(4 + offset + matchValue.Length, Align(matchValue.Length, 4) - matchValue.Length).Clear();
         }
 
