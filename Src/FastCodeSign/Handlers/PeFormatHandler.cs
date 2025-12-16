@@ -56,11 +56,15 @@ public sealed class PeFormatHandler : IFormatHandler
             winCert.CertificateType != 0x0002) // WIN_CERT_TYPE_PKCS_SIGNED_DATA
             return ReadOnlySpan<byte>.Empty;
 
-        // We need to skip the 8 byte header, and subtract it from the length
-        uint certDataOffset = obj.SecurityVirtualAddress + 8;
-        uint certDataLength = winCert.Length - 10;
+        if (winCert.Length < WinCertificate.StructSize || winCert.Length > obj.SecuritySize)
+            return ReadOnlySpan<byte>.Empty;
 
-        return data.Slice((int)certDataOffset, (int)certDataLength);
+        // We need to skip the 8 byte header, and subtract it from the length.
+        ReadOnlySpan<byte> certWithPadding = winCertTable.Slice(WinCertificate.StructSize, checked((int)(winCert.Length - WinCertificate.StructSize)));
+
+        // dwLength includes padding to an 8-byte boundary, but the SignedCms decoder expects the precise ASN.1 object.
+        int asn1Length = Asn1Helper.GetAsn1SequenceEncodedLength(certWithPadding);
+        return certWithPadding[..asn1Length];
     }
 
     byte[] IFormatHandler.ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm)
