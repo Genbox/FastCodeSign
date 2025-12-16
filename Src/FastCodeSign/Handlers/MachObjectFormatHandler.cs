@@ -203,7 +203,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         }
 
         //Now we need to hash the file in <pageSize> chunks up to <codeLimit> and add the hashes to cdHasher
-        uint pageSize = (uint)(1 << pageSizeLg2);
+        uint pageSize = 1u << pageSizeLg2;
 
         ulong remaining = codeLimit32;
         int offset = 0;
