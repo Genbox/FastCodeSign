@@ -242,17 +242,15 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //Shrink __LINKEDIT.filesize
         ulong newFileSize = obj.LinkEdit.FileSize - obj.CodeSignature.DataSize;
 
-        int headerSize = obj.Is64Bit ? 32 : 28;
-
         if (obj.Is64Bit)
         {
-            WriteU64(data, obj.LinkEdit.Offset + headerSize + 0, Align(newFileSize, 16384), le);
-            WriteU64(data, obj.LinkEdit.Offset + headerSize + 16, newFileSize, le);
+            WriteU64(data, obj.LinkEdit.Offset + 32, Align(newFileSize, 16384), le); // vmsize
+            WriteU64(data, obj.LinkEdit.Offset + 48, newFileSize, le); // filesize
         }
         else
         {
-            WriteU32(data, obj.LinkEdit.Offset + headerSize + 0, (uint)Align(newFileSize, 16384), le);
-            WriteU32(data, obj.LinkEdit.Offset + headerSize + 8, (uint)newFileSize, le);
+            WriteU32(data, obj.LinkEdit.Offset + 28, (uint)Align(newFileSize, 16384), le); // vmsize
+            WriteU32(data, obj.LinkEdit.Offset + 36, (uint)newFileSize, le); // filesize
         }
 
         ulong leEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize; //End of __LINKEDIT
@@ -585,13 +583,13 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         if (obj.Is64Bit)
         {
-            WriteU64(span, headerSize + obj.LinkEdit.Offset + 0, Align(newLinkEditSize, 16384), le); // vmsize
-            WriteU64(span, headerSize + obj.LinkEdit.Offset + 16, newLinkEditSize, le); // filesize
+            WriteU64(span, obj.LinkEdit.Offset + 32, Align(newLinkEditSize, 16384), le); // vmsize
+            WriteU64(span, obj.LinkEdit.Offset + 48, newLinkEditSize, le); // filesize
         }
         else
         {
-            WriteU32(span, headerSize + obj.LinkEdit.Offset + 0, checked((uint)Align(newLinkEditSize, 16384)), le); // vmsize
-            WriteU32(span, headerSize + obj.LinkEdit.Offset + 8, checked((uint)newLinkEditSize), le); // filesize
+            WriteU32(span, obj.LinkEdit.Offset + 28, checked((uint)Align(newLinkEditSize, 16384)), le); // vmsize
+            WriteU32(span, obj.LinkEdit.Offset + 36, checked((uint)newLinkEditSize), le); // filesize
         }
     }
 
