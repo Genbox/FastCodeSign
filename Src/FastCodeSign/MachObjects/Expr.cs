@@ -97,7 +97,7 @@ public abstract class Expr
     {
         0 => "leaf",
         -1 => "root",
-        _ => slot.ToString(CultureInfo.InvariantCulture)
+        _ => slot.ToString(NumberFormatInfo.InvariantInfo)
     };
 
     private sealed class SimpleExpr(ExprOp op) : Expr
