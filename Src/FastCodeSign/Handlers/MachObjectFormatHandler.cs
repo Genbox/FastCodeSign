@@ -329,7 +329,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         string identifier = opt.Identifier;
 
         if (identifier == null!)
-            throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
+            throw new InvalidOperationException($"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
 
         Requirements? req = opt.Requirements;
 

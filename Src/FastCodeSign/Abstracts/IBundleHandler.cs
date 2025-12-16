@@ -9,7 +9,7 @@ public interface IBundleHandler
 
     bool IsBundlePath(string path);
 
-    BundleSignature CreateSignature(IContext context, SignOptions options, IBundleOptions? bundleOptions = null);
+    BundleSignature CreateSignature(IContext context, SignOptions signOptions, IBundleOptions? bundleOptions = null);
 
     void WriteSignature(IContext context, BundleSignature signature);
 

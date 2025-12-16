@@ -279,10 +279,10 @@ public sealed class AppBundleHandler : IBundleHandler
                 return false;
 
             FileAttributes attrs = File.GetAttributes(fullPath);
-            if ((attrs & FileAttributes.ReparsePoint) == 0)
+            if ((attrs & FileAttributes.ReparsePoint) == FileAttributes.None)
                 return false;
 
-            FileSystemInfo fsi = (attrs & FileAttributes.Directory) != 0 ? new DirectoryInfo(fullPath) : new FileInfo(fullPath);
+            FileSystemInfo fsi = (attrs & FileAttributes.Directory) != FileAttributes.None ? new DirectoryInfo(fullPath) : new FileInfo(fullPath);
             return string.Equals(fsi.LinkTarget, expectedTarget, StringComparison.Ordinal);
         }
 
@@ -560,8 +560,8 @@ public sealed class AppBundleHandler : IBundleHandler
                 continue;
 
             FileAttributes attrs = File.GetAttributes(entry);
-            bool isDir = (attrs & FileAttributes.Directory) != 0;
-            bool isReparse = (attrs & FileAttributes.ReparsePoint) != 0;
+            bool isDir = (attrs & FileAttributes.Directory) != FileAttributes.None;
+            bool isReparse = (attrs & FileAttributes.ReparsePoint) != FileAttributes.None;
 
             if (isDir && !isReparse)
                 continue; // Directories are represented by their contents
