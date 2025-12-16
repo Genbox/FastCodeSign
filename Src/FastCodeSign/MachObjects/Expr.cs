@@ -249,7 +249,7 @@ public abstract class Expr
             MatchOperation.LessThan => $"< {ValueToString(matchValue!)}",
             MatchOperation.GreaterEqual => $">= {ValueToString(matchValue!)}",
             MatchOperation.LessEqual => $"<= {ValueToString(matchValue!)}",
-            MatchOperation.GreaterThan => $">= {ValueToString(matchValue!)}",
+            MatchOperation.GreaterThan => $"> {ValueToString(matchValue!)}",
             MatchOperation.On => $"= timestamp \"{GetTimestampString(matchValue!)}\"",
             MatchOperation.Before => $"< timestamp \"{GetTimestampString(matchValue!)}\"",
             MatchOperation.After => $"> timestamp \"{GetTimestampString(matchValue!)}\"",
