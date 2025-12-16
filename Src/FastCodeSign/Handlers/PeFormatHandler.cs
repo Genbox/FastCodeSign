@@ -152,7 +152,9 @@ public sealed class PeFormatHandler : IFormatHandler
 
         Span<byte> span = data[(int)datLen..];
         winCert.Write(span);
-        encodedCms.CopyTo(span[WinCertificate.StructSize..(int)(WinCertificate.StructSize + sigLen)]);
+        Span<byte> certSpan = span[WinCertificate.StructSize..(int)(WinCertificate.StructSize + sigLen)];
+        encodedCms.CopyTo(certSpan);
+        certSpan[encodedCms.Length..].Clear(); // Clear padding
 
         // Update the security directory entry
         WinPeContext obj = (WinPeContext)context;
