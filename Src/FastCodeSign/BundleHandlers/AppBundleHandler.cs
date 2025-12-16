@@ -73,6 +73,8 @@ public sealed class AppBundleHandler : IBundleHandler
             infoBytes = ms.ToArray();
         }
 
+        Dictionary<string, object> pList = BuildPList(obj); // Do not inline
+
         IFormatHandler handler = new MachObjectFormatHandler();
         using FileAllocation file = new FileAllocation(obj.BundleExecutablePath);
         ReadOnlySpan<byte> dataSpan = file.GetSpan();
@@ -88,7 +90,7 @@ public sealed class AppBundleHandler : IBundleHandler
         }
 
         // Sign the resources
-        return new BundleSignature(signatures, new AppBundleInfo { CodeResources = BuildPList(obj) });
+        return new BundleSignature(signatures, new AppBundleInfo { CodeResources = pList });
     }
 
     void IBundleHandler.WriteSignature(IContext context, BundleSignature signature)
