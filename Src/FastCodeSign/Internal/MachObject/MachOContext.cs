@@ -80,6 +80,13 @@ internal class MachOContext : IContext
         if (text == null)
             throw new InvalidOperationException("The Mach Object file does not contain a __TEXT section.");
 
+        if (codeSignature != null)
+        {
+            ulong sigEnd = codeSignature.DataOffset + codeSignature.DataSize;
+            if (codeSignature.DataOffset == 0 || codeSignature.DataSize == 0 || sigEnd > (uint)data.Length)
+                throw new InvalidDataException("The code signature load command points outside the file.");
+        }
+
         return new MachOContext
         {
             IsSigned = codeSignature != null && codeSignature.DataOffset != 0 && codeSignature.DataSize != 0,
