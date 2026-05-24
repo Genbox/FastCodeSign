@@ -3,6 +3,7 @@
   <PropertyGroup>
     <Description>A cross-platform code signing library for Windows Authenticode, PowerShell and macOS code signatures</Description>
     <PackageTags>codesign;code signature;authenticode;integrity;x509</PackageTags>
+    <AssemblyName>Genbox.$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
 
 </Project>
