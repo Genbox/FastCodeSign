@@ -1,4 +1,4 @@
-﻿using Genbox.FastCodeSign.Abstracts;
+using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.MachObjects;
 
 namespace Genbox.FastCodeSign.BundleHandlers;

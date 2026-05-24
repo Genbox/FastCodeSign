@@ -1,4 +1,4 @@
-﻿namespace Genbox.FastCodeSign.Enums;
+namespace Genbox.FastCodeSign.Enums;
 
 [Flags]
 public enum SignatureComponent : byte

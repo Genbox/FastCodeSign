@@ -1,4 +1,4 @@
-﻿namespace Genbox.FastCodeSign.Models;
+namespace Genbox.FastCodeSign.Models;
 
 public sealed class BundleSignature
 {

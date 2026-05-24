@@ -1,4 +1,4 @@
-﻿using Genbox.FastCodeSign.Abstracts;
+using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Helpers;

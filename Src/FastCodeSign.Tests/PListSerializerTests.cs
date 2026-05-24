@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Tests.Code;
 
