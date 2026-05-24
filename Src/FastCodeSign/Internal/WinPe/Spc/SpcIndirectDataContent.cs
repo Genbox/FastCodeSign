@@ -12,17 +12,17 @@ namespace Genbox.FastCodeSign.Internal.WinPe.Spc;
 ///     data SpcAttributeTypeAndOptionalValue,
 ///     messageDigest DigestInfo
 /// } --#public—
-/// 
+///
 /// SpcAttributeTypeAndOptionalValue ::= SEQUENCE {
 ///     type ObjectID,
 ///     value [0] EXPLICIT ANY OPTIONAL
 /// }
-/// 
+///
 /// DigestInfo ::= SEQUENCE {
 ///     digestAlgorithm AlgorithmIdentifier,
 ///     digest OCTETSTRING
 /// }
-/// 
+///
 /// AlgorithmIdentifier ::= SEQUENCE {
 ///     algorithm ObjectID,
 ///     parameters [0] EXPLICIT ANY OPTIONAL

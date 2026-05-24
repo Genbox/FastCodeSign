@@ -84,7 +84,7 @@ internal static partial class Win32Native
         ref SIGNER_DIGEST_SIGN_INFO pSignInfo,
         IntPtr pReserved
     );
-    
+
     [StructLayoutAttribute(LayoutKind.Sequential)]
     private struct SIGNER_CONTEXT
     {
@@ -92,7 +92,7 @@ internal static partial class Win32Native
         public uint cbBlob;
         public IntPtr pbBlob;
     }
-    
+
     [DllImport("Mssign32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SignerSignEx2(
         SPC_FLAGS  dwFlags,               // DWORD
@@ -100,16 +100,16 @@ internal static partial class Win32Native
         IntPtr pSignerCert,         // SIGNER_CERT
         IntPtr pSignatureInfo,      // SIGNER_SIGNATURE_INFO
         IntPtr pProviderInfo,       // SIGNER_PROVIDER_INFO
-        uint  dwTimestampFlags,       // DWORD                  
+        uint  dwTimestampFlags,       // DWORD
         string? pszTimestampAlgOid,  // PCSTR
         string? pwszHttpTimeStamp,   // LPCWSTR
         IntPtr psRequest,           // PCRYPT_ATTRIBUTES
-        IntPtr pSipData,            // LPVOID 
+        IntPtr pSipData,            // LPVOID
         out SIGNER_CONTEXT ppSignerContext,  // SIGNER_CONTEXT
-        IntPtr PCSTR,               // PCERT_STRONG_SIGN_PARA 
-        IntPtr pReserved            // PVOID                  
+        IntPtr PCSTR,               // PCERT_STRONG_SIGN_PARA
+        IntPtr pReserved            // PVOID
     );
-    
+
     [LibraryImport(Mssign32)]
     internal static partial int SignerFreeSignerContext(IntPtr pSignerContext);
 
