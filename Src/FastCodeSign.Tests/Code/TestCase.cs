@@ -4,6 +4,14 @@ namespace Genbox.FastCodeSign.Tests.Code;
 
 internal sealed class TestCase : XUnitTest
 {
+    public TestCase()
+    {
+        ProviderFactory = _ => throw new InvalidOperationException("This test case was not initialized.");
+        Signed = string.Empty;
+        Unsigned = string.Empty;
+        Hash = string.Empty;
+    }
+
     private TestCase(Func<IAllocation, CodeSignProvider> providerFactory, Type handlerType, string signed, string unsigned, string hash, Action<Span<byte>>? equalityPatch, IFormatOptions? formatOptions) : base(handlerType.Name + " " + signed)
     {
         ProviderFactory = providerFactory;

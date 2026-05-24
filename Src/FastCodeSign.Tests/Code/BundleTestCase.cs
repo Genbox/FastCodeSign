@@ -8,6 +8,13 @@ internal sealed class BundleTestCase : XUnitTest, IDisposable
     private readonly string _bundlePathZip;
     private readonly string _bundlePath;
 
+    public BundleTestCase()
+    {
+        _bundlePathZip = string.Empty;
+        _bundlePath = string.Empty;
+        ProviderFactory = _ => throw new InvalidOperationException("This test case was not initialized.");
+    }
+
     private BundleTestCase(Func<string, CodeSignBundleProvider> providerFactory, Type handlerType, string bundlePathZip, string testMethod, bool isSigned) : base(handlerType.Name + " " + bundlePathZip)
     {
         _bundlePathZip = bundlePathZip;
@@ -41,5 +48,9 @@ internal sealed class BundleTestCase : XUnitTest, IDisposable
 
     public override string ToString() => Path.GetFileName(_bundlePathZip);
 
-    public void Dispose() => Directory.Delete(_bundlePath, true);
+    public void Dispose()
+    {
+        if (_bundlePath.Length != 0 && Directory.Exists(_bundlePath))
+            Directory.Delete(_bundlePath, true);
+    }
 }
