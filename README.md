@@ -10,7 +10,7 @@ Has no external dependencies and has a simple one-shot API that auto-detects fil
 
 ### Features
 
-* Supports signing Windows executables, PowerShell scripts and macOS macho files
+* Supports signing Windows executables, PowerShell scripts, macOS Mach-O files, and macOS app bundles
 * Supports signing blobs in memory with no intermediate files
 * Supports hardware security module (HSM) through key operation delegation:
     * Windows: [Cryptographic Next Generation](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-portal?redirectedfrom=MSDN)
@@ -84,11 +84,13 @@ PowerShell files:
 
 #### macOS code sign
 
-* Mach Object files
+* Mach-O files
+* App bundles with an executable (`.app`)
 
 #### Not supported
 
-* dmg/pkg/app: Bundle files for macOS
+* dmg: macOS disk images
+* pkg: macOS installer packages
 * cat: Catalog Security file
 * manifest: Application manifest file
 * application: ClickOnce deployment manifest file
@@ -100,7 +102,7 @@ PowerShell files:
 This library does not support signing applications for platforms older than OS X Maverick (10.9, released in 2013) and iOS 15 (released in 2021).
 See Apple's [new code signature format](https://developer.apple.com/documentation/Xcode/using-the-latest-code-signature-format) document for details.
 
-* Only SHA256 is used for hashing
+* CodeDirectory hashes support SHA-1, SHA-256, and SHA-384
 
 #### macOS App bundles
 
