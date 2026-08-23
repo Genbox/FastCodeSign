@@ -12,7 +12,7 @@ internal static class Program
                       """u8.ToArray();
 
         // You need to provide a code signing certificate
-        X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
+        using X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
 
         Span<byte> signed = CodeSign.SignData(pwsh, cert, fileName: "script.ps1");
         Console.WriteLine(Encoding.UTF8.GetString(signed));

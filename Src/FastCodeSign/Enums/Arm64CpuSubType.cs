@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Genbox.FastCodeSign.Enums;
 
+[SuppressMessage("Design", "CA1008:Enums should have zero value", Justification = "Apple names the zero value CPU_SUBTYPE_ARM64_ALL.")]
 [Flags]
 public enum Arm64CpuSubType : uint
 {

@@ -12,7 +12,7 @@ internal static class PowerShell
     internal static void Generate(X509Certificate2 cert)
     {
         //The default PS1 file is UTF8 without BOM, and CRLF newlines.
-        RSA rsa = cert.GetRSAPrivateKey()!;
+        using RSA rsa = cert.GetRSAPrivateKey()!;
         HashAlgorithmName hash = HashAlgorithmName.SHA256;
 
         foreach (string file in Directory.GetFiles("PowerShell", "*_unsigned.dat", SearchOption.TopDirectoryOnly))

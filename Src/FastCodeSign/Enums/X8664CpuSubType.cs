@@ -2,6 +2,7 @@ namespace Genbox.FastCodeSign.Enums;
 
 public enum X8664CpuSubType : uint
 {
+    None = 0,
     All = 3,
     All_64 = 3 | Lib64,
     Haswell = 8,

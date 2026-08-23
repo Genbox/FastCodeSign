@@ -15,7 +15,7 @@ public class SignedCmsExtensionsTests
     {
         string path = Path.Combine(Constants.FilesDir, "Misc/ps1_countersigned.dat");
 
-        CodeSignProvider provider = CodeSignProvider.FromFile(path, new PowerShellScriptFormatHandler(Encoding.UTF8), true);
+        using CodeSignFileProvider provider = CodeSignProvider.FromFile(path, new PowerShellScriptFormatHandler(Encoding.UTF8), true);
         SignedCms? cms = provider.GetSignature();
         Assert.NotNull(cms);
 
@@ -30,7 +30,7 @@ public class SignedCmsExtensionsTests
         string dst = Path.Combine(Path.GetTempPath(), "ps1_signed.ps1");
         File.Copy(src, dst, true);
 
-        CodeSignProvider provider = CodeSignProvider.FromFile(dst, new PowerShellScriptFormatHandler(Encoding.UTF8));
+        using CodeSignFileProvider provider = CodeSignProvider.FromFile(dst, new PowerShellScriptFormatHandler(Encoding.UTF8));
         SignedCms? cms = provider.GetSignature();
         Assert.NotNull(cms);
 

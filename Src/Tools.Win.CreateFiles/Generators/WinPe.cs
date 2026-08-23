@@ -10,7 +10,7 @@ internal static class WinPe
 {
     internal static void Generate(X509Certificate2 cert)
     {
-        RSA rsa = cert.GetRSAPrivateKey()!;
+        using RSA rsa = cert.GetRSAPrivateKey()!;
 
         foreach (string file in Directory.GetFiles("WinPe", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
             SignFile(file, cert, rsa, HashAlgorithmName.SHA256);

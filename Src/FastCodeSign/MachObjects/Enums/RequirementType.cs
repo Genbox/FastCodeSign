@@ -3,6 +3,7 @@ namespace Genbox.FastCodeSign.MachObjects.Enums;
 // https://github.com/apple-oss-distributions/Security/blob/3dab46a11f45f2ffdbd70e2127cc5a8ce4a1f222/OSX/libsecurity_codesigning/lib/CSCommon.h#L361
 public enum RequirementType : uint
 {
+    None = 0,
     Host = 1, // what hosts may run us
     Guest = 2, // what guests we may run
     Designated = 3, // designated requirement

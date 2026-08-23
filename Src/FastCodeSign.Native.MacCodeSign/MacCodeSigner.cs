@@ -4,7 +4,7 @@ using static Genbox.FastCodeSign.Native.MacCodeSign.Native.MacNative;
 
 namespace Genbox.FastCodeSign.Native.MacCodeSign;
 
-public static class MacCodeSign
+public static class MacCodeSigner
 {
     public static unsafe void SignFile(string path, byte[] pkcs12Bytes, string password)
     {

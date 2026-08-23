@@ -550,13 +550,13 @@ internal static class PowerShellVectors
     private static string TabsInsideBase64(string s, int chunk = 16) => MapB64(s, l =>
     {
         string p = l[2..];
-        return "# " + string.Join("\t", Enumerable.Range(0, ((p.Length + chunk) - 1) / chunk).Select(i => p.Substring(i * chunk, Math.Min(chunk, p.Length - (i * chunk)))));
+        return "# " + string.Join('\t', Enumerable.Range(0, ((p.Length + chunk) - 1) / chunk).Select(i => p.Substring(i * chunk, Math.Min(chunk, p.Length - (i * chunk)))));
     });
 
     private static string ZeroWidthSpaceInBase64(string s) => MapB64(s, l =>
     {
         string p = l[2..];
-        return "# " + string.Join("\u200B", Enumerable.Range(0, (p.Length + 14) / 15).Select(i => p.Substring(i * 15, Math.Min(15, p.Length - (i * 15)))));
+        return "# " + string.Join('\u200B', Enumerable.Range(0, (p.Length + 14) / 15).Select(i => p.Substring(i * 15, Math.Min(15, p.Length - (i * 15)))));
     });
 
     private static string HashInjectedInBase64(string s) => MapB64(s, l =>
@@ -566,7 +566,7 @@ internal static class PowerShellVectors
         return "# " + p[..at] + " ## " + p[at..];
     });
 
-    private static string UrlSafeB64(string s) => MapB64(s, l => "# " + l[2..].Replace("+", "-", StringComparison.Ordinal).Replace("/", "_", StringComparison.Ordinal));
+    private static string UrlSafeB64(string s) => MapB64(s, l => "# " + l[2..].Replace('+', '-').Replace('/', '_'));
 
     private static string StripPaddingB64(string s) => MapB64(s, l => "# " + l[2..].Replace("=", "", StringComparison.Ordinal));
     private static string ExtraPaddingB64(string s) => MapB64(s, l => "# " + l[2..] + "====");
@@ -574,8 +574,8 @@ internal static class PowerShellVectors
     private static string ControlWsInB64(string s) => MapB64(s, l =>
     {
         string p = l[2..];
-        string vt = string.Join("\v", Enumerable.Range(0, (p.Length + 19) / 20).Select(i => p.Substring(i * 20, Math.Min(20, p.Length - (i * 20)))));
-        return "# " + string.Join("\f", Enumerable.Range(0, (vt.Length + 29) / 30).Select(i => vt.Substring(i * 30, Math.Min(30, vt.Length - (i * 30)))));
+        string vt = string.Join('\v', Enumerable.Range(0, (p.Length + 19) / 20).Select(i => p.Substring(i * 20, Math.Min(20, p.Length - (i * 20)))));
+        return "# " + string.Join('\f', Enumerable.Range(0, (vt.Length + 29) / 30).Select(i => vt.Substring(i * 30, Math.Min(30, vt.Length - (i * 30)))));
     });
 
     private static string BomInsideFirstB64(string s)
@@ -592,7 +592,7 @@ internal static class PowerShellVectors
         });
     }
 
-    private static string NullsInB64(string s) => MapB64(s, l => "# " + string.Join("\0", l[2..].Select(c => c.ToString())));
+    private static string NullsInB64(string s) => MapB64(s, l => "# " + string.Join('\0', l[2..].Select(c => c.ToString())));
 
     private static (string begin, string end, string[] b64) SplitBlock(string s)
     {
@@ -707,7 +707,7 @@ internal static class PowerShellVectors
         if (outSeq.Count < idxs.Count)
         {
             List<string> list = lines.ToList();
-            foreach (int r in idxs.Skip(outSeq.Count).OrderByDescending(x => x))
+            foreach (int r in idxs.Skip(outSeq.Count).OrderDescending())
                 list.RemoveAt(r);
             return string.Join(NewLine, list);
         }

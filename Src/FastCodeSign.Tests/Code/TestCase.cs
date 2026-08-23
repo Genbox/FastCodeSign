@@ -47,7 +47,7 @@ internal sealed class TestCase : XUnitTest
         string fileName = Path.GetFileName(Signed);
 
         //If there is one underscore, we show the entire filename
-        if (fileName.Count(x => x == '_') == 1)
+        if (fileName.Count('_') == 1)
             return fileName;
 
         return fileName[..fileName.LastIndexOf('_')];

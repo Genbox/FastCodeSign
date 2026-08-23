@@ -20,6 +20,6 @@ internal static class Program
     {
         Console.WriteLine($"Signing {unsigned}");
         File.Copy(unsigned, signed, true);
-        MacCodeSign.SignFile(unsigned, certBytes, "password");
+        MacCodeSigner.SignFile(unsigned, certBytes, "password");
     }
 }

@@ -11,7 +11,7 @@ public class AuthenticodeTests
     public void VerifyFile(string fileName, WinVerifyTrustResult expected)
     {
         string path = Path.Combine(FilesDir, fileName);
-        Assert.Equal(expected, Authenticode.VerifyFile(path));
+        Assert.Equal(expected, AuthenticodeVerifier.VerifyFile(path));
     }
 
     [Theory]
@@ -19,7 +19,7 @@ public class AuthenticodeTests
     public void VerifyFileExt(string fileName, string expectedSigner)
     {
         string path = Path.Combine(FilesDir, "Signed/WinPe/", fileName);
-        Assert.Equal(WinVerifyTrustResult.SUCCESS, Authenticode.VerifyFileExt(path, out string? signer, out byte[]? certificate));
+        Assert.Equal(WinVerifyTrustResult.SUCCESS, AuthenticodeVerifier.VerifyFileExt(path, out string? signer, out byte[]? certificate));
 
         Assert.NotNull(signer);
         Assert.NotNull(certificate);
@@ -33,10 +33,10 @@ public class AuthenticodeTests
     public void GetHash(string fileName, string expectedSha1, string expectedSha256)
     {
         string path = Path.Combine(FilesDir, "Signed/WinPe/", fileName);
-        byte[] sha1Hash = Authenticode.GetPeHash(path, HashAlgorithmName.SHA1);
+        byte[] sha1Hash = AuthenticodeVerifier.GetPeHash(path, HashAlgorithmName.SHA1);
         Assert.Equal(expectedSha1, Convert.ToHexString(sha1Hash).ToLowerInvariant());
 
-        byte[] sha256Hash = Authenticode.GetPeHash(path, HashAlgorithmName.SHA256);
+        byte[] sha256Hash = AuthenticodeVerifier.GetPeHash(path, HashAlgorithmName.SHA256);
         Assert.Equal(expectedSha256, Convert.ToHexString(sha256Hash).ToLowerInvariant());
     }
 
@@ -44,7 +44,7 @@ public class AuthenticodeTests
     [InlineData(@"C:\Windows\regedit.exe", WinVerifyTrustResult.SUCCESS, "669670ca90bdb1f1d945fc6c4a42a1544fa7e5b7e6100db760ba9b3fbe044afa")]
     public void VerifyFileWithCab(string fileName, WinVerifyTrustResult expectedRes, string expectedHash)
     {
-        Assert.Equal(expectedRes, Authenticode.VerifyFileWithCab(fileName, out byte[] hash));
+        Assert.Equal(expectedRes, AuthenticodeVerifier.VerifyFileWithCab(fileName, out byte[] hash));
         Assert.Equal(expectedHash, Convert.ToHexString(hash).ToLowerInvariant());
     }
 }

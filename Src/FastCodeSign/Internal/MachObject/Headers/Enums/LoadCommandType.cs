@@ -1,9 +1,9 @@
 namespace Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 
 // https://github.com/apple-oss-distributions/xnu/blob/e3723e1f17661b24996789d8afc084c0c3303b26/EXTERNAL_HEADERS/mach-o/loader.h#L264
-[Flags]
 public enum LoadCommandType : uint
 {
+    None = 0,
     SEGMENT = 0x1, // segment of this file to be mapped
     SYMTAB = 0x2, // link-edit stab symbol table info
     SYMSEG = 0x3, // link-edit gdb symbol table info (obsolete)

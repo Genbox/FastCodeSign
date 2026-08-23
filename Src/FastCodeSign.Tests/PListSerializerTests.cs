@@ -14,7 +14,7 @@ public class PListSerializerTests
     {
         string fullPath = Path.Combine(Constants.FilesDir, "Misc", "Plists", resourceName);
 
-        Dictionary<string, object> obj = PListSerializer.Deserialize(await File.ReadAllBytesAsync(fullPath));
+        Dictionary<string, object> obj = PListSerializer.Deserialize(await File.ReadAllBytesAsync(fullPath, TestContext.Current.CancellationToken));
         Assert.NotNull(obj);
 
         await Verify(obj)
@@ -26,7 +26,7 @@ public class PListSerializerTests
     [Fact]
     private async Task SerializeAndDeserialize()
     {
-        using MemoryStream ms = new MemoryStream();
+        await using MemoryStream ms = new MemoryStream();
         PListSerializer.Serialize(new Dictionary<string, object>
         {
             { "string-test", "asd" }, // String support

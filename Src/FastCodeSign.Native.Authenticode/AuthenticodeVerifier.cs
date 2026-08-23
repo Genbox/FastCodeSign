@@ -10,7 +10,7 @@ using static Genbox.FastCodeSign.Internal.Native.Win32Native;
 namespace Genbox.FastCodeSign.Native.Authenticode;
 
 [SuppressMessage("Blocker Bug", "S3869:\"SafeHandle.DangerousGetHandle\" should not be called")]
-public static class Authenticode
+public static class AuthenticodeVerifier
 {
     private const int X509_ASN_ENCODING = 0x00000001;
     private static readonly Guid DRIVER_ACTION_VERIFY = new Guid("{F750E6C3-38EE-11d1-85E5-00C04FC295EE}");

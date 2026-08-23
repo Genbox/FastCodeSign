@@ -166,7 +166,8 @@ public class CodeSignProviderTests
         exe[0] = (byte)'M';
         exe[1] = (byte)'Z';
 
-        CodeSignProvider.FromData(exe, null, "UPPERCASE.EXE"); //Shouldn't throw
+        CodeSignProvider provider = CodeSignProvider.FromData(exe, null, "UPPERCASE.EXE");
+        Assert.NotNull(provider);
     }
 
     private static TheoryData<TestCase> GetTestCases() =>

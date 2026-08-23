@@ -33,6 +33,7 @@ namespace Genbox.FastCodeSign.Internal.WinPe.Spc;
 /// <param name="DigestAlgorithm">This field specifies the digest algorithm that is used to hash the file. The value must match the digestAlgorithm value specified in SignerInfo and the parent PKCS #7 digestAlgorithms fields.</param>
 /// <param name="Digest">This field is set to the message digest value of the file.</param>
 /// <param name="DataType">This field is set to an SpcAttributeTypeAndOptionalValue structure.</param>
+/// <param name="DigestParameters">The optional encoded algorithm parameters.</param>
 [StructLayout(LayoutKind.Auto)]
 internal readonly record struct SpcIndirectDataContent(byte[]? Data, Oid DataType, Oid DigestAlgorithm, byte[] Digest, byte[]? DigestParameters)
 {

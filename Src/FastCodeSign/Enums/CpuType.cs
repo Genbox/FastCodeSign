@@ -4,6 +4,7 @@ public enum CpuType : uint
 {
     // See https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/mach/machine.h#L138
 
+    None = 0,
     VAX = 1,
     MC680x0 = 6,
     X86 = 7,

@@ -100,11 +100,11 @@ public static class SignerInfoExtensions
 
     private static async Task<byte[]> SendRequestAsync(HttpClient client, string url, ByteArrayContent content)
     {
-        using HttpResponseMessage resp = await client.PostAsync(url, content).ConfigureAwait(false);
+        using HttpResponseMessage resp = await client.PostAsync(url, content, CancellationToken.None).ConfigureAwait(false);
 
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException($"Timestamp authority return an error: {resp.StatusCode}");
 
-        return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+        return await resp.Content.ReadAsByteArrayAsync(CancellationToken.None).ConfigureAwait(false);
     }
 }

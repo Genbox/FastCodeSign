@@ -10,7 +10,7 @@ internal static class Program
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("This tool only runs on Windows");
 
-        X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
+        using X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
 
         PowerShell.Generate(cert);
         PowerShellVectors.Generate(cert);

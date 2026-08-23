@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Tests.Code;
 
 namespace Genbox.FastCodeSign.Tests;
@@ -9,15 +10,34 @@ public class CodeSignTests
     [Fact]
     private void SignFileTest()
     {
-        string dstFile = Path.Combine(Path.GetTempPath(), "macho_unsigned");
+        string dstFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         File.Copy(_srcFile, dstFile, true);
 
-        CodeSign.SignFile(dstFile, Constants.GetCert());
+        try
+        {
+            using X509Certificate2 certificate = Constants.GetCert();
+            CodeSign.SignFile(dstFile, certificate);
+
+            using CodeSignFileProvider provider = CodeSignProvider.FromFile(dstFile);
+            var signedCms = provider.GetSignature();
+            Assert.NotNull(signedCms);
+            Assert.True(provider.HasValidSignature(signedCms));
+        }
+        finally
+        {
+            File.Delete(dstFile);
+        }
     }
 
     [Fact]
     private void SignDataTest()
     {
-        CodeSign.SignData(File.ReadAllBytes(_srcFile), Constants.GetCert(), "macho_unsigned");
+        using X509Certificate2 certificate = Constants.GetCert();
+        byte[] signed = CodeSign.SignData(File.ReadAllBytes(_srcFile), certificate, "macho_unsigned").ToArray();
+
+        CodeSignProvider provider = CodeSignProvider.FromData(signed, fileName: "macho_unsigned");
+        var signedCms = provider.GetSignature();
+        Assert.NotNull(signedCms);
+        Assert.True(provider.HasValidSignature(signedCms));
     }
 }
