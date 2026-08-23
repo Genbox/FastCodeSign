@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Native.Authenticode.Internal;
@@ -12,11 +13,16 @@ namespace Genbox.FastCodeSign.Native.Authenticode;
 
 public static class AuthenticodeSigner
 {
+    private const uint E_FAIL = 0x80004005;
     private const uint E_INVALIDARG = 0x80070057;
     private static readonly SignCallback _signCallback = SignCallback; //Need this rooted so the GC does not collect it
 
+    [SupportedOSPlatform("windows")]
     public static unsafe void SignFile(string path, X509Certificate2 signingCertificate, AsymmetricAlgorithm signingAlgorithm, HashAlgorithmName fileDigestAlgorithm, TimeStampConfiguration? timeStampConfig)
     {
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Authenticode native signing is only supported on Windows.");
+
         if (!File.Exists(path))
             throw new FileNotFoundException(path);
 
@@ -73,7 +79,9 @@ public static class AuthenticodeSigner
             SIGNER_DIGEST_SIGN_INFO signCallbackInfo = new SIGNER_DIGEST_SIGN_INFO(callbackPtr, (IntPtr)gch);
 
             SipKind sipKind = GetSipKind(path);
+            APPX_SIP_CLIENT_DATA appxClientData = default;
             void* sipData = null;
+            Exception? cleanupException = null;
 
             try
             {
@@ -83,31 +91,36 @@ public static class AuthenticodeSigner
                     flags |= SPCEx3.SPC_EXC_PE_PAGE_HASHES_FLAG;
 
                     SIGNER_SIGN_EX3_PARAMS parameters = new SIGNER_SIGN_EX3_PARAMS(flags, timeStampFlags, &subjectInfo, &signerCert, &signatureInfo, &context, pTimestampUrl, pTimestampAlgorithmOid, &signCallbackInfo);
-                    APPX_SIP_CLIENT_DATA cd = new APPX_SIP_CLIENT_DATA(&parameters);
-                    sipData = &cd;
+                    appxClientData = new APPX_SIP_CLIENT_DATA(&parameters);
+                    sipData = &appxClientData;
                 }
 
                 int result = Win32Native.SignerSignEx3(flags, &subjectInfo, &signerCert, &signatureInfo, IntPtr.Zero, timeStampFlags, pTimestampAlgorithmOid, pTimestampUrl, IntPtr.Zero, sipData, &context, IntPtr.Zero, ref signCallbackInfo, IntPtr.Zero);
 
+                if (ctx.SignException != null)
+                    throw new InvalidOperationException("Signing callback failed.", ctx.SignException);
+
                 if (result != 0)
                     throw new InvalidOperationException($"Signing failed with code {Marshal.GetPInvokeErrorMessage(result)}");
+            }
+            finally
+            {
+                if (context != IntPtr.Zero && Win32Native.SignerFreeSignerContext(context) != 0)
+                    cleanupException = new InvalidOperationException("Error happened while freeing signer context");
 
-                if (context != IntPtr.Zero)
-                    if (Win32Native.SignerFreeSignerContext(context) != 0)
-                        throw new InvalidOperationException("Error happened while freeing signer context");
-
-                if (sipKind == SipKind.Appx)
+                if (sipKind == SipKind.Appx && sipData != null)
                 {
                     IntPtr state = ((APPX_SIP_CLIENT_DATA*)sipData)->pAppxSipState;
                     if (state != IntPtr.Zero)
                         Marshal.Release(state); //State is an IUnknown COM interface pointer
                 }
-            }
-            finally
-            {
+
                 if (gch.IsAllocated)
                     gch.Free();
             }
+
+            if (cleanupException != null)
+                throw cleanupException;
         }
     }
 
@@ -125,35 +138,44 @@ public static class AuthenticodeSigner
         GCHandle handle = GCHandle.FromIntPtr(pvExtra);
         SignContext ctx = (SignContext)handle.Target!;
 
-        byte[] signature;
-        switch (ctx.SigningAlgorithm)
+        try
         {
-            case RSA rsa:
-                signature = rsa.SignHash(pDigestToSign, ctx.FileDigestAlgorithm, RSASignaturePadding.Pkcs1);
-                break;
-            case ECDsa ecdsa:
-                signature = ecdsa.SignHash(pDigestToSign);
-                break;
-            default:
-                return E_INVALIDARG;
+            byte[] signature;
+            switch (ctx.SigningAlgorithm)
+            {
+                case RSA rsa:
+                    signature = rsa.SignHash(pDigestToSign, ctx.FileDigestAlgorithm, RSASignaturePadding.Pkcs1);
+                    break;
+                case ECDsa ecdsa:
+                    signature = ecdsa.SignHash(pDigestToSign);
+                    break;
+                default:
+                    return E_INVALIDARG;
+            }
+
+            // Allocate unmanaged buffer with LocalAlloc so SignerSignEx3 can free it
+            IntPtr resultPtr = Win32Native.LocalAlloc(0 /* LMEM_FIXED */, (UIntPtr)signature.Length);
+
+            if (resultPtr == IntPtr.Zero)
+                return (uint)Marshal.GetLastWin32Error();
+
+            Marshal.Copy(signature, 0, resultPtr, signature.Length);
+
+            blob.pbData = resultPtr;
+            blob.cbData = (uint)signature.Length;
+            return 0;
         }
-
-        // Allocate unmanaged buffer with LocalAlloc so SignerSignEx3 can free it
-        IntPtr resultPtr = Win32Native.LocalAlloc(0 /* LMEM_FIXED */, (UIntPtr)signature.Length);
-
-        if (resultPtr == IntPtr.Zero)
-            return (uint)Marshal.GetLastWin32Error();
-
-        Marshal.Copy(signature, 0, resultPtr, signature.Length);
-
-        blob.pbData = resultPtr;
-        blob.cbData = (uint)signature.Length;
-        return 0;
+        catch (Exception ex) when (ex is CryptographicException or InvalidOperationException or NotSupportedException or ObjectDisposedException)
+        {
+            ctx.SignException = ex;
+            return E_FAIL;
+        }
     }
 
     private sealed class SignContext(AsymmetricAlgorithm alg, HashAlgorithmName digest)
     {
         public AsymmetricAlgorithm SigningAlgorithm { get; } = alg;
         public HashAlgorithmName FileDigestAlgorithm { get; } = digest;
+        public Exception? SignException { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using Genbox.FastCodeSign.Internal.Native;
 using Genbox.FastCodeSign.Internal.Native.Enums;
@@ -18,18 +19,36 @@ public static class AuthenticodeVerifier
 
     public static WinVerifyTrustResult VerifyFile(string fileName)
     {
+        return VerifyFile(fileName, false);
+    }
+
+    public static WinVerifyTrustResult VerifyFile(string fileName, bool enableRevocation)
+    {
+        EnsureWindows();
         WINTRUST_FILE_INFO fileInfo = new WINTRUST_FILE_INFO(Path.GetFullPath(fileName));
-        return WinVerifyCommon(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, false);
+        return WinVerifyCommon(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, enableRevocation);
     }
 
     public static WinVerifyTrustResult VerifyFileExt(string fileName, out string? signer, out byte[]? certificate)
     {
+        return VerifyFileExt(fileName, false, out signer, out certificate);
+    }
+
+    public static WinVerifyTrustResult VerifyFileExt(string fileName, bool enableRevocation, out string? signer, out byte[]? certificate)
+    {
+        EnsureWindows();
         WINTRUST_FILE_INFO fileInfo = new WINTRUST_FILE_INFO(Path.GetFullPath(fileName));
-        return WinVerifyCommonExt(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, false, out signer, out certificate);
+        return WinVerifyCommonExt(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, enableRevocation, out signer, out certificate);
     }
 
     public static WinVerifyTrustResult VerifyFileWithCab(string fileName, out byte[] hash)
     {
+        return VerifyFileWithCab(fileName, false, out hash);
+    }
+
+    public static WinVerifyTrustResult VerifyFileWithCab(string fileName, bool enableRevocation, out byte[] hash)
+    {
+        EnsureWindows();
         string fullPath = Path.GetFullPath(fileName);
         WINTRUST_CATALOG_INFO catalogInfo = default;
 
@@ -44,7 +63,8 @@ public static class AuthenticodeVerifier
             if (catalog.IsInvalid)
                 return WinVerifyTrustResult.TRUST_E_NOSIGNATURE;
 
-            if (!CryptCATCatalogInfoFromContext(catalog, out CATALOG_INFO catInfo, 0))
+            CATALOG_INFO catInfo = new CATALOG_INFO();
+            if (!CryptCATCatalogInfoFromContext(catalog, ref catInfo, 0))
                 return WinVerifyTrustResult.TRUST_E_SYSTEM_ERROR;
 
             catalogInfo = new WINTRUST_CATALOG_INFO();
@@ -60,7 +80,7 @@ public static class AuthenticodeVerifier
 
             catalogInfo.pbCalculatedFileHash = hashPtr;
 
-            return WinVerifyCommon(catalogInfo, WTD_CHOICE.WTD_CHOICE_CATALOG, DRIVER_ACTION_VERIFY, false);
+            return WinVerifyCommon(catalogInfo, WTD_CHOICE.WTD_CHOICE_CATALOG, DRIVER_ACTION_VERIFY, enableRevocation);
         }
         finally
         {
@@ -71,6 +91,12 @@ public static class AuthenticodeVerifier
 
     public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, out string? signer, out byte[]? certificate, out byte[]? hash)
     {
+        return VerifyFileWithCabExt(fileName, false, out signer, out certificate, out hash);
+    }
+
+    public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, bool enableRevocation, out string? signer, out byte[]? certificate, out byte[]? hash)
+    {
+        EnsureWindows();
         string fullPath = Path.GetFullPath(fileName);
         signer = null;
         certificate = null;
@@ -89,7 +115,8 @@ public static class AuthenticodeVerifier
             if (catalog.IsInvalid)
                 return WinVerifyTrustResult.TRUST_E_NOSIGNATURE;
 
-            if (!CryptCATCatalogInfoFromContext(catalog, out CATALOG_INFO catInfo, 0))
+            CATALOG_INFO catInfo = new CATALOG_INFO();
+            if (!CryptCATCatalogInfoFromContext(catalog, ref catInfo, 0))
                 return WinVerifyTrustResult.TRUST_E_SYSTEM_ERROR;
 
             catalogInfo = new WINTRUST_CATALOG_INFO();
@@ -105,7 +132,7 @@ public static class AuthenticodeVerifier
 
             catalogInfo.pbCalculatedFileHash = hashPtr;
 
-            return WinVerifyCommonExt(catalogInfo, WTD_CHOICE.WTD_CHOICE_CATALOG, DRIVER_ACTION_VERIFY, false, out signer, out certificate);
+            return WinVerifyCommonExt(catalogInfo, WTD_CHOICE.WTD_CHOICE_CATALOG, DRIVER_ACTION_VERIFY, enableRevocation, out signer, out certificate);
         }
         finally
         {
@@ -116,6 +143,8 @@ public static class AuthenticodeVerifier
 
     public static byte[] GetPeHash(string fileName, HashAlgorithmName? hashAlgorithm = null)
     {
+        EnsureWindows();
+
         if (hashAlgorithm != null && hashAlgorithm != HashAlgorithmName.SHA1 && !FunctionExists(Wintrust, nameof(CryptCATAdminCalcHashFromFileHandle2)))
             throw new NotSupportedException("Windows 7 and older does not support anything but SHA1.");
 
@@ -293,7 +322,7 @@ public static class AuthenticodeVerifier
 
     private static bool FunctionExists(string dllName, string functionName)
     {
-        IntPtr h = LoadLibraryW(dllName);
+        IntPtr h = LoadLibraryExW(dllName, IntPtr.Zero, LOAD_LIBRARY_SEARCH_SYSTEM32);
         if (h == IntPtr.Zero)
             return false;
 
@@ -305,5 +334,11 @@ public static class AuthenticodeVerifier
         {
             FreeLibrary(h);
         }
+    }
+
+    private static void EnsureWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Authenticode native verification is only supported on Windows.");
     }
 }

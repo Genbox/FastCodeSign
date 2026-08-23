@@ -9,7 +9,7 @@ internal sealed class SafeCatalogHandle() : SafeHandleZeroOrMinusOneIsInvalid(tr
     protected override bool ReleaseHandle()
     {
         if (ContextHandle == null)
-            throw new InvalidOperationException("ContextHandle is null. This should not happen.");
+            return false;
 
         return Win32Native.CryptCATAdminReleaseCatalogContext(ContextHandle, handle, 0);
     }

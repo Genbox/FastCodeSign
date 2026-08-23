@@ -13,13 +13,14 @@ internal static partial class Win32Native
     internal const string Wintrust = "wintrust.dll";
     private const string Crypt32 = "crypt32.dll";
     private const string Mssign32 = "mssign32.dll";
+    internal const uint LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800;
 
     [LibraryImport(Crypt32, StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int CertNameToStrW(uint dwCertEncodingType, ref CRYPT_BLOB_ARRAY pName, CERT_NAME_STR dwStrType, IntPtr psz, uint csz);
 
     [LibraryImport(Wintrust,StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool CryptCATCatalogInfoFromContext(SafeCatalogHandle hCatInfo, out CATALOG_INFO psCatInfo, int dwFlags);
+    internal static partial bool CryptCATCatalogInfoFromContext(SafeCatalogHandle hCatInfo, ref CATALOG_INFO psCatInfo, int dwFlags);
 
     [LibraryImport(Wintrust,  StringMarshalling = StringMarshalling.Utf16)]
     internal static partial SafeCatalogHandle CryptCATAdminEnumCatalogFromHash(SafeContextHandle hCatAdmin, [In]byte[] pbHash, uint cbHash, int dwFlags, IntPtr phPrevCatInfo);
@@ -59,6 +60,9 @@ internal static partial class Win32Native
 
     [LibraryImport(Kernel32, StringMarshalling = StringMarshalling.Utf16)]
     internal static partial IntPtr LoadLibraryW(string lpFileName);
+
+    [LibraryImport(Kernel32, StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    internal static partial IntPtr LoadLibraryExW(string lpFileName, IntPtr hFile, uint dwFlags);
 
     [LibraryImport(Kernel32, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial IntPtr GetProcAddress(IntPtr hModule, string procName);
