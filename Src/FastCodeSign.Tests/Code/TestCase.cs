@@ -10,6 +10,7 @@ internal sealed class TestCase : XUnitTest
         Signed = string.Empty;
         Unsigned = string.Empty;
         Hash = string.Empty;
+        HandlerType = typeof(void);
     }
 
     private TestCase(Func<IAllocation, CodeSignProvider> providerFactory, Type handlerType, string signed, string unsigned, string hash, Action<Span<byte>>? equalityPatch, IFormatOptions? formatOptions) : base(handlerType.Name + " " + signed)
@@ -20,6 +21,7 @@ internal sealed class TestCase : XUnitTest
         Unsigned = unsigned;
         Hash = hash;
         EqualityPatch = equalityPatch;
+        HandlerType = handlerType;
     }
 
     public Action<Span<byte>>? EqualityPatch { get; }
@@ -28,6 +30,7 @@ internal sealed class TestCase : XUnitTest
     public string Signed { get; }
     public string Unsigned { get; }
     public string Hash { get; }
+    public Type HandlerType { get; }
 
     public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, IFormatOptions? formatOptions = null, Action<Span<byte>>? equalityPatch = null)
     {
@@ -47,7 +50,7 @@ internal sealed class TestCase : XUnitTest
         string fileName = Path.GetFileName(Signed);
 
         //If there is one underscore, we show the entire filename
-        if (fileName.Count('_') == 1)
+        if (fileName.IndexOf('_') >= 0 && fileName.IndexOf('_') == fileName.LastIndexOf('_'))
             return fileName;
 
         return fileName[..fileName.LastIndexOf('_')];

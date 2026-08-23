@@ -55,7 +55,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         MachOContext obj = (MachOContext)context;
         Debug.Assert(obj.CodeSignature != null);
 
-        if (obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (uint)data.Length)
+        if ((ulong)obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (ulong)data.Length)
             throw new InvalidDataException("The code signature data is truncated.");
 
         //Read the SuperBlob
@@ -67,6 +67,11 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         if (sbHeader.Magic != CsMagic.EmbeddedSignature || sbHeader.Count == 0) //Not embedded or there are no slots in the SuperBlob
             return ReadOnlySpan<byte>.Empty;
+
+        if (sbHeader.Length < SuperBlobHeader.StructSize || sbHeader.Length > sbSpan.Length || (ulong)sbHeader.Count * BlobIndex.StructSize > sbHeader.Length - SuperBlobHeader.StructSize)
+            throw new InvalidDataException("The code signature blob index is truncated.");
+
+        sbSpan = sbSpan[..(int)sbHeader.Length];
 
         //Read the index structures right after the SuperBlob header
         for (int i = 0; i < sbHeader.Count; i++)
@@ -80,7 +85,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             if (blobIndex.Type != CsSlot.Signature)
                 continue;
 
-            if (blobIndex.Offset > sbSpan.Length || blobIndex.Offset + BlobWrapper.StructSize > (uint)sbSpan.Length)
+            if (blobIndex.Offset > sbSpan.Length || (ulong)blobIndex.Offset + BlobWrapper.StructSize > (ulong)sbSpan.Length)
                 throw new InvalidDataException("The code signature blob is truncated.");
 
             ReadOnlySpan<byte> blobSpan = sbSpan[(int)blobIndex.Offset..];
@@ -104,7 +109,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         MachOContext obj = (MachOContext)context;
         Debug.Assert(obj.CodeSignature != null);
 
-        if (obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (uint)data.Length)
+        if ((ulong)obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize > (ulong)data.Length)
             throw new InvalidDataException("The code signature data is truncated.");
 
         //If there is no signature, we cannot just hash the file, since Mach Object signatures require external files such as entitlement and requirements
@@ -112,38 +117,9 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         if (!obj.IsSigned)
             throw new InvalidOperationException("Mach Object does not support stable hashing");
 
-        //Read the SuperBlob. We need to read the CodeDirectory header & hash the special slots.
-        ReadOnlySpan<byte> sbSpan = data.Slice((int)obj.CodeSignature.DataOffset, (int)obj.CodeSignature.DataSize);
-        SuperBlobHeader sbHeader = SuperBlobHeader.Read(sbSpan);
-
-        if (sbHeader.Magic != CsMagic.EmbeddedSignature || sbHeader.Count == 0)
-            throw new InvalidOperationException("The signature is not embedded in the file");
-
-        //Locate the CodeDirectory blob inside the SuperBlob.
-        ReadOnlySpan<byte> cdSpan = ReadOnlySpan<byte>.Empty;
-
-        //We need to store the blob indexes we see to later lookup in the array to find special slots
-        List<BlobIndex> slots = new List<BlobIndex>();
-
-        for (int i = 0; i < sbHeader.Count; i++)
-        {
-            BlobIndex blobIdx = BlobIndex.Read(sbSpan[(SuperBlobHeader.StructSize + (i * BlobIndex.StructSize))..]);
-            slots.Add(blobIdx);
-
-            if (blobIdx.Type != CsSlot.CodeDirectory)
-                continue;
-
-            ReadOnlySpan<byte> blobSpan = sbSpan[(int)blobIdx.Offset..];
-            BlobWrapper blobHeader = BlobWrapper.Read(blobSpan);
-
-            if (blobHeader.Type != CsMagic.CodeDirectory)
-                throw new InvalidOperationException("Unexpected CodeDirectory magic");
-
-            cdSpan = blobSpan[..(int)blobHeader.Length];
-        }
-
-        if (cdSpan.IsEmpty)
-            throw new InvalidOperationException("Unable to find a CodeDirectory blob in the signature");
+        ReadOnlySpan<byte> cdSpan = GetEmbeddedBlob(obj, data, CsSlot.CodeDirectory);
+        if (cdSpan.Length < CodeDirectoryHeader.StructSize)
+            throw new InvalidDataException("The CodeDirectory is truncated.");
 
         //Read the CodeDirectory header
         uint hashOff = ReadUInt32BigEndian(cdSpan.Slice(16, 4));
@@ -164,43 +140,49 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //- Hashes of the special pages
         //- Hashes of the code pages
 
+        if (hashSize == 0 || pageSizeLg2 >= 31)
+            throw new InvalidDataException("The CodeDirectory contains invalid hash settings.");
+
+        ulong specialHashesSize = (ulong)nSpecial * hashSize;
+        if (hashOff < specialHashesSize || hashOff > cdSpan.Length)
+            throw new InvalidDataException("The CodeDirectory contains invalid special hash offsets.");
+
+        int specialHashOffset = checked((int)(hashOff - specialHashesSize));
+        if (specialHashOffset < CodeDirectoryHeader.StructSize || (ulong)specialHashOffset + specialHashesSize > (ulong)cdSpan.Length)
+            throw new InvalidDataException("The CodeDirectory contains invalid special hash offsets.");
+
+        if ((ulong)hashOff + ((ulong)nCodeSlots * hashSize) > (ulong)cdSpan.Length)
+            throw new InvalidDataException("The CodeDirectory contains invalid code hash offsets.");
+
+        if (codeLimit32 > data.Length || nCodeSlots != ((ulong)codeLimit32 + ((1U << pageSizeLg2) - 1)) >> pageSizeLg2)
+            throw new InvalidDataException("The CodeDirectory code limit is invalid.");
+
         //We create two hashers here. One to produce special/code page hashes, and one to consume the hashes which eventually become the CodeDirectory hash.
         HashAlgorithmName hashName = GetHashAlgorithmName(hashType);
         using IncrementalHash hasher = IncrementalHash.CreateHash(hashName);
         using IncrementalHash cdHasher = IncrementalHash.CreateHash(hashName);
 
-        //We take the CodeDirectory header (without the hashes) and hash it. The header includes the static header + the dynamic headers (version specific) + the header data (identity and teamid)
-        //We assume we can read from offset 0 to the offset where special hashes begin.
-        cdHasher.AppendData(cdSpan[..(int)(hashOff - (nSpecial * hashSize))]); //Go from hash offset, then backwards the number of special hashes
-
-        int specialHashOffset = (int)(hashOff - (nSpecial * hashSize));
-
-        if (specialHashOffset < 0 || specialHashOffset + (nSpecial * hashSize) > cdSpan.Length)
-            throw new InvalidDataException("The CodeDirectory contains invalid special hash offsets.");
+        //The signed prefix ends immediately before the special-slot table.
+        cdHasher.AppendData(cdSpan[..specialHashOffset]);
 
         //Then we go through the blobs, find special slots, and hash the content, then add the hash to cdHasher
-        for (int i = (int)nSpecial; i > 0; i--)
+        for (int i = checked((int)nSpecial); i > 0; i--)
         {
-            ReadOnlySpan<byte> blobSpan = ReadOnlySpan<byte>.Empty;
+            ReadOnlySpan<byte> blobSpan;
             int specialIndex = (int)(nSpecial - i);
 
-            foreach (BlobIndex blobIndex in slots)
+            try
             {
-                if (blobIndex.Type != (CsSlot)i)
-                    continue;
-
-                blobSpan = sbSpan[(int)blobIndex.Offset..];
-                break;
+                blobSpan = GetEmbeddedBlob(obj, data, (CsSlot)i);
             }
-
-            if (blobSpan.IsEmpty)
+            catch (InvalidOperationException)
+            {
                 cdHasher.AppendData(cdSpan.Slice(specialHashOffset + (specialIndex * hashSize), hashSize));
-            else
-            {
-                BlobWrapper blobHeader = BlobWrapper.Read(blobSpan);
-                hasher.AppendData(blobSpan[..(int)blobHeader.Length]);
-                cdHasher.AppendData(hasher.GetHashAndReset().AsSpan(0, hashSize));
+                continue;
             }
+
+            hasher.AppendData(blobSpan);
+            cdHasher.AppendData(hasher.GetHashAndReset().AsSpan(0, hashSize));
         }
 
         //Now we need to hash the file in <pageSize> chunks up to <codeLimit> and add the hashes to cdHasher
@@ -230,6 +212,17 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //Remove the LC_CODE_SIGNATURE command from the list of load commands. It is the last command in the list.
         const uint size = LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize;
 
+        int expectedCodeSignatureOffset = checked((obj.Is64Bit ? 32 : 28) + (int)obj.MachHeader.SizeOfCommands - CodeSignatureHeader.StructSize);
+        if (obj.LinkEdit.FileOffset > ulong.MaxValue - obj.LinkEdit.FileSize)
+            throw new InvalidDataException("The __LINKEDIT section has invalid bounds.");
+
+        ulong linkEditEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize;
+        ulong codeSignatureEnd = (ulong)obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize;
+        if (obj.CodeSignature.Offset != expectedCodeSignatureOffset)
+            throw new InvalidDataException("The LC_CODE_SIGNATURE command must be the last load command to remove it safely.");
+        if (obj.CodeSignature.DataOffset < obj.LinkEdit.FileOffset || obj.CodeSignature.DataSize > obj.LinkEdit.FileSize || codeSignatureEnd != linkEditEnd || linkEditEnd != (ulong)data.Length)
+            throw new InvalidDataException("The code signature must be the final __LINKEDIT data to remove it safely.");
+
         //Clear the LC header and the LC_CODE_SIGNATURE command entry
         data.Slice(obj.CodeSignature.Offset - LoadCommandHeader.StructSize, (int)size).Clear();
 
@@ -254,12 +247,6 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             WriteU32(data[(obj.LinkEdit.Offset + 36)..], (uint)newFileSize, le); // filesize
         }
 
-        ulong leEnd = obj.LinkEdit.FileOffset + obj.LinkEdit.FileSize; //End of __LINKEDIT
-        ulong csEnd = obj.CodeSignature.DataOffset + obj.CodeSignature.DataSize; //End of the code signature
-
-        Debug.Assert(csEnd == leEnd, "The code directory end must match the link edit end");
-        Debug.Assert((ulong)data.Length == leEnd, "The link edit section must end at the end of the file");
-
         return obj.CodeSignature.DataSize;
     }
 
@@ -267,8 +254,8 @@ public sealed class MachObjectFormatHandler : IFormatHandler
     {
         MachOContext obj = (MachOContext)context;
 
-        Span<byte> data = allocation.GetSpan();
-        int oldSize = data.Length;
+        ReadOnlySpan<byte> original = allocation.GetSpan();
+        int oldSize = original.Length;
         MachObjectInfo info = (MachObjectInfo)signature.SignatureInfo!;
 
         ulong codeLimit = info.CodeLimit;
@@ -276,16 +263,21 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         uint sbSize = info.SuperBlockSize;
 
         SortedList<CsSlot, ReadOnlyMemory<byte>> blobs = new SortedList<CsSlot, ReadOnlyMemory<byte>>(info.Blobs); //We copy the collection to avoid duplicating the signature blob on multiple calls to WriteSignature
-        blobs.Add(CsSlot.Signature, signature.SignedCms.Encode());
+        byte[] cmsBytes = signature.SignedCms.Encode();
+        blobs.Add(CsSlot.Signature, cmsBytes);
 
-        //We need to update the header etc. before adding the CodeDirectory as it calculates page hashes, and they otherwise won't be correct.
-        WriteHeaders(data, obj, codeLimit, padLen, sbSize);
+        uint requiredSize = checked((uint)(SuperBlobHeader.StructSize + BlobWrapper.StructSize + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize)));
+        // FCS-006: Capacity is validated before any persistent Mach-O header or allocation mutation.
+        if (requiredSize > sbSize)
+            throw new InvalidOperationException($"The encoded CMS requires {requiredSize} bytes, exceeding the reserved Mach-O signature capacity of {sbSize} bytes.");
 
-        allocation.SetLength((uint)(oldSize + padLen + sbSize)); //Extend the allocation with the SuperBlob
-        data = allocation.GetSpan();
+        uint newSize = checked((uint)(oldSize + padLen + sbSize));
+        byte[] staged = new byte[newSize];
+        original.CopyTo(staged);
+        WriteHeaders(staged, obj, codeLimit, padLen, sbSize);
 
         //Set the span at after the file where the SB begins
-        data = data[(oldSize + padLen)..];
+        Span<byte> data = staged.AsSpan(oldSize + padLen);
 
         // Write the SuperBlob header
         WriteUInt32BigEndian(data[..], (uint)CsMagic.EmbeddedSignature);
@@ -318,6 +310,30 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             //Write the actual blob
             blob.Value.Span.CopyTo(data);
             data = data[blob.Value.Length..];
+        }
+
+        // FCS-006: Stage every fallible serialization step before growing or mutating the persistent allocation.
+        try
+        {
+            allocation.SetLength(newSize);
+            Span<byte> destination = allocation.GetSpan();
+            if (destination.Length != staged.Length)
+                throw new InvalidOperationException("The allocation did not grow to the requested Mach-O signature size.");
+
+            staged.CopyTo(destination);
+        }
+        catch
+        {
+            try
+            {
+                allocation.SetLength((uint)oldSize);
+            }
+            catch
+            {
+                // IAllocation has no transaction primitive; preserve the original failure when rollback is unavailable.
+            }
+
+            throw;
         }
     }
 
@@ -376,7 +392,8 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             infoBytes = ms.ToArray();
         }
 
-        return CreateSignature(obj, data, signOptions, identifier, opt.TeamId, segmentFlags, requirementsBytes, entitlementsXmlBytes, entitlementsDerBytes, resourcesBytes, infoBytes, configureSigner);
+        string? teamId = opt.TeamId ?? (signOptions.Certificate.IsAppleDeveloperCertificate() ? signOptions.Certificate.GetTeamId() : null);
+        return CreateSignature(obj, data, signOptions, identifier, teamId, GetCodeDirectoryFlags(opt.SigningFlags), segmentFlags, requirementsBytes, entitlementsXmlBytes, entitlementsDerBytes, resourcesBytes, infoBytes, configureSigner);
     }
 
     bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
@@ -403,7 +420,103 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         return true;
     }
 
-    internal static Signature CreateSignature(MachOContext context, ReadOnlySpan<byte> data, SignOptions signOptions, string identifier, string? teamId, ExecSegFlags segFlags, ReadOnlyMemory<byte> requirements, ReadOnlyMemory<byte> entitlementsXml, ReadOnlyMemory<byte> entitlementsDer, ReadOnlyMemory<byte> resources, ReadOnlyMemory<byte> info, Action<CmsSigner>? configureSigner)
+    void IFormatHandler.CheckSignature(IContext context, ReadOnlySpan<byte> data, SignedCms signedCms)
+    {
+        ReadOnlySpan<byte> codeDirectory = GetEmbeddedBlob((MachOContext)context, data, CsSlot.CodeDirectory);
+        SignedCms detachedCms = new SignedCms(new ContentInfo(codeDirectory.ToArray()), true);
+        detachedCms.Decode(signedCms.Encode());
+
+        if (detachedCms.SignerInfos.Count == 0)
+            throw new CryptographicException("The CMS does not contain a signer.");
+
+        // FCS-001: Mach-O CMS signatures are detached and must verify over this exact embedded CodeDirectory blob.
+        detachedCms.CheckSignature(true);
+    }
+
+    internal static bool TryExtractSpecialSlot(MachOContext context, ReadOnlySpan<byte> data, CsSlot slot, out ReadOnlySpan<byte> blob)
+    {
+        try
+        {
+            blob = GetEmbeddedBlob(context, data, slot);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            blob = ReadOnlySpan<byte>.Empty;
+            return false;
+        }
+    }
+
+    internal static bool VerifySpecialSlot(MachOContext context, ReadOnlySpan<byte> data, CsSlot slot, ReadOnlySpan<byte> value)
+    {
+        ReadOnlySpan<byte> codeDirectory = GetEmbeddedBlob(context, data, CsSlot.CodeDirectory);
+        if (codeDirectory.Length < CodeDirectoryHeader.StructSize)
+            throw new InvalidDataException("The CodeDirectory is truncated.");
+
+        uint hashOffset = ReadUInt32BigEndian(codeDirectory[16..]);
+        uint specialSlotCount = ReadUInt32BigEndian(codeDirectory[24..]);
+        byte hashSize = codeDirectory[36];
+        byte hashType = codeDirectory[37];
+        uint slotIndex = (uint)slot;
+
+        if (slotIndex == 0 || slotIndex > specialSlotCount || hashSize == 0 || hashOffset < slotIndex * hashSize)
+            return false;
+
+        int slotOffset = checked((int)(hashOffset - (slotIndex * hashSize)));
+        if (slotOffset > codeDirectory.Length - hashSize)
+            throw new InvalidDataException("The CodeDirectory special-slot hashes are truncated.");
+
+        using IncrementalHash hasher = IncrementalHash.CreateHash(GetHashAlgorithmName(hashType));
+        hasher.AppendData(value);
+        byte[] actualHash = hasher.GetHashAndReset();
+        // FCS-003: External special-slot inputs are accepted only when their bytes reproduce the stored CodeDirectory hash.
+        return codeDirectory.Slice(slotOffset, hashSize).SequenceEqual(actualHash.AsSpan(0, hashSize));
+    }
+
+    private static ReadOnlySpan<byte> GetEmbeddedBlob(MachOContext context, ReadOnlySpan<byte> data, CsSlot slot)
+    {
+        if (context.CodeSignature == null)
+            throw new InvalidOperationException("The Mach Object is not signed.");
+
+        ulong offset = context.CodeSignature.DataOffset;
+        ulong size = context.CodeSignature.DataSize;
+        if (offset > (ulong)data.Length || size > (ulong)data.Length - offset || size < SuperBlobHeader.StructSize)
+            throw new InvalidDataException("The code signature superblob is truncated.");
+
+        ReadOnlySpan<byte> superBlob = data.Slice((int)offset, (int)size);
+        SuperBlobHeader header = SuperBlobHeader.Read(superBlob);
+        if (header.Magic != CsMagic.EmbeddedSignature || header.Length > superBlob.Length || header.Length < SuperBlobHeader.StructSize)
+            throw new InvalidDataException("The code signature superblob is invalid.");
+
+        ulong indexLength = (ulong)header.Count * BlobIndex.StructSize;
+        if (indexLength > header.Length - SuperBlobHeader.StructSize)
+            throw new InvalidDataException("The code signature blob index is truncated.");
+
+        superBlob = superBlob[..(int)header.Length];
+        for (int i = 0; i < header.Count; i++)
+        {
+            BlobIndex index = BlobIndex.Read(superBlob[(SuperBlobHeader.StructSize + (i * BlobIndex.StructSize))..]);
+            if (index.Type != slot)
+                continue;
+
+            if (index.Offset > superBlob.Length || (ulong)index.Offset + BlobWrapper.StructSize > (ulong)superBlob.Length)
+                throw new InvalidDataException("The code signature blob is truncated.");
+
+            ReadOnlySpan<byte> candidate = superBlob[(int)index.Offset..];
+            BlobWrapper blobHeader = BlobWrapper.Read(candidate);
+            if (blobHeader.Length < BlobWrapper.StructSize || blobHeader.Length > candidate.Length)
+                throw new InvalidDataException("The code signature blob is truncated.");
+
+            if (slot == CsSlot.CodeDirectory && blobHeader.Type != CsMagic.CodeDirectory)
+                throw new InvalidDataException("The CodeDirectory blob has invalid magic.");
+
+            return candidate[..(int)blobHeader.Length];
+        }
+
+        throw new InvalidOperationException($"The Mach-O signature does not contain slot {slot}.");
+    }
+
+    internal static Signature CreateSignature(MachOContext context, ReadOnlySpan<byte> data, SignOptions signOptions, string identifier, string? teamId, CdFlags codeDirectoryFlags, ExecSegFlags segFlags, ReadOnlyMemory<byte> requirements, ReadOnlyMemory<byte> entitlementsXml, ReadOnlyMemory<byte> entitlementsDer, ReadOnlyMemory<byte> resources, ReadOnlyMemory<byte> info, Action<CmsSigner>? configureSigner)
     {
         if (identifier == null!)
             throw new ArgumentNullException(nameof(identifier), $"Identifier cannot be null. Please supply a filename or set the identifier directly on {nameof(MachObjectFormatHandler)}");
@@ -420,13 +533,15 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         if (!entitlementsXml.IsEmpty)
             blobs.Add(CsSlot.Entitlements, entitlementsXml);
 
+        SortedList<CsSlot, ReadOnlyMemory<byte>> specialSlots = new SortedList<CsSlot, ReadOnlyMemory<byte>>(blobs);
         if (!resources.IsEmpty)
-            blobs.Add(CsSlot.ResourceDir, resources);
+            specialSlots.Add(CsSlot.ResourceDir, resources);
 
         if (!info.IsEmpty)
-            blobs.Add(CsSlot.Info, info);
+            specialSlots.Add(CsSlot.Info, info);
 
-        int maxSlot = blobs.Count == 0 ? 0 : blobs.Max(x => (int)x.Key); // We need to extract this here for max special slot
+        // FCS-002: Info.plist and CodeResources are external special-slot inputs, not embedded SuperBlob payloads.
+        int maxSlot = specialSlots.Count == 0 ? 0 : specialSlots.Max(x => (int)x.Key);
 
         ulong linkEditEnd = context.LinkEdit.FileOffset + context.LinkEdit.FileSize;
         Debug.Assert((uint)linkEditEnd == data.Length);
@@ -439,7 +554,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         blobs.Add(CsSlot.CodeDirectory, cdBlob);
 
         Span<byte> cdSpan = cdBlob.AsSpan();
-        WriteCodeDirectoryHeader(ref cdSpan, identifier, teamId, hashAlgo, maxSlot, codeLimit, context.Text, segFlags, cdSize, idOffset, teamIdOffset, hashesOffset);
+        WriteCodeDirectoryHeader(ref cdSpan, identifier, teamId, hashAlgo, maxSlot, codeLimit, context.Text, codeDirectoryFlags, segFlags, cdSize, idOffset, teamIdOffset, hashesOffset);
 
         uint sbSize = Align((uint)(SuperBlobHeader.StructSize // SuperBlob header size
                                    + BlobWrapper.StructSize + CmsSizeEst //CMS wrapper header size + estimated cms size
@@ -461,7 +576,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         {
             byte hashSize = hashAlgo.GetSize();
 
-            HashSpecialSlots(ref cdSpan, blobs, maxSlot, hasher, hashSize);
+            HashSpecialSlots(ref cdSpan, specialSlots, maxSlot, hasher, hashSize);
             HashCodeSlotsPatch(ref cdSpan, patch, hasher, hashSize);
             HashCodeSlots(cdSpan, data, padLen, codeLimit - (ulong)patch.Length, hasher, hashSize);
 
@@ -550,32 +665,48 @@ public sealed class MachObjectFormatHandler : IFormatHandler
     internal static ExecSegFlags GetExecSegFlags(Entitlements entitlements)
     {
         ExecSegFlags flags = ExecSegFlags.MainBinary;
-        if (entitlements.Contains("get-task-allow")) flags |= ExecSegFlags.AllowUnsigned;
-        if (entitlements.Contains("run-unsigned-code")) flags |= ExecSegFlags.AllowUnsigned;
-        if (entitlements.Contains("com.apple.private.cs.debugger")) flags |= ExecSegFlags.Debugger;
-        if (entitlements.Contains("dynamic-codesigning")) flags |= ExecSegFlags.Jit;
-        if (entitlements.Contains("com.apple.private.skip-library-validation")) flags |= ExecSegFlags.SkipLibraryValidation;
-        if (entitlements.Contains("com.apple.private.amfi.can-load-cdhash")) flags |= ExecSegFlags.CanLoadCdHash;
-        if (entitlements.Contains("com.apple.private.amfi.can-execute-cdhash")) flags |= ExecSegFlags.CanExecuteCdHash;
+        // FCS-005: ExecSeg permissions require the exact case-sensitive entitlement key with boolean true.
+        if (entitlements.IsEnabled("get-task-allow")) flags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.IsEnabled("run-unsigned-code")) flags |= ExecSegFlags.AllowUnsigned;
+        if (entitlements.IsEnabled("com.apple.private.cs.debugger")) flags |= ExecSegFlags.Debugger;
+        if (entitlements.IsEnabled("dynamic-codesigning")) flags |= ExecSegFlags.Jit;
+        if (entitlements.IsEnabled("com.apple.private.skip-library-validation")) flags |= ExecSegFlags.SkipLibraryValidation;
+        if (entitlements.IsEnabled("com.apple.private.amfi.can-load-cdhash")) flags |= ExecSegFlags.CanLoadCdHash;
+        if (entitlements.IsEnabled("com.apple.private.amfi.can-execute-cdhash")) flags |= ExecSegFlags.CanExecuteCdHash;
 
         return flags;
     }
+
+    internal static CdFlags GetCodeDirectoryFlags(MachObjectSigningFlags flags) => flags switch
+    {
+        MachObjectSigningFlags.None => CdFlags.None,
+        MachObjectSigningFlags.HardenedRuntime => CdFlags.Runtime,
+        _ => throw new ArgumentOutOfRangeException(nameof(flags))
+    };
 
     private static void WriteHeaders(Span<byte> span, MachOContext obj, ulong codeLimit, int padLength, uint sbSize)
     {
         bool le = obj.IsLittleEndian;
 
-        // Bump counts in the mach object header
-        WriteU32(span[16..], obj.MachHeader.NumberOfCommands + 1, le);
-        WriteU32(span[20..], obj.MachHeader.SizeOfCommands + LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
-
         // We need to insert the new load command right after the header
         int headerSize = obj.Is64Bit ? 32 : 28;
         int headerEnd = headerSize + (int)obj.MachHeader.SizeOfCommands;
+        const int commandSize = LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize;
+
+        if (headerEnd > span.Length - commandSize)
+            throw new InvalidDataException("The Mach Object does not have enough header padding for a code signature load command.");
+
+        foreach (byte value in span.Slice(headerEnd, commandSize))
+            if (value != 0)
+                throw new InvalidDataException("The Mach Object does not have enough header padding for a code signature load command.");
+
+        // Bump counts in the mach object header
+        WriteU32(span[16..], obj.MachHeader.NumberOfCommands + 1, le);
+        WriteU32(span[20..], obj.MachHeader.SizeOfCommands + commandSize, le);
 
         //Write CodeSignature
         WriteU32(span[(headerEnd + 0)..], (uint)LoadCommandType.CODE_SIGNATURE, le);
-        WriteU32(span[(headerEnd + 4)..], LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize, le);
+        WriteU32(span[(headerEnd + 4)..], commandSize, le);
         WriteU32(span[(headerEnd + 8)..], (uint)codeLimit, le); //Offset
         WriteU32(span[(headerEnd + 12)..], sbSize, le); //Length
 
@@ -594,7 +725,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         }
     }
 
-    private static void WriteCodeDirectoryHeader(ref Span<byte> span, string identifier, string? teamId, HashAlgorithmName hashAlgorithm, int maxSlot, ulong codeLimit, Segment textSeg, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
+    private static void WriteCodeDirectoryHeader(ref Span<byte> span, string identifier, string? teamId, HashAlgorithmName hashAlgorithm, int maxSlot, ulong codeLimit, Segment textSeg, CdFlags codeDirectoryFlags, ExecSegFlags segmentFlags, int cdSize, int idOffset, int teamIdOffset, int hashesOffset)
     {
         //The first header is the code directory header. It contains the size of the rest of the header.
         CodeDirectoryHeader header = new CodeDirectoryHeader
@@ -602,7 +733,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             Magic = CsMagic.CodeDirectory,
             Length = (uint)cdSize,
             Version = UseVersion,
-            Flags = CdFlags.None,
+            Flags = codeDirectoryFlags,
             HashOffset = (uint)hashesOffset,
             IdentOffset = (uint)idOffset,
             nSpecialSlots = (uint)maxSlot,

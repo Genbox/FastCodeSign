@@ -8,13 +8,14 @@ internal static class FormatHandlerFactory
     private static readonly IFormatHandler[] Handlers =
     [
         new PeFormatHandler(),
+        new FatMachObjectFormatHandler(),
         new MachObjectFormatHandler(),
         new PowerShellCmdletDefinitionXmlFormatHandler(),
         new PowerShellConsoleFormatHandler(),
         new PowerShellManifestFormatHandler(),
-        new PowerShellModuleFormatHandler(),
         new PowerShellXmlFormatHandler(),
         new PowerShellScriptFormatHandler(), //This is here because it matches everything
+        new PowerShellModuleFormatHandler(),
     ];
 
     public static IFormatHandler? Get(ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)

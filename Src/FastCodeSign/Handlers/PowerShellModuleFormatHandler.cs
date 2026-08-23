@@ -10,7 +10,7 @@ public sealed class PowerShellModuleFormatHandler(Encoding? encoding = null) : T
 {
     // See https://learn.microsoft.com/en-us/powershell/scripting/developer/module/understanding-a-windows-powershell-module?view=powershell-7.5
 
-    public override int MinValidSize => 13; // function a{1}
+    public override int MinValidSize => 0;
     public override string[] ValidExt => ["psm1"];
-    public override bool IsValidHeader(ReadOnlySpan<byte> data) => ContainsAdv(data, "function");
+    public override bool IsValidHeader(ReadOnlySpan<byte> data) => true;
 }

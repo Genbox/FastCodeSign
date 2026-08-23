@@ -29,4 +29,9 @@ public class AppBundleOptions : IBundleOptions
     /// An optional team id.
     /// </summary>
     public string? TeamId { get; set; }
+
+    /// <summary>
+    /// Controls macOS code-signing behavior for the bundle executable and nested code.
+    /// </summary>
+    public MachObjectSigningFlags SigningFlags { get; set; }
 }

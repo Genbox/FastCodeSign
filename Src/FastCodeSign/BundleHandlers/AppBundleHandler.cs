@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Enums;
@@ -10,6 +12,7 @@ using Genbox.FastCodeSign.Extensions;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Helpers;
 using Genbox.FastCodeSign.Internal.Bundles;
+using Genbox.FastCodeSign.Internal.Helpers;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.MachObjects;
@@ -19,6 +22,8 @@ namespace Genbox.FastCodeSign.BundleHandlers;
 
 public sealed class AppBundleHandler : IBundleHandler
 {
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
     public IContext GetContext(string path) => AppBundleContext.Create(path);
 
     public bool IsBundlePath(string path) => File.Exists(Path.Combine(path, "Contents", "Info.plist"));
@@ -51,29 +56,19 @@ public sealed class AppBundleHandler : IBundleHandler
             entitlementsDerBytes = entitlements.EncodeAsDer();
         }
 
-        Dictionary<string, object>? resourceSeal = opt.ResourcesPropertyList;
-        byte[]? resourcesBytes = null;
+        Dictionary<string, object> signingRules2 = opt.ResourcesPropertyList?.TryGetValue("rules2", out object? customRules) == true && customRules is Dictionary<string, object> customRules2 ? customRules2 : BuildRules2();
+        // FCS-002: Nested code is signed before the parent envelope captures its CodeDirectory hash.
+        string? teamId = opt.TeamId ?? (signOptions.Certificate.IsAppleDeveloperCertificate() ? signOptions.Certificate.GetTeamId() : null);
+        CdFlags codeDirectoryFlags = MachObjectFormatHandler.GetCodeDirectoryFlags(opt.SigningFlags);
+        SignNestedCode(obj, signOptions, signingRules2, teamId, opt.SigningFlags);
 
-        using MemoryStream ms = new MemoryStream();
-
-        if (resourceSeal != null)
-        {
-            ms.SetLength(0);
-            PListSerializer.Serialize(resourceSeal, ms);
-            resourcesBytes = ms.ToArray();
-        }
+        Dictionary<string, object> pList = opt.ResourcesPropertyList ?? BuildPList(obj, signOptions.Certificate);
+        byte[] resourcesBytes = SerializePList(pList);
 
         Dictionary<string, object>? propertyList = opt.InfoPropertyList;
-        byte[]? infoBytes = null;
-
-        if (propertyList != null)
-        {
-            ms.SetLength(0);
-            PListSerializer.Serialize(propertyList, ms);
-            infoBytes = ms.ToArray();
-        }
-
-        Dictionary<string, object> pList = BuildPList(obj); // Do not inline
+        byte[] infoBytes = File.ReadAllBytes(Path.Combine(obj.BundlePath, "Contents", "Info.plist"));
+        if (propertyList != null && !SerializePList(propertyList).AsSpan().SequenceEqual(infoBytes))
+            throw new InvalidOperationException("InfoPropertyList must serialize to the exact on-disk Info.plist bytes.");
 
         IFormatHandler handler = new MachObjectFormatHandler();
         using FileAllocation file = new FileAllocation(obj.BundleExecutablePath);
@@ -86,11 +81,11 @@ public sealed class AppBundleHandler : IBundleHandler
         {
             ReadOnlySpan<byte> objSpan = objs[i].GetSpan(dataSpan);
             MachOContext machOContext = (MachOContext)handler.GetContext(objSpan);
-            signatures[i] = MachObjectFormatHandler.CreateSignature(machOContext, objSpan, signOptions, obj.Identifier, opt.TeamId, segmentFlags, requirementsBytes, entitlementsXmlBytes, entitlementsDerBytes, resourcesBytes, infoBytes, null);
+            signatures[i] = MachObjectFormatHandler.CreateSignature(machOContext, objSpan, signOptions, obj.Identifier, teamId, codeDirectoryFlags, segmentFlags, requirementsBytes, entitlementsXmlBytes, entitlementsDerBytes, resourcesBytes, infoBytes, null);
         }
 
         // Sign the resources
-        return new BundleSignature(signatures, new AppBundleInfo { CodeResources = pList });
+        return new BundleSignature(signatures, new AppBundleInfo { CodeResources = pList, CodeResourcesBytes = resourcesBytes });
     }
 
     void IBundleHandler.WriteSignature(IContext context, BundleSignature signature)
@@ -106,7 +101,8 @@ public sealed class AppBundleHandler : IBundleHandler
 
         string codeResFile = Path.Combine(codeSigPath, "CodeResources");
         using FileStream fs = File.Create(codeResFile);
-        PListSerializer.Serialize(info.CodeResources, fs);
+        // FCS-002: Write the exact CodeResources bytes hashed into the executable's ResourceDir special slot.
+        fs.Write(info.CodeResourcesBytes);
 
         // Write the signature(s) to the mach object file
         using FileAllocation file = new FileAllocation(obj.BundleExecutablePath);
@@ -115,20 +111,7 @@ public sealed class AppBundleHandler : IBundleHandler
         MachObject[] machObjects = MachObjectHelper.GetMachObjects(span);
         Debug.Assert(signature.Signatures.Length == machObjects.Length, "The number of signatures does not match the number of mach object slices.");
 
-        MachMagic magic = (MachMagic)ReadUInt32BigEndian(span);
-
-        switch (magic)
-        {
-            case MachMagic.FatMagicBE or MachMagic.FatMagicLE:
-                WriteFatSignature(file, machObjects, signature.Signatures, false);
-                break;
-            case MachMagic.FatMagic64BE or MachMagic.FatMagic64LE:
-                WriteFatSignature(file, machObjects, signature.Signatures, true);
-                break;
-            default:
-                WriteThinSignature(span, file, signature.Signatures[0]);
-                break;
-        }
+        MachObjectSignatureHelper.WriteSignatures(file, machObjects, signature.Signatures);
     }
 
     public SignatureComponent RemoveSignature(IContext context)
@@ -168,22 +151,23 @@ public sealed class AppBundleHandler : IBundleHandler
         }
 
         using FileAllocation allocation = new FileAllocation(obj.BundleExecutablePath);
-        IFormatHandler handler = new MachObjectFormatHandler();
-
-        Span<byte> span = allocation.GetSpan();
-
-        MachObject[] objs = MachObjectHelper.GetMachObjects(span);
-
-        foreach (MachObject machObject in objs)
+        ReadOnlySpan<byte> executable = allocation.GetSpan();
+        MachObject[] objects = MachObjectHelper.GetMachObjects(executable);
+        IFormatHandler machHandler = new MachObjectFormatHandler();
+        bool hasSignature = false;
+        foreach (MachObject machObject in objects)
         {
-            Span<byte> objSpan = machObject.GetSpan(span);
-            IContext machContext = handler.GetContext(objSpan);
-
-            if (machContext.IsSigned)
+            if (machHandler.GetContext(machObject.GetSpan(executable)).IsSigned)
             {
-                handler.RemoveSignature(machContext, objSpan);
-                removed |= SignatureComponent.MachObjectSignature;
+                hasSignature = true;
+                break;
             }
+        }
+
+        if (hasSignature)
+        {
+            RemoveMachSignatures(allocation, executable, objects, machHandler);
+            removed |= SignatureComponent.MachObjectSignature;
         }
 
         return removed;
@@ -194,6 +178,10 @@ public sealed class AppBundleHandler : IBundleHandler
         AppBundleContext obj = (AppBundleContext)context;
 
         if (!obj.IsSigned)
+            return false;
+
+        // A CodeResources seal and every main-executable architecture are required for a complete bundle signature.
+        if (!File.Exists(Path.Combine(obj.BundlePath, "Contents", "_CodeSignature", "CodeResources")))
             return false;
 
         // Check if the signature in the mach object is valid
@@ -208,6 +196,9 @@ public sealed class AppBundleHandler : IBundleHandler
             {
                 ReadOnlySpan<byte> objSpan = machObject.GetSpan(span);
                 IContext objContext = handler.GetContext(objSpan);
+
+                if (!objContext.IsSigned)
+                    return false;
 
                 ReadOnlySpan<byte> signatureBytes = handler.ExtractSignature(objContext, objSpan);
                 Debug.Assert(!signatureBytes.IsEmpty);
@@ -225,6 +216,16 @@ public sealed class AppBundleHandler : IBundleHandler
                 SignedCms signedCms = new SignedCms();
                 signedCms.Decode(signatureBytes);
 
+                try
+                {
+                    // FCS-001: Each bundle architecture must verify its detached CMS over its embedded CodeDirectory.
+                    handler.CheckSignature(objContext, objSpan, signedCms);
+                }
+                catch (CryptographicException)
+                {
+                    return false;
+                }
+
                 if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName hashAlgorithm))
                     throw new InvalidOperationException("The CMS does not contain a valid hash.");
 
@@ -239,11 +240,36 @@ public sealed class AppBundleHandler : IBundleHandler
 
     private static bool VerifyResourceSeal(AppBundleContext context)
     {
+        string codeResourcesPath = Path.Combine(context.BundlePath, "Contents", "_CodeSignature", "CodeResources");
+        byte[] codeResourcesBytes = File.ReadAllBytes(codeResourcesPath);
+
+        // FCS-003: Trust the on-disk special-slot inputs only after matching their exact sealed bytes in every architecture.
+        if (!VerifySpecialSlots(context, codeResourcesBytes, File.ReadAllBytes(Path.Combine(context.BundlePath, "Contents", "Info.plist"))))
+            return false;
+
         // Deserialize the property list
-        Dictionary<string, object> pList = PListSerializer.Deserialize(File.ReadAllBytes(Path.Combine(context.BundlePath, "Contents", "_CodeSignature", "CodeResources")));
-        Dictionary<string, object> files2 = (Dictionary<string, object>)pList["files2"];
+        Dictionary<string, object> pList = PListSerializer.Deserialize(codeResourcesBytes);
+        if (!pList.TryGetValue("files2", out object? filesObject) || filesObject is not Dictionary<string, object> files2 || !pList.TryGetValue("rules2", out object? rulesObject) || rulesObject is not Dictionary<string, object> rules2)
+            return false;
 
         string contents = Path.Combine(context.BundlePath, "Contents");
+
+        foreach (SealEntry entry in EnumerateSealableEntries(context, rules2))
+        {
+            string relativePath = entry.RelativePath;
+            RuleDecision rule = EvaluateRule(rules2, relativePath);
+            if (!rule.Matched || (entry.NestedCode != null && !rule.Nested))
+                return false;
+
+            if (rule.Omit)
+                continue;
+
+            if (!files2.TryGetValue(relativePath, out object? value))
+                return false;
+
+            if ((entry.NestedCode != null) != IsNestedEntry(value))
+                return false;
+        }
 
         foreach ((string relativePath, object value) in files2)
         {
@@ -256,7 +282,8 @@ public sealed class AppBundleHandler : IBundleHandler
 
     private static bool ValidateFiles2Entry(string contentsRoot, string relativePath, object value)
     {
-        string fullPath = Path.Combine(contentsRoot, relativePath);
+        if (!TryResolveBundleRelativePath(contentsRoot, relativePath, out string? fullPath))
+            return false;
 
         if (value is byte[] hashBytes)
             return ValidateFileHash(fullPath, hashBytes, HashAlgorithmName.SHA256);
@@ -266,13 +293,18 @@ public sealed class AppBundleHandler : IBundleHandler
 
         if (dict.TryGetValue("cdhash", out object? cdHashObj) && cdHashObj is byte[] cdHash)
         {
-            if (!Directory.Exists(fullPath))
+            NestedCode? nested = TryResolveNestedCode(fullPath, Directory.Exists(fullPath));
+            if (nested == null)
                 return false;
 
-            if (!ValidateCdHash(fullPath, cdHash))
+            if (!dict.TryGetValue("requirement", out object? requirementObj) || requirementObj is not string requirement)
                 return false;
 
-            return ValidateMachSignature(fullPath);
+            if (!ValidateExecutableCdHash(nested.ExecutablePath, cdHash, requirement))
+                return false;
+
+            // FCS-003: Nested bundles recurse; standalone nested Mach-O code must validate every architecture.
+            return nested.IsBundle ? CodeSignProvider.FromBundle(nested.SealPath).HasValidSignature() : ValidateMachExecutable(nested.ExecutablePath);
         }
 
         if (dict.TryGetValue("symlink", out object? symlinkObj) && symlinkObj is string expectedTarget)
@@ -304,11 +336,8 @@ public sealed class AppBundleHandler : IBundleHandler
         return expectedHash.SequenceEqual(actual);
     }
 
-    private static bool ValidateCdHash(string bundlePath, byte[] expectedCdHash)
+    private static bool ValidateExecutableCdHash(string executablePath, byte[] expectedCdHash, string expectedRequirementText)
     {
-        if (!TryResolveExecutablePath(bundlePath, out string? executablePath))
-            return false;
-
         IFormatHandler formatHandler = new MachObjectFormatHandler();
 
         using FileAllocation allocation = new FileAllocation(executablePath);
@@ -317,43 +346,71 @@ public sealed class AppBundleHandler : IBundleHandler
         MachObject[] objs = MachObjectHelper.GetMachObjects(span);
 
         if (objs.Length == 0)
-            return TryMatchCdHash(formatHandler, span, expectedCdHash);
+            return ValidateNestedSlice(formatHandler, span, expectedCdHash, expectedRequirementText, out bool matchesCdHash) && matchesCdHash;
 
-        foreach (MachObject machObject in objs)
+        bool anyCdHashMatch = false;
+        for (int i = 0; i < objs.Length; i++)
         {
-            ReadOnlySpan<byte> objSpan = machObject.GetSpan(span);
-            if (TryMatchCdHash(formatHandler, objSpan, expectedCdHash))
-                return true;
+            ReadOnlySpan<byte> objSpan = objs[i].GetSpan(span);
+            if (!ValidateNestedSlice(formatHandler, objSpan, expectedCdHash, expectedRequirementText, out bool matchesCdHash))
+                return false;
+            anyCdHashMatch |= matchesCdHash;
         }
 
-        return false;
+        return anyCdHashMatch;
     }
 
-    private static bool TryMatchCdHash(IFormatHandler handler, ReadOnlySpan<byte> objSpan, byte[] expectedCdHash)
+    private static bool ValidateNestedSlice(IFormatHandler handler, ReadOnlySpan<byte> objSpan, byte[] expectedCdHash, string expectedRequirementText, out bool matchesCdHash)
     {
+        matchesCdHash = false;
         IContext machContext = handler.GetContext(objSpan);
+
+        if (!machContext.IsSigned)
+            return false;
 
         ReadOnlySpan<byte> signatureBytes = handler.ExtractSignature(machContext, objSpan);
         SignedCms signedCms = new SignedCms();
         signedCms.Decode(signatureBytes);
 
-        if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? digest, out _))
+        try
+        {
+            handler.CheckSignature(machContext, objSpan, signedCms);
+        }
+        catch (CryptographicException)
+        {
             return false;
+        }
+
+        if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? digest, out HashAlgorithmName algorithm) || !digest.SequenceEqual(handler.ComputeHash(machContext, objSpan, algorithm)))
+            return false;
+
+        if (!MachObjectFormatHandler.TryExtractSpecialSlot((MachOContext)machContext, objSpan, CsSlot.Requirements, out ReadOnlySpan<byte> requirements))
+            return false;
+
+        try
+        {
+            if (!string.Equals(Requirements.GetDesignatedRequirementText(requirements), expectedRequirementText, StringComparison.Ordinal))
+                return false;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
 
         ReadOnlySpan<byte> cdHash = digest.Length > 20 ? digest.AsSpan(0, 20) : digest;
-
-        return cdHash.SequenceEqual(expectedCdHash);
+        matchesCdHash = cdHash.SequenceEqual(expectedCdHash);
+        return true;
     }
 
-    private static bool ValidateMachSignature(string bundlePath)
+    private static bool ValidateMachExecutable(string executablePath)
     {
-        if (!TryResolveExecutablePath(bundlePath, out string? executablePath))
-            return false;
-
-        IFormatHandler handler = new MachObjectFormatHandler();
-
         using FileAllocation allocation = new FileAllocation(executablePath);
-        Span<byte> span = allocation.GetSpan();
+        return ValidateMachData(allocation.GetSpan());
+    }
+
+    private static bool ValidateMachData(ReadOnlySpan<byte> span)
+    {
+        IFormatHandler handler = new MachObjectFormatHandler();
 
         MachObject[] objs = MachObjectHelper.GetMachObjects(span);
 
@@ -380,6 +437,15 @@ public sealed class AppBundleHandler : IBundleHandler
             SignedCms signedCms = new SignedCms();
             signedCms.Decode(signatureBytes);
 
+            try
+            {
+                handler.CheckSignature(machContext, objSpan, signedCms);
+            }
+            catch (CryptographicException)
+            {
+                return false;
+            }
+
             if (!handler.ExtractHashFromSignedCms(signedCms, out byte[]? expectedDigest, out HashAlgorithmName algo))
                 return false;
 
@@ -388,213 +454,389 @@ public sealed class AppBundleHandler : IBundleHandler
         }
     }
 
-    private static bool TryResolveExecutablePath(string bundlePath, [NotNullWhen(true)]out string? executablePath)
+    private static Dictionary<string, object> BuildPList(AppBundleContext obj, X509Certificate2 certificate)
     {
-        executablePath = null;
-
-        string? infoPath = FindInfoPlist(bundlePath, out string? execName);
-        execName ??= Path.GetFileNameWithoutExtension(bundlePath);
-
-        HashSet<string> candidates =
-        [
-            Path.Combine(bundlePath, "Contents", "MacOS", execName),
-            Path.Combine(bundlePath, execName),
-            Path.Combine(bundlePath, "Versions", "Current", execName),
-            Path.Combine(bundlePath, "Versions", "A", execName)
-        ];
-
-        if (infoPath != null)
-        {
-            string infoDir = Path.GetDirectoryName(infoPath)!;
-            string? parent = Directory.GetParent(infoDir)?.FullName;
-
-            if (parent != null)
-                candidates.Add(Path.Combine(parent, execName));
-        }
-
-        foreach (string candidate in candidates)
-        {
-            FileInfo fi = new FileInfo(candidate);
-
-            if (!fi.Exists || fi.Length == 0)
-                continue;
-
-            executablePath = candidate;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static void WriteThinSignature(Span<byte> span, FileAllocation file, Signature machSignature)
-    {
-        IFormatHandler handler = new MachObjectFormatHandler();
-        IContext machContext = handler.GetContext(span);
-        handler.WriteSignature(machContext, file, machSignature);
-    }
-
-    private static void WriteFatSignature(FileAllocation unsignedFile, MachObject[] machObjects, Signature[] signatures, bool isFat64)
-    {
-        MachMagic magic = isFat64 ? MachMagic.FatMagic64BE : MachMagic.FatMagicBE;
-        IFormatHandler handler = new MachObjectFormatHandler();
-
-        ReadOnlySpan<byte> unsignedSpan = unsignedFile.GetSpan();
-
-        string tempPath = unsignedFile.FilePath + ".tmp";
-        int archHeaderSize = isFat64 ? 32 : 20;
-        int headerSize = 8 + (machObjects.Length * archHeaderSize);
-        byte[] headerBuffer = new byte[headerSize];
-
-        try
-        {
-            using FileStream tempStream = new FileStream(tempPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-            Span<byte> headerSpan = headerBuffer;
-
-            WriteUInt32BigEndian(headerSpan, (uint)magic);
-            WriteUInt32BigEndian(headerSpan[4..], (uint)machObjects.Length);
-
-            // Reserve header space
-            tempStream.SetLength(headerSize);
-
-            ulong offset = (ulong)headerSize;
-
-            for (int i = 0; i < machObjects.Length; i++)
-            {
-                ReadOnlySpan<byte> objSpan = machObjects[i].GetSpan(unsignedSpan);
-
-                MemoryAllocation allocation = new MemoryAllocation(objSpan.ToArray());
-                IContext machContext = handler.GetContext(allocation.GetSpan());
-                handler.WriteSignature(machContext, allocation, signatures[i]);
-
-                Span<byte> signedSpan = allocation.GetSpan();
-
-                offset = Align(offset, 1UL << (int)machObjects[i].Align);
-                tempStream.Position = (long)offset;
-                tempStream.Write(signedSpan);
-
-                int archOffset = 8 + (i * archHeaderSize);
-
-                WriteUInt32BigEndian(headerSpan[archOffset..], (uint)machObjects[i].CpuType);
-                WriteUInt32BigEndian(headerSpan[(archOffset + 4)..], Convert.ToUInt32(machObjects[i].CpuSubType));
-
-                if (isFat64)
-                {
-                    WriteUInt64BigEndian(headerSpan[(archOffset + 8)..], offset);
-                    WriteUInt64BigEndian(headerSpan[(archOffset + 16)..], (ulong)signedSpan.Length);
-                    WriteUInt32BigEndian(headerSpan[(archOffset + 24)..], machObjects[i].Align);
-                    WriteUInt32BigEndian(headerSpan[(archOffset + 28)..], 0);
-                }
-                else
-                {
-                    WriteUInt32BigEndian(headerSpan[(archOffset + 8)..], checked((uint)offset));
-                    WriteUInt32BigEndian(headerSpan[(archOffset + 12)..], checked((uint)signedSpan.Length));
-                    WriteUInt32BigEndian(headerSpan[(archOffset + 16)..], machObjects[i].Align);
-                }
-
-                offset += (ulong)signedSpan.Length;
-            }
-
-            tempStream.SetLength((long)offset);
-            tempStream.Position = 0;
-            tempStream.Write(headerBuffer);
-            tempStream.Flush();
-            tempStream.Position = 0;
-
-            unsignedFile.SetLength(checked((uint)offset));
-            Span<byte> dest = unsignedFile.GetSpan();
-            int copied = 0;
-
-            while (true)
-            {
-                int read = tempStream.Read(dest[copied..]);
-
-                if (read == 0)
-                    break;
-
-                copied += read;
-            }
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
-    }
-
-    private static string? FindInfoPlist(string bundlePath, out string? execName)
-    {
-        string[] possible =
-        [
-            Path.Combine(bundlePath, "Contents", "Info.plist"),
-            Path.Combine(bundlePath, "Resources", "Info.plist"),
-            Path.Combine(bundlePath, "Info.plist"),
-            Path.Combine(bundlePath, "Versions", "Current", "Resources", "Info.plist"),
-            Path.Combine(bundlePath, "Versions", "A", "Resources", "Info.plist")
-        ];
-
-        foreach (string path in possible)
-        {
-            if (!File.Exists(path))
-                continue;
-
-            Dictionary<string, object> plist = PListSerializer.Deserialize(File.ReadAllBytes(path));
-
-            execName = plist.TryGetValue("CFBundleExecutable", out object? execObj) ? (string)execObj : null;
-            return path;
-        }
-
-        execName = null;
-        return null;
-    }
-
-    private static Dictionary<string, object> BuildPList(AppBundleContext obj)
-    {
+        Dictionary<string, object> files = new Dictionary<string, object>(StringComparer.Ordinal);
         Dictionary<string, object> files2 = new Dictionary<string, object>(StringComparer.Ordinal);
+        Dictionary<string, object> rules = BuildRules();
+        Dictionary<string, object> rules2 = BuildRules2();
 
-        string contentsPath = Path.Combine(obj.BundlePath, "Contents");
-        foreach (string entry in Directory.EnumerateFileSystemEntries(contentsPath, "*", SearchOption.AllDirectories))
+        foreach (SealEntry sealEntry in EnumerateSealableEntries(obj, rules2))
         {
-            string relative = Path.GetRelativePath(contentsPath, entry);
-            relative = relative.Replace(Path.DirectorySeparatorChar, '/');
-
-            // Skip our own signature artifacts
-            if (relative.StartsWith("_CodeSignature", StringComparison.Ordinal) || string.Equals(relative, "CodeResources", StringComparison.Ordinal))
+            string relative = sealEntry.RelativePath;
+            string entry = sealEntry.FullPath;
+            if (EvaluateRule(rules2, relative).Omit)
                 continue;
+
+            if (sealEntry.NestedCode != null)
+            {
+                NestedCode nested = sealEntry.NestedCode;
+                Requirements nestedRequirement = certificate.IsAppleDeveloperCertificate()
+                    ? Requirements.CreateAppleDevDefault(nested.Identifier, certificate)
+                    : Requirements.CreateDefault(nested.Identifier, certificate);
+
+                files2.Add(relative, new Dictionary<string, object>
+                {
+                    { "cdhash", GetExecutableCdHash(nested.ExecutablePath) },
+                    // FCS-002/FCS-003: This text corresponds byte-for-byte to the designated requirement retained or generated for nested code.
+                    { "requirement", nestedRequirement.GetDesignatedRequirementText() }
+                });
+                continue;
+            }
 
             FileAttributes attrs = File.GetAttributes(entry);
             bool isDir = (attrs & FileAttributes.Directory) != FileAttributes.None;
             bool isReparse = (attrs & FileAttributes.ReparsePoint) != FileAttributes.None;
-
-            if (isDir && !isReparse)
-                continue; // Directories are represented by their contents
-
-            Dictionary<string, object> files2Value = new Dictionary<string, object>(3);
+            Dictionary<string, object> files2Value = new Dictionary<string, object>(1);
 
             if (isReparse)
             {
                 FileSystemInfo fsi = isDir ? new DirectoryInfo(entry) : new FileInfo(entry);
-                if (fsi.LinkTarget != null)
-                    files2Value.Add("symlink", fsi.LinkTarget);
-                else
-                    throw new InvalidDataException($"Unable to resolve symlink target for '{relative}'.");
+                files2Value.Add("symlink", fsi.LinkTarget ?? throw new InvalidDataException($"Unable to resolve symlink target for '{relative}'."));
             }
             else
             {
                 using FileStream fs = File.OpenRead(entry);
                 files2Value.Add("hash2", SHA256.HashData(fs));
+
+                if (!EvaluateRule(rules, relative).Omit && Regex.IsMatch(relative, @"^(Resources/|version\.plist$)", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, RegexTimeout))
+                {
+                    fs.Position = 0;
+                    files.Add(relative, SHA1.HashData(fs));
+                }
             }
 
             files2.Add(relative, files2Value);
         }
 
+        // FCS-002: A v2 CodeResources envelope carries both legacy and modern seals plus their evaluation rules.
         return new Dictionary<string, object>
         {
-            { "files2", files2 }
+            { "files", files },
+            { "files2", files2 },
+            { "rules", rules },
+            { "rules2", rules2 }
         };
     }
+
+    private static void SignNestedCode(AppBundleContext context, SignOptions signOptions, Dictionary<string, object> rules2, string? teamId, MachObjectSigningFlags signingFlags)
+    {
+        foreach (NestedCode nested in EnumerateSealableEntries(context, rules2).Select(entry => entry.NestedCode).OfType<NestedCode>())
+        {
+            if (!PathHelper.IsPhysicalPathWithin(nested.ExecutablePath, context.BundlePath))
+                throw new InvalidDataException($"Nested executable '{nested.ExecutablePath}' resolves outside the bundle.");
+
+            if (!nested.IsBundle)
+            {
+                SignMachExecutable(nested, signOptions, teamId, signingFlags);
+                continue;
+            }
+
+            CodeSignBundleProvider provider = CodeSignProvider.FromBundle(nested.SealPath);
+            AppBundleContext nestedContext = AppBundleContext.Create(nested.SealPath);
+
+            if (nestedContext.IsSigned)
+                provider.RemoveSignature();
+
+            BundleSignature signature = provider.CreateSignature(signOptions, new AppBundleOptions { TeamId = teamId, SigningFlags = signingFlags });
+            provider.WriteSignature(signature);
+        }
+    }
+
+    private static void SignMachExecutable(NestedCode nested, SignOptions signOptions, string? teamId, MachObjectSigningFlags signingFlags)
+    {
+        IFormatHandler handler = new MachObjectFormatHandler();
+        using FileAllocation allocation = new FileAllocation(nested.ExecutablePath);
+        ReadOnlySpan<byte> data = allocation.GetSpan();
+        MachObject[] machObjects = MachObjectHelper.GetMachObjects(data);
+        bool anySigned = false;
+        foreach (MachObject machObject in machObjects)
+        {
+            bool isSigned = handler.GetContext(machObject.GetSpan(data)).IsSigned;
+            anySigned |= isSigned;
+        }
+
+        Requirements requirements = CreateRequirements(nested.Identifier, signOptions.Certificate);
+        byte[] requirementBytes = requirements.ToArray();
+
+        if (anySigned)
+        {
+            // Parent re-signing also re-signs nested code, propagating its requested identity and flags.
+            RemoveMachSignatures(allocation, data, machObjects, handler);
+            data = allocation.GetSpan();
+            machObjects = MachObjectHelper.GetMachObjects(data);
+        }
+
+        Signature[] signatures = new Signature[machObjects.Length];
+
+        for (int i = 0; i < machObjects.Length; i++)
+        {
+            ReadOnlySpan<byte> slice = machObjects[i].GetSpan(data);
+            MachOContext machContext = (MachOContext)handler.GetContext(slice);
+            signatures[i] = MachObjectFormatHandler.CreateSignature(machContext, slice, signOptions, nested.Identifier, teamId, MachObjectFormatHandler.GetCodeDirectoryFlags(signingFlags), ExecSegFlags.MainBinary, requirementBytes, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, null);
+        }
+
+        MachObjectSignatureHelper.WriteSignatures(allocation, machObjects, signatures);
+    }
+
+    private static Requirements CreateRequirements(string identifier, X509Certificate2 certificate) => certificate.IsAppleDeveloperCertificate()
+        ? Requirements.CreateAppleDevDefault(identifier, certificate)
+        : Requirements.CreateDefault(identifier, certificate);
+
+    private static void RemoveMachSignatures(FileAllocation allocation, ReadOnlySpan<byte> data, MachObject[] machObjects, IFormatHandler handler)
+    {
+        MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
+        if (magic is not (MachMagic.FatMagicBE or MachMagic.FatMagicLE or MachMagic.FatMagic64BE or MachMagic.FatMagic64LE))
+        {
+            Span<byte> slice = allocation.GetSpan();
+            IContext context = handler.GetContext(slice);
+            if (context.IsSigned)
+            {
+                long delta = handler.RemoveSignature(context, slice);
+                allocation.SetLength(checked((uint)(slice.Length - delta)));
+            }
+            return;
+        }
+
+        MachObjectSignatureHelper.RemoveSignatures(allocation, machObjects);
+    }
+
+    private static void RemoveMachSignatures(string executablePath)
+    {
+        using FileAllocation allocation = new FileAllocation(executablePath);
+        ReadOnlySpan<byte> data = allocation.GetSpan();
+        RemoveMachSignatures(allocation, data, MachObjectHelper.GetMachObjects(data), new MachObjectFormatHandler());
+    }
+
+    private static NestedCode? TryResolveNestedCode(string path, bool isDirectory)
+    {
+        if (!isDirectory)
+            return IsMachObjectFile(path) ? new NestedCode(path, path, Path.GetFileName(path), false) : null;
+
+        if (IsNestedBundle(path))
+        {
+            AppBundleContext context = AppBundleContext.Create(path);
+            return new NestedCode(path, context.BundleExecutablePath, context.Identifier, true);
+        }
+
+        string[] infoCandidates =
+        [
+            Path.Combine(path, "Resources", "Info.plist"),
+            Path.Combine(path, "Versions", "Current", "Resources", "Info.plist"),
+            Path.Combine(path, "Versions", "A", "Resources", "Info.plist"),
+            Path.Combine(path, "Info.plist")
+        ];
+
+        string identifier = Path.GetFileNameWithoutExtension(path);
+        string executableName = identifier;
+        foreach (string infoPath in infoCandidates)
+        {
+            if (!File.Exists(infoPath))
+                continue;
+
+            Dictionary<string, object> info = PListSerializer.Deserialize(File.ReadAllBytes(infoPath));
+            if (info.TryGetValue("CFBundleIdentifier", out object? identifierValue) && identifierValue is string bundleIdentifier)
+                identifier = bundleIdentifier;
+            if (info.TryGetValue("CFBundleExecutable", out object? executableValue) && executableValue is string bundleExecutable)
+                executableName = bundleExecutable;
+            break;
+        }
+
+        string[] executableCandidates =
+        [
+            Path.Combine(path, executableName),
+            Path.Combine(path, "Versions", "Current", executableName),
+            Path.Combine(path, "Versions", "A", executableName)
+        ];
+
+        foreach (string executablePath in executableCandidates)
+        {
+            if (IsMachObjectFile(executablePath))
+                return new NestedCode(path, executablePath, identifier, false);
+        }
+
+        return null;
+    }
+
+    private static bool IsMachObjectFile(string path)
+    {
+        if (!File.Exists(path))
+            return false;
+
+        Span<byte> magicBytes = stackalloc byte[4];
+        using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (stream.Read(magicBytes) != magicBytes.Length)
+            return false;
+
+        MachMagic magic = (MachMagic)ReadUInt32BigEndian(magicBytes);
+        return magic is MachMagic.MachMagicBE or MachMagic.MachMagicLE or MachMagic.MachMagic64BE or MachMagic.MachMagic64LE or MachMagic.FatMagicBE or MachMagic.FatMagicLE or MachMagic.FatMagic64BE or MachMagic.FatMagic64LE;
+    }
+
+    private static IEnumerable<SealEntry> EnumerateSealableEntries(AppBundleContext context, Dictionary<string, object> rules2)
+    {
+        string contents = Path.Combine(context.BundlePath, "Contents");
+        string executable = NormalizeRelativePath(Path.GetRelativePath(contents, context.BundleExecutablePath));
+        Stack<string> directories = new Stack<string>();
+        directories.Push(contents);
+
+        while (directories.Count != 0)
+        {
+            string directory = directories.Pop();
+            foreach (string entry in Directory.EnumerateFileSystemEntries(directory).Order(StringComparer.Ordinal))
+            {
+                string relative = NormalizeRelativePath(Path.GetRelativePath(contents, entry));
+                if (relative == executable || relative == "CodeResources" || relative == "_CodeSignature" || relative.StartsWith("_CodeSignature/", StringComparison.Ordinal))
+                    continue;
+
+                FileAttributes attrs = File.GetAttributes(entry);
+                bool isDirectory = (attrs & FileAttributes.Directory) != FileAttributes.None;
+                bool isReparse = (attrs & FileAttributes.ReparsePoint) != FileAttributes.None;
+                RuleDecision rule = EvaluateRule(rules2, relative);
+                // Framework-style directories are traversed so their resources remain covered by this bundle's seal.
+                NestedCode? nested = !isReparse && rule.Nested ? TryResolveNestedCode(entry, isDirectory) : null;
+
+                if (nested != null || !isDirectory || isReparse)
+                    yield return new SealEntry(relative, entry, nested);
+                else
+                    directories.Push(entry);
+            }
+        }
+    }
+
+    private static bool VerifySpecialSlots(AppBundleContext context, byte[] codeResources, byte[] infoPlist)
+    {
+        IFormatHandler handler = new MachObjectFormatHandler();
+        using FileAllocation allocation = new FileAllocation(context.BundleExecutablePath);
+        ReadOnlySpan<byte> data = allocation.GetSpan();
+
+        foreach (MachObject machObject in MachObjectHelper.GetMachObjects(data))
+        {
+            ReadOnlySpan<byte> slice = machObject.GetSpan(data);
+            MachOContext machContext = (MachOContext)handler.GetContext(slice);
+
+            if (!MachObjectFormatHandler.VerifySpecialSlot(machContext, slice, CsSlot.ResourceDir, codeResources))
+                return false;
+
+            if (!MachObjectFormatHandler.VerifySpecialSlot(machContext, slice, CsSlot.Info, infoPlist))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static byte[] GetExecutableCdHash(string executablePath)
+    {
+        IFormatHandler handler = new MachObjectFormatHandler();
+        using FileAllocation allocation = new FileAllocation(executablePath);
+        ReadOnlySpan<byte> data = allocation.GetSpan();
+        MachObject machObject = MachObjectHelper.GetMachObjects(data)[0];
+        ReadOnlySpan<byte> slice = machObject.GetSpan(data);
+        IContext machContext = handler.GetContext(slice);
+        SignedCms cms = new SignedCms();
+        cms.Decode(handler.ExtractSignature(machContext, slice));
+
+        if (!handler.ExtractHashFromSignedCms(cms, out byte[]? digest, out _))
+            throw new InvalidDataException("The nested bundle CMS does not contain a CodeDirectory hash.");
+
+        return digest.AsSpan(0, Math.Min(20, digest.Length)).ToArray();
+    }
+
+    private static Dictionary<string, object> BuildRules() => new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        { @"^Resources/", true },
+        { @"^Resources/.*\.lproj/", new Dictionary<string, object> { { "optional", true }, { "weight", 1000.0 } } },
+        { @"^Resources/.*\.lproj/locversion\.plist$", new Dictionary<string, object> { { "omit", true }, { "weight", 1100.0 } } },
+        { @"^Resources/Base\.lproj/", new Dictionary<string, object> { { "weight", 1010.0 } } },
+        { @"^version\.plist$", true }
+    };
+
+    private static Dictionary<string, object> BuildRules2() => new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        { @"^.*", true },
+        { @".*\.dSYM($|/)", new Dictionary<string, object> { { "weight", 11.0 } } },
+        { @"^(.*/)?\.DS_Store$", new Dictionary<string, object> { { "omit", true }, { "weight", 2000.0 } } },
+        { @"^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/", new Dictionary<string, object> { { "nested", true }, { "weight", 10.0 } } },
+        { @"^[^/]+$", new Dictionary<string, object> { { "nested", true }, { "weight", 10.0 } } },
+        { @"^embedded\.provisionprofile$", new Dictionary<string, object> { { "weight", 20.0 } } },
+        { @"^Info\.plist$", new Dictionary<string, object> { { "omit", true }, { "weight", 20.0 } } },
+        { @"^PkgInfo$", new Dictionary<string, object> { { "omit", true }, { "weight", 20.0 } } },
+        { @"^Resources/", new Dictionary<string, object> { { "weight", 20.0 } } },
+        { @"^Resources/.*\.lproj/", new Dictionary<string, object> { { "optional", true }, { "weight", 1000.0 } } },
+        { @"^Resources/.*\.lproj/locversion\.plist$", new Dictionary<string, object> { { "omit", true }, { "weight", 1100.0 } } },
+        { @"^Resources/Base\.lproj/", new Dictionary<string, object> { { "weight", 1010.0 } } },
+        { @"^version\.plist$", new Dictionary<string, object> { { "weight", 20.0 } } }
+    };
+
+    private static RuleDecision EvaluateRule(Dictionary<string, object> rules, string relativePath)
+    {
+        RuleDecision result = default;
+        double selectedWeight = double.NegativeInfinity;
+
+        foreach ((string pattern, object value) in rules)
+        {
+            bool matches;
+            try
+            {
+                matches = Regex.IsMatch(relativePath, pattern, RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, RegexTimeout);
+            }
+            catch (ArgumentException)
+            {
+                return new RuleDecision(false, false, false);
+            }
+
+            if (!matches)
+                continue;
+
+            Dictionary<string, object>? options = value as Dictionary<string, object>;
+            double weight = options != null && options.TryGetValue("weight", out object? weightValue) ? Convert.ToDouble(weightValue) : 0;
+            if (weight < selectedWeight)
+                continue;
+
+            selectedWeight = weight;
+            result = new RuleDecision(true, options?.TryGetValue("omit", out object? omit) == true && omit is true, options?.TryGetValue("nested", out object? nested) == true && nested is true);
+        }
+
+        return result;
+    }
+
+    private static bool IsNestedEntry(object value) => value is Dictionary<string, object> dict && dict.TryGetValue("cdhash", out object? cdhash) && cdhash is byte[];
+
+    private static bool IsNestedBundle(string path) => File.Exists(Path.Combine(path, "Contents", "Info.plist"));
+
+    private static bool TryResolveBundleRelativePath(string root, string relativePath, [NotNullWhen(true)]out string? fullPath)
+    {
+        fullPath = null;
+        if (string.IsNullOrEmpty(relativePath) || Path.IsPathRooted(relativePath))
+            return false;
+
+        string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        string candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!candidate.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison))
+            return false;
+
+        fullPath = candidate;
+        return true;
+    }
+
+    private static byte[] SerializePList(Dictionary<string, object> pList)
+    {
+        using MemoryStream stream = new MemoryStream();
+        PListSerializer.Serialize(pList, stream);
+        return stream.ToArray();
+    }
+
+    private static string NormalizeRelativePath(string path) => path.Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/');
+
+    private readonly record struct RuleDecision(bool Matched, bool Omit, bool Nested);
+
+    private sealed record NestedCode(string SealPath, string ExecutablePath, string Identifier, bool IsBundle);
+
+    private sealed record SealEntry(string RelativePath, string FullPath, NestedCode? NestedCode);
 
     private sealed class AppBundleInfo
     {
         internal required Dictionary<string, object> CodeResources { get; init; }
+        internal required byte[] CodeResourcesBytes { get; init; }
     }
 }

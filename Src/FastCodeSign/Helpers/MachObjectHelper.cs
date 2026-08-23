@@ -58,10 +58,13 @@ public static class MachObjectHelper
         if (fatCount == 0)
             throw new InvalidDataException("Empty fat file");
 
-        MachObject[] objs = new MachObject[fatCount];
-
         int offset = 8;
         int archSize = is64Bit ? 32 : 20;
+
+        if (fatCount > (data.Length - offset) / archSize)
+            throw new InvalidDataException("Truncated fat entry");
+
+        MachObject[] objs = new MachObject[fatCount];
 
         for (uint i = 0; i < fatCount; i++)
         {
@@ -101,6 +104,12 @@ public static class MachObjectHelper
             CpuType cpuTypeEnum = (CpuType)cpuType;
             Enum cpuSubTypeEnum = CpuSubTypeToEnum(cpuTypeEnum, cpuSubType);
 
+            if (sOffset > (ulong)data.Length || sSize > (ulong)data.Length - sOffset)
+                throw new InvalidDataException("Fat mach object slice points outside the file.");
+
+            if (sAlign >= 64)
+                throw new InvalidDataException("Fat mach object slice alignment is invalid.");
+
             objs[i] = new MachObject(cpuTypeEnum, cpuSubTypeEnum, sOffset, sSize, sAlign);
         }
 
@@ -120,7 +129,8 @@ public static class MachObjectHelper
 
     private static Enum CpuSubTypeToEnum(CpuType cpuTypeEnum, uint cpuSubType) => cpuTypeEnum switch
     {
-        CpuType.X86 or CpuType.X86_64 => (X8664CpuSubType)cpuSubType,
+        CpuType.X86 => (I386CpuSubType)cpuSubType,
+        CpuType.X86_64 => (X8664CpuSubType)cpuSubType,
         CpuType.ARM => (ArmCpuSubType)cpuSubType,
         CpuType.ARM64 or CpuType.ARM64_32 => (Arm64CpuSubType)cpuSubType,
         _ => CpuSubType.Any

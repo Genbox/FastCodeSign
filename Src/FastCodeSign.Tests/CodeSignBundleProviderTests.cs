@@ -18,10 +18,14 @@ public class CodeSignBundleProviderTests
         {
             CodeSignBundleProvider provider = tc.ProviderFactory(tc.UnpackBundle());
 
-            SignOptions options = new SignOptions { Certificate = Constants.GetCert() };
+            using var certificate = Constants.GetCert();
+            SignOptions options = new SignOptions { Certificate = certificate };
 
             if (!tc.IsSigned)
+            {
+                provider.RemoveSignature();
                 provider.CreateSignature(options);
+            }
             else
                 Assert.Throws<InvalidOperationException>(() => provider.CreateSignature(options));
         }
@@ -34,10 +38,12 @@ public class CodeSignBundleProviderTests
         {
             CodeSignBundleProvider provider = tc.ProviderFactory(tc.UnpackBundle());
 
-            SignOptions options = new SignOptions { Certificate = Constants.GetCert() };
+            using var certificate = Constants.GetCert();
+            SignOptions options = new SignOptions { Certificate = certificate };
 
             if (!tc.IsSigned)
             {
+                provider.RemoveSignature();
                 BundleSignature sig = provider.CreateSignature(options);
                 provider.WriteSignature(sig);
             }
@@ -55,10 +61,7 @@ public class CodeSignBundleProviderTests
 
             SignatureComponent removed = provider.RemoveSignature();
 
-            if (tc.IsSigned)
-                Assert.Equal(SignatureComponent.CodeResourcesFile | SignatureComponent.LegacyCodeResourcesFile | SignatureComponent.CodeSignatureFolder | SignatureComponent.MachObjectSignature, removed);
-            else
-                Assert.Equal(SignatureComponent.None, removed);
+            Assert.Equal(tc.SignatureComponents, removed);
         }
     }
 
@@ -78,8 +81,8 @@ public class CodeSignBundleProviderTests
         {
             var cases = new[]
             {
-                BundleTestCase.Create(new AppBundleHandler(), "Signed/AppBundle/Discord.dat", true, testMethod.Name),
-                BundleTestCase.Create(new AppBundleHandler(), "Unsigned/AppBundle/MyApp.dat", false, testMethod.Name),
+                BundleTestCase.Create(new AppBundleHandler(), "Signed/AppBundle/Discord.dat", true, SignatureComponent.CodeResourcesFile | SignatureComponent.LegacyCodeResourcesFile | SignatureComponent.CodeSignatureFolder | SignatureComponent.MachObjectSignature, testMethod.Name),
+                BundleTestCase.Create(new AppBundleHandler(), "Unsigned/AppBundle/MyApp.dat", false, SignatureComponent.MachObjectSignature, testMethod.Name),
             };
 
             var rows = new ReadOnlyCollection<ITheoryDataRow>(cases

@@ -12,6 +12,18 @@ namespace Genbox.FastCodeSign.Tests;
 
 public class CodeSignProviderTests
 {
+    [Theory]
+    [InlineData(".env")]
+    [InlineData(".bashrc")]
+    public void FromData_WithDotFileName_DoesNotTreatNameAsExtension(string fileName)
+    {
+        byte[] data = File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Unsigned/MachO/macho_unsigned.dat"));
+
+        CodeSignProvider provider = CodeSignProvider.FromData(data, fileName: fileName);
+
+        Assert.False(provider.HasSignature());
+    }
+
     [Theory, MemberData(nameof(GetTestCases))]
     private void HasSignature(TestCase tc)
     {
@@ -110,7 +122,8 @@ public class CodeSignProviderTests
     private async Task CreateSignature(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken)));
-        Signature sig = provider.CreateSignature(new SignOptions { Certificate = Constants.GetCert() }, tc.FormatOptions);
+        using var certificate = Constants.GetCert();
+        Signature sig = provider.CreateSignature(new SignOptions { Certificate = certificate }, tc.FormatOptions);
 
         await Verify(sig.SignedCms)
               .UseFileName($"{nameof(CreateSignature)}-{Path.GetFileName(tc.Unsigned)}")
@@ -123,7 +136,8 @@ public class CodeSignProviderTests
     private void CreateSignature_FileWithSignatureShouldThrow(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
-        Assert.Throws<InvalidOperationException>(() => provider.CreateSignature(new SignOptions { Certificate = Constants.GetCert() }));
+        using var certificate = Constants.GetCert();
+        Assert.Throws<InvalidOperationException>(() => provider.CreateSignature(new SignOptions { Certificate = certificate }));
     }
 
     [Theory, MemberData(nameof(GetTestCases))]
@@ -132,7 +146,8 @@ public class CodeSignProviderTests
         byte[] unsigned = await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken);
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
         CodeSignProvider provider = tc.ProviderFactory(allocation);
-        provider.WriteSignature(provider.CreateSignature(new SignOptions { Certificate = Constants.GetCert() }, tc.FormatOptions, signer =>
+        using var certificate = Constants.GetCert();
+        provider.WriteSignature(provider.CreateSignature(new SignOptions { Certificate = certificate }, tc.FormatOptions, signer =>
         {
             for (int i = signer.SignedAttributes.Count - 1; i >= 0; i--)
             {
@@ -144,7 +159,15 @@ public class CodeSignProviderTests
             }
         }));
 
-        await Verify(allocation.GetSpan().ToArray())
+        byte[] actual = allocation.GetSpan().ToArray();
+        if (tc.HandlerType == typeof(PeFormatHandler))
+        {
+            int peHeaderOffset = ReadInt32LittleEndian(unsigned.AsSpan(0x3c, 4));
+            int checksumOffset = peHeaderOffset + 4 + 20 + 0x40;
+            unsigned.AsSpan(checksumOffset, 4).CopyTo(actual.AsSpan(checksumOffset));
+        }
+
+        await Verify(actual)
               .UseFileName($"{nameof(WriteSignature)}-{Path.GetFileName(tc.Unsigned)}")
               .UseDirectory("Verify/" + nameof(CodeSignProviderTests))
               .DisableDiff()
@@ -157,6 +180,25 @@ public class CodeSignProviderTests
         MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.Signed));
         CodeSignProvider provider = tc.ProviderFactory(allocation);
         Assert.Throws<InvalidOperationException>(() => provider.WriteSignature(provider.CreateSignature(null!)));
+    }
+
+    [Fact]
+    private void WriteSignature_UpdatesPeChecksum()
+    {
+        byte[] unsigned = File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Unsigned/WinPe/exe_unsigned.dat"));
+        MemoryAllocation allocation = new MemoryAllocation(unsigned);
+        CodeSignProvider provider = new CodeSignProvider(new PeFormatHandler(), allocation, "exe_unsigned.dat");
+        using var certificate = Constants.GetCert();
+
+        provider.WriteSignature(provider.CreateSignature(new SignOptions { Certificate = certificate }));
+
+        ReadOnlySpan<byte> signed = allocation.GetSpan();
+        int peHeaderOffset = ReadInt32LittleEndian(signed.Slice(0x3c, 4));
+        int checksumOffset = peHeaderOffset + 4 + 20 + 0x40;
+
+        uint checksum = ReadUInt32LittleEndian(signed.Slice(checksumOffset, 4));
+        Assert.NotEqual(0u, checksum);
+        Assert.Equal(ComputePeChecksum(signed, checksumOffset), checksum);
     }
 
     [Fact]
@@ -212,6 +254,35 @@ public class CodeSignProviderTests
 
         // 4) Zero out CheckSum (uint32, little-endian)
         WriteUInt32LittleEndian(data.Slice(checksumOffset, 4), 0);
+    }
+
+    private static uint ComputePeChecksum(ReadOnlySpan<byte> data, int checksumOffset)
+    {
+        ulong checksum = 0;
+        int offset = 0;
+
+        while (offset + 1 < data.Length)
+        {
+            if (offset == checksumOffset)
+            {
+                offset += 4;
+                continue;
+            }
+
+            checksum += ReadUInt16LittleEndian(data[offset..]);
+            checksum = (checksum & 0xffff) + (checksum >> 16);
+            offset += 2;
+        }
+
+        if (offset < data.Length)
+        {
+            checksum += data[offset];
+            checksum = (checksum & 0xffff) + (checksum >> 16);
+        }
+
+        checksum = (checksum & 0xffff) + (checksum >> 16);
+        checksum += (uint)data.Length;
+        return (uint)checksum;
     }
 
     private static void PatchMachO(Span<byte> data)

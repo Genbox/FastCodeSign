@@ -160,6 +160,9 @@ public sealed class PeFormatHandler : IFormatHandler
         WinPeContext obj = (WinPeContext)context;
         WriteUInt32LittleEndian(data[(int)obj.SecurityDirOffset..], datLen);
         WriteUInt32LittleEndian(data[(int)(obj.SecurityDirOffset + 4)..], WinCertificate.StructSize + sigLen);
+
+        WriteUInt32LittleEndian(data[(int)obj.ChecksumOffset..], 0);
+        WriteUInt32LittleEndian(data[(int)obj.ChecksumOffset..], ComputePeChecksum(data, obj.ChecksumOffset));
     }
 
     Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, SignOptions signOptions, IFormatOptions? formatOptions, Action<CmsSigner>? configureSigner)
@@ -209,5 +212,34 @@ public sealed class PeFormatHandler : IFormatHandler
 
         //Zero the security directory entry (8 bytes)
         WriteInt64LittleEndian(data[(int)context.SecurityDirOffset..], 0);
+    }
+
+    private static uint ComputePeChecksum(ReadOnlySpan<byte> data, uint checksumOffset)
+    {
+        ulong checksum = 0;
+        int offset = 0;
+
+        while (offset + 1 < data.Length)
+        {
+            if (offset == checksumOffset)
+            {
+                offset += 4;
+                continue;
+            }
+
+            checksum += ReadUInt16LittleEndian(data[offset..]);
+            checksum = (checksum & 0xffff) + (checksum >> 16);
+            offset += 2;
+        }
+
+        if (offset < data.Length)
+        {
+            checksum += data[offset];
+            checksum = (checksum & 0xffff) + (checksum >> 16);
+        }
+
+        checksum = (checksum & 0xffff) + (checksum >> 16);
+        checksum += (uint)data.Length;
+        return (uint)checksum;
     }
 }

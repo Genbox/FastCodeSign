@@ -9,14 +9,25 @@ namespace Genbox.FastCodeSign.Allocations;
 public sealed class FileAllocation : IAllocation, IDisposable
 {
     private readonly FileStream _fileStream;
-    private MemoryMappedFile _mmf;
+    private readonly bool _canWrite;
+    private MemoryMappedFile? _mmf;
     private unsafe byte* _ptr;
-    private MemoryMappedViewAccessor _view;
+    private MemoryMappedViewAccessor? _view;
 
     public FileAllocation(string filePath)
     {
         FilePath = filePath;
-        _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite);
+        try
+        {
+            _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite);
+            _canWrite = true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            _canWrite = false;
+        }
+
         CreateProvider();
     }
 
@@ -24,12 +35,18 @@ public sealed class FileAllocation : IAllocation, IDisposable
 
     public unsafe Span<byte> GetSpan()
     {
+        if (_view == null)
+            return Span<byte>.Empty;
+
         int length = (int)_view.Capacity;
         return new Span<byte>(_ptr, length);
     }
 
     public void SetLength(uint length)
     {
+        if (!_canWrite)
+            throw new UnauthorizedAccessException("The file was opened read-only and cannot be resized.");
+
         Dispose(false);
 
         _fileStream.SetLength(length);
@@ -41,22 +58,32 @@ public sealed class FileAllocation : IAllocation, IDisposable
 
     private unsafe void CreateProvider()
     {
-        _mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, true);
-        _view = _mmf.CreateViewAccessor(0, _fileStream.Length, MemoryMappedFileAccess.ReadWrite);
+        if (_fileStream.Length == 0)
+            return;
+
+        MemoryMappedFileAccess access = _canWrite ? MemoryMappedFileAccess.ReadWrite : MemoryMappedFileAccess.Read;
+        _mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length, access, HandleInheritability.None, true);
+        _view = _mmf.CreateViewAccessor(0, _fileStream.Length, access);
 
         _view.SafeMemoryMappedViewHandle.AcquirePointer(ref _ptr);
     }
 
     private unsafe void Dispose(bool all)
     {
-        _view.Flush();
+        if (_view != null)
+        {
+            if (_canWrite)
+                _view.Flush();
 
-        _view.SafeMemoryMappedViewHandle.ReleasePointer();
-        _view.Dispose();
+            _view.SafeMemoryMappedViewHandle.ReleasePointer();
+            _view.Dispose();
+            _view = null;
+        }
 
         _ptr = null;
 
-        _mmf.Dispose();
+        _mmf?.Dispose();
+        _mmf = null;
 
         if (all)
             _fileStream.Dispose();

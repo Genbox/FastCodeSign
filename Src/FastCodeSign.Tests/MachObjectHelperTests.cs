@@ -1,5 +1,7 @@
+using System.Buffers.Binary;
 using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Helpers;
+using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Models;
 using Genbox.FastCodeSign.Tests.Code;
 
@@ -27,7 +29,7 @@ public class MachObjectHelperTests
         Assert.Equal(3, slices.Length);
 
         Assert.Equal(CpuType.ARM64, slices[0].CpuType);
-        Assert.Equal(Arm64CpuSubType.All, slices[0].CpuSubType);
+        Assert.Equal(Arm64CpuSubType.None, slices[0].CpuSubType);
         Assert.Equal(96UL, slices[0].Offset);
         Assert.Equal(160UL, slices[0].Size);
         Assert.Equal(5U, slices[0].Align);
@@ -39,7 +41,7 @@ public class MachObjectHelperTests
         Assert.Equal(5U, slices[1].Align);
 
         Assert.Equal(CpuType.ARM64, slices[2].CpuType);
-        Assert.Equal(Arm64CpuSubType.All, slices[2].CpuSubType);
+        Assert.Equal(Arm64CpuSubType.None, slices[2].CpuSubType);
         Assert.Equal(544UL, slices[2].Offset);
         Assert.Equal(96UL, slices[2].Size);
         Assert.Equal(5U, slices[2].Align);
@@ -52,7 +54,7 @@ public class MachObjectHelperTests
         Assert.Equal(3, slices.Length);
 
         Assert.Equal(CpuType.ARM64, slices[0].CpuType);
-        Assert.Equal(Arm64CpuSubType.All, slices[0].CpuSubType);
+        Assert.Equal(Arm64CpuSubType.None, slices[0].CpuSubType);
         Assert.Equal(128UL, slices[0].Offset);
         Assert.Equal(200UL, slices[0].Size);
         Assert.Equal(5U, slices[0].Align);
@@ -64,9 +66,42 @@ public class MachObjectHelperTests
         Assert.Equal(5U, slices[1].Align);
 
         Assert.Equal(CpuType.ARM64, slices[2].CpuType);
-        Assert.Equal(Arm64CpuSubType.All, slices[2].CpuSubType);
+        Assert.Equal(Arm64CpuSubType.None, slices[2].CpuSubType);
         Assert.Equal(672UL, slices[2].Offset);
         Assert.Equal(150UL, slices[2].Size);
         Assert.Equal(5U, slices[2].Align);
+    }
+
+    [Fact]
+    private void FatSliceOutsideFileThrowsInvalidDataException()
+    {
+        byte[] data = new byte[28];
+        BinaryPrimitives.WriteUInt32BigEndian(data, 0xcafebabe); // FAT magic
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(4), 1); // one arch
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(8), (uint)CpuType.X86_64);
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(12), (uint)X8664CpuSubType.All);
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(16), 24); // overlaps header and exceeds file with size below
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(20), 16);
+
+        Assert.Throws<InvalidDataException>(() => MachObjectHelper.GetMachObjects(data));
+    }
+
+    [Fact]
+    private void MachObjectSliceOutsideBufferThrowsInvalidDataException()
+    {
+        MachObject slice = new MachObject(CpuType.X86_64, X8664CpuSubType.All, 8, 8, 0);
+
+        Assert.Throws<InvalidDataException>(() => slice.GetSpan(new byte[12]));
+    }
+
+    [Fact]
+    private void TruncatedLoadCommandThrowsInvalidDataException()
+    {
+        byte[] data = new byte[64];
+        BinaryPrimitives.WriteUInt32BigEndian(data, 0xcffaedfe); // 64-bit little-endian Mach-O magic
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(16), 1); // one load command
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(20), 4); // shorter than load command header
+
+        Assert.Throws<InvalidDataException>(() => MachOContext.Create(data));
     }
 }

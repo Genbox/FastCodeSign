@@ -82,7 +82,7 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
         byte[] encoded = signature.SignedCms.Encode();
 
-        if (obj.Encoding.CodePage == 1200)
+        if (obj.Encoding.CodePage is 1200 or 1201)
             WriteUtf16(obj, allocation, startComment, endComment, newLine, encoded);
         else if (obj.Encoding.CodePage == 65001)
             WriteUtf8(obj, allocation, startComment, endComment, newLine, encoded);
@@ -337,13 +337,23 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
             {
                 // UTF-16LE: [ascii, 0x00]
                 for (int i = 0, j = 0; i < utf16Bytes.Length; i += 2, j++)
+                {
+                    if (utf16Bytes[i + 1] != 0 || utf16Bytes[i] > 0x7f)
+                        throw new InvalidDataException("UTF-16 signature block contains non-ASCII data.");
+
                     ascii[j] = utf16Bytes[i];
+                }
             }
             else
             {
                 // UTF-16BE: [0x00, ascii]
                 for (int i = 0, j = 0; i < utf16Bytes.Length; i += 2, j++)
+                {
+                    if (utf16Bytes[i] != 0 || utf16Bytes[i + 1] > 0x7f)
+                        throw new InvalidDataException("UTF-16 signature block contains non-ASCII data.");
+
                     ascii[j] = utf16Bytes[i + 1];
+                }
             }
 
             return DecodeUtf8Base64(ascii);

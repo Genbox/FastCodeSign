@@ -8,24 +8,23 @@ public static class X509Certificate2Extensions
 {
     private static readonly string[] Oids =
     [
-        ExtAppleSigning,
+        ExtDeveloperIdApplication,
+        ExtDeveloperIdKernel,
+        ExtAppleMacAppSigningDevelopment,
+        ExtAppleMacAppSigningSubmission,
+        ExtAppleMacAppStoreCodeSigning,
+        ExtAppleMacAppStoreInstallerSigning,
+        ExtDeveloperIdInstaller,
         ExtIPhoneDeveloper,
         ExtIPhoneOsApplicationSigning,
         ExtAppleDeveloperCertificateSubmission,
         ExtSafariDeveloper,
         ExtIPhoneOsVpnSigning,
-        ExtAppleMacAppSigningDevelopment,
-        ExtAppleMacAppSigningSubmission,
-        ExtAppleMacAppStoreCodeSigning,
-        ExtAppleMacAppStoreInstallerSigning,
         ExtMacDeveloper,
-        ExtDeveloperIdApplication,
-        ExtDeveloperIdDate,
-        ExtDeveloperIdInstaller,
         ExtApplePayPassbookSigning,
         ExtWebsitePushNotificationSigning,
-        ExtDeveloperIdKernel,
-        ExtTestFlight
+        ExtTestFlight,
+        ExtAppleSigning
     ];
 
     public static string? GetTeamId(this X509Certificate2 certificate)
@@ -49,17 +48,18 @@ public static class X509Certificate2Extensions
     }
 
     public static bool IsAppleDeveloperCertificate(this X509Certificate2 certificate)
-    {
-        foreach (X509Extension extension in certificate.Extensions)
-        {
-            if (extension.Oid?.Value == null)
-                continue;
+        => certificate.GetAppleCertificateProfile() != null;
 
-            if (Oids.Contains(extension.Oid.Value, StringComparer.Ordinal))
-                return true;
+    internal static string? GetAppleCertificateProfile(this X509Certificate2 certificate)
+    {
+        foreach (string profile in Oids)
+        {
+            foreach (X509Extension extension in certificate.Extensions)
+                if (string.Equals(extension.Oid?.Value, profile, StringComparison.Ordinal))
+                    return profile;
         }
 
-        return false;
+        return null;
     }
 
     private static string ReadAnyAsnString(AsnReader reader)

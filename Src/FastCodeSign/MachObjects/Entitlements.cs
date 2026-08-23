@@ -6,9 +6,11 @@ namespace Genbox.FastCodeSign.MachObjects;
 
 public class Entitlements
 {
-    private readonly Dictionary<string, object> _values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, object> _values = new Dictionary<string, object>(StringComparer.Ordinal);
 
     public bool Contains(string identifier) => _values.ContainsKey(identifier);
+
+    internal bool IsEnabled(string identifier) => _values.TryGetValue(identifier, out object? value) && value is true;
 
     public void Add(string identifier, object value)
     {

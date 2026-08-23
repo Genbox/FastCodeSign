@@ -38,6 +38,140 @@ public abstract class Expr
     public static Expr NamedCode(string code) => new NamedExpr(ExprOp.NamedCode, Encoding.ASCII.GetBytes(code));
     public static Expr Platform(MachPlatform platform) => new PlatformExpr(platform);
 
+    internal static Expr Decode(ReadOnlySpan<byte> buffer, out int bytesConsumed)
+    {
+        if (buffer.Length < 4)
+            throw new InvalidDataException("Truncated requirement expression.");
+
+        ExprOp op = (ExprOp)ReadUInt32BigEndian(buffer);
+        switch (op)
+        {
+            case ExprOp.False:
+            case ExprOp.True:
+            case ExprOp.AppleAnchor:
+            case ExprOp.TrustedCerts:
+            case ExprOp.AppleGenericAnchor:
+            case ExprOp.Notarized:
+            case ExprOp.LegacyDevId:
+                bytesConsumed = 4;
+                return new SimpleExpr(op);
+            case ExprOp.Ident:
+            {
+                byte[] value = ReadData(buffer[4..], out int consumed);
+                bytesConsumed = 4 + consumed;
+                return new StringExpr(op, Encoding.UTF8.GetString(value));
+            }
+            case ExprOp.And:
+            case ExprOp.Or:
+            {
+                Expr left = Decode(buffer[4..], out int leftSize);
+                Expr right = Decode(buffer[(4 + leftSize)..], out int rightSize);
+                bytesConsumed = 4 + leftSize + rightSize;
+                return new BinaryOperatorExpr(op, left, right);
+            }
+            case ExprOp.Not:
+            {
+                Expr inner = Decode(buffer[4..], out int innerSize);
+                bytesConsumed = 4 + innerSize;
+                return new UnaryOperatorExpr(op, inner);
+            }
+            case ExprOp.CdHash:
+                if (buffer.Length < 24)
+                    throw new InvalidDataException("Truncated CodeDirectory hash expression.");
+                bytesConsumed = 24;
+                return new CdHashExpr(buffer.Slice(4, 20).ToArray());
+            case ExprOp.AnchorHash:
+            {
+                EnsureLength(buffer, 12);
+                int certificateIndex = ReadInt32BigEndian(buffer[4..]);
+                byte[] hash = ReadData(buffer[8..], out int consumed);
+                bytesConsumed = 8 + consumed;
+                return new AnchorHashExpr(certificateIndex, hash);
+            }
+            case ExprOp.InfoKeyValue:
+            {
+                byte[] field = ReadData(buffer[4..], out int fieldSize);
+                byte[] value = ReadData(buffer[(4 + fieldSize)..], out int valueSize);
+                bytesConsumed = 4 + fieldSize + valueSize;
+                return new InfoKeyValueExpr(Encoding.ASCII.GetString(field), value);
+            }
+            case ExprOp.InfoKeyField:
+            case ExprOp.EntitlementField:
+            {
+                byte[] field = ReadData(buffer[4..], out int fieldSize);
+                ReadMatch(buffer[(4 + fieldSize)..], out MatchOperation match, out byte[]? value, out int matchSize);
+                bytesConsumed = 4 + fieldSize + matchSize;
+                return new FieldMatchExpr(op, Encoding.ASCII.GetString(field), match, value);
+            }
+            case ExprOp.CertField:
+            case ExprOp.CertGeneric:
+            case ExprOp.CertPolicy:
+            case ExprOp.CertFieldDate:
+            {
+                EnsureLength(buffer, 12);
+                int certificateIndex = ReadInt32BigEndian(buffer[4..]);
+                byte[] field = ReadData(buffer[8..], out int fieldSize);
+                ReadMatch(buffer[(8 + fieldSize)..], out MatchOperation match, out byte[]? value, out int matchSize);
+                bytesConsumed = 8 + fieldSize + matchSize;
+                return new CertExpr(op, certificateIndex, field, match, value);
+            }
+            case ExprOp.TrustedCert:
+                EnsureLength(buffer, 8);
+                bytesConsumed = 8;
+                return new TrustedCertExpr(ReadInt32BigEndian(buffer[4..]));
+            case ExprOp.NamedAnchor:
+            case ExprOp.NamedCode:
+            {
+                byte[] name = ReadData(buffer[4..], out int consumed);
+                bytesConsumed = 4 + consumed;
+                return new NamedExpr(op, name);
+            }
+            case ExprOp.Platform:
+                EnsureLength(buffer, 8);
+                bytesConsumed = 8;
+                return new PlatformExpr((MachPlatform)ReadUInt32BigEndian(buffer[4..]));
+            default:
+                throw new InvalidDataException($"Unsupported requirement expression operation: {op}.");
+        }
+    }
+
+    private static byte[] ReadData(ReadOnlySpan<byte> buffer, out int bytesConsumed)
+    {
+        EnsureLength(buffer, 4);
+        int length = ReadInt32BigEndian(buffer);
+        if (length < 0)
+            throw new InvalidDataException("Invalid requirement expression data length.");
+
+        int alignedLength = Align(length, 4);
+        EnsureLength(buffer, 4 + alignedLength);
+        bytesConsumed = 4 + alignedLength;
+        return buffer.Slice(4, length).ToArray();
+    }
+
+    private static void ReadMatch(ReadOnlySpan<byte> buffer, out MatchOperation operation, out byte[]? value, out int bytesConsumed)
+    {
+        EnsureLength(buffer, 4);
+        operation = (MatchOperation)ReadUInt32BigEndian(buffer);
+        if (!Enum.IsDefined(operation))
+            throw new InvalidDataException($"Unsupported requirement match operation: {operation}.");
+
+        if (operation is MatchOperation.Exists or MatchOperation.Absent)
+        {
+            value = null;
+            bytesConsumed = 4;
+            return;
+        }
+
+        value = ReadData(buffer[4..], out int valueSize);
+        bytesConsumed = 4 + valueSize;
+    }
+
+    private static void EnsureLength(ReadOnlySpan<byte> buffer, int requiredLength)
+    {
+        if (buffer.Length < requiredLength)
+            throw new InvalidDataException("Truncated requirement expression.");
+    }
+
     private static ReadOnlySpan<byte> GetData(ReadOnlySpan<byte> expr)
     {
         if (expr.Length < 8)
@@ -208,7 +342,7 @@ public abstract class Expr
         public override void Write(Span<byte> buffer)
         {
             WriteUInt32BigEndian(buffer[..4], (uint)ExprOp.AnchorHash);
-            WriteUInt32BigEndian(buffer.Slice(4, 4), 0);
+            WriteInt32BigEndian(buffer.Slice(4, 4), certificateIndex);
             WriteInt32BigEndian(buffer.Slice(8, 4), anchorHash.Length);
             anchorHash.CopyTo(buffer.Slice(12, anchorHash.Length));
         }

@@ -34,4 +34,9 @@ public class MachObjectFormatOptions : IFormatOptions
     /// An optional team id.
     /// </summary>
     public string? TeamId { get; set; }
+
+    /// <summary>
+    /// Controls macOS code-signing behavior.
+    /// </summary>
+    public MachObjectSigningFlags SigningFlags { get; set; }
 }

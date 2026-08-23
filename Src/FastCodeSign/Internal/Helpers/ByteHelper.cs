@@ -7,8 +7,6 @@ internal static class ByteHelper
     private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
     private static readonly byte[] Utf16Bom = [0xFF, 0xFE];
     private static readonly byte[] Utf16BeBom = [0xFE, 0xFF];
-    private const int MaxProbeLength = 8192;
-
     /// <summary>Align value up to next multiple of alignment.</summary>
     internal static ulong Align(ulong val, ulong alignment) => ((val + alignment) - 1) & ~(alignment - 1);
 
@@ -22,12 +20,10 @@ internal static class ByteHelper
     {
         Encoding encoding = DetectEncoding(span) ?? Encoding.UTF8;
 
-        // avoid allocating huge strings when sniffing type
-        string str = encoding.GetString(span.Length > MaxProbeLength ? span[..MaxProbeLength] : span);
-
         foreach (string value in values)
         {
-            if (str.Contains(value))
+            byte[] encoded = encoding.GetBytes(value);
+            if (span.IndexOf(encoded) >= 0)
                 return true;
         }
 
@@ -45,6 +41,42 @@ internal static class ByteHelper
         if (data.StartsWith(Utf16BeBom))
             return Encoding.BigEndianUnicode;
 
+        Encoding? utf16NoBom = DetectUtf16NoBom(data);
+        if (utf16NoBom != null)
+            return utf16NoBom;
+
         return null;
     }
+
+    private static Encoding? DetectUtf16NoBom(ReadOnlySpan<byte> data)
+    {
+        int pairs = Math.Min(data.Length / 2, 512);
+        if (pairs < 4)
+            return null;
+
+        int leAscii = 0;
+        int beAscii = 0;
+
+        for (int i = 0; i < pairs; i++)
+        {
+            byte first = data[i * 2];
+            byte second = data[(i * 2) + 1];
+
+            if (second == 0 && IsLikelyTextByte(first))
+                leAscii++;
+
+            if (first == 0 && IsLikelyTextByte(second))
+                beAscii++;
+        }
+
+        if (leAscii >= (pairs * 3) / 4 && beAscii == 0)
+            return Encoding.Unicode;
+
+        if (beAscii >= (pairs * 3) / 4 && leAscii == 0)
+            return Encoding.BigEndianUnicode;
+
+        return null;
+    }
+
+    private static bool IsLikelyTextByte(byte value) => value is 9 or 10 or 13 || value is >= 32 and <= 126;
 }

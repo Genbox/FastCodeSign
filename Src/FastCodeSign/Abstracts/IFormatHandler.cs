@@ -20,12 +20,31 @@ public interface IFormatHandler
     /// <summary>Extracts the range of bytes that represent the CMS blob</summary>
     ReadOnlySpan<byte> ExtractSignature(IContext context, ReadOnlySpan<byte> data);
 
+    /// <summary>Extracts every CMS blob represented by the format. Normal formats contain one CMS.</summary>
+    IReadOnlyList<byte[]> ExtractSignatures(IContext context, ReadOnlySpan<byte> data) => [ExtractSignature(context, data).ToArray()];
+
     /// <summary>Computes a hash of the data as defined by the signing specification.</summary>
     byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm);
+
+    /// <summary>Computes the hash for a CMS extracted at <paramref name="signatureIndex"/>.</summary>
+    byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, int signatureIndex)
+        => ComputeHash(context, data, hashAlgorithm);
 
     /// <summary>Remove the signature from the data.</summary>
     /// <returns>The number of bytes removed. It is used by the higher-level APIs for truncation of the file.</returns>
     long RemoveSignature(IContext context, Span<byte> data);
+
+    /// <summary>
+    /// Removes a signature and resizes the allocation. This low-level operation mutates the allocation immediately.
+    /// Callers that require atomic replacement should stage work in a separate allocation first.
+    /// </summary>
+    long RemoveSignature(IContext context, IAllocation allocation)
+    {
+        Span<byte> data = allocation.GetSpan();
+        long delta = RemoveSignature(context, data);
+        allocation.SetLength(checked((uint)(data.Length - delta)));
+        return delta;
+    }
 
     /// <summary>The handler can add properties to the CMS signer object which are needed to envelope the signature.</summary>
     /// <param name="context">The context</param>
@@ -38,6 +57,15 @@ public interface IFormatHandler
 
     /// <summary>Writes the encoded CMS structure into a signature structure.</summary>
     void WriteSignature(IContext context, IAllocation allocation, Signature signature);
+
+    /// <summary>Verifies the CMS signature bytes independently of certificate trust.</summary>
+    void CheckSignature(IContext context, ReadOnlySpan<byte> data, SignedCms signedCms)
+    {
+        if (signedCms.SignerInfos.Count == 0)
+            throw new CryptographicException("The CMS does not contain a signer.");
+
+        signedCms.CheckSignature(true);
+    }
 
     /// <summary>Extracts the hash from a signed CMS structure. File formats usually save it in an attribute or as part of the ContentInfo.</summary>
     /// <param name="signedCms">The CMS structure</param>

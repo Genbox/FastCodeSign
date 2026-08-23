@@ -2,6 +2,7 @@ using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Helpers;
+using Genbox.FastCodeSign.Internal.Helpers;
 using Genbox.FastCodeSign.Internal.MachObject;
 
 namespace Genbox.FastCodeSign.Internal.Bundles;
@@ -10,10 +11,17 @@ public class AppBundleContext : IContext
 {
     public static AppBundleContext Create(string bundlePath)
     {
-        string contents = Path.Combine(bundlePath, "Contents");
+        string fullBundlePath = Path.GetFullPath(bundlePath);
+        if (PathHelper.IsReparsePoint(fullBundlePath))
+            throw new IOException("Signing a bundle through a symbolic link or reparse point is not supported.");
+
+        string contents = Path.Combine(fullBundlePath, "Contents");
 
         if (!Directory.Exists(contents))
             throw new DirectoryNotFoundException("Content directory not found");
+
+        if (!PathHelper.IsPhysicalPathWithin(contents, fullBundlePath))
+            throw new InvalidDataException("The bundle Contents directory resolves outside the bundle.");
 
         string plist = Path.Combine(contents, "Info.plist");
 
@@ -21,38 +29,38 @@ public class AppBundleContext : IContext
             throw new FileNotFoundException("Info.plist file not found");
 
         (string executable, string identifier) = GetBundleInfo(plist);
-        string bundleExecutablePath = Path.Combine(contents, "MacOS", executable);
+        if (!IsSimpleFileName(executable))
+            throw new InvalidDataException("CFBundleExecutable must be a simple filename.");
+
+        string macOsPath = Path.GetFullPath(Path.Combine(contents, "MacOS"));
+        string bundleExecutablePath = Path.GetFullPath(Path.Combine(macOsPath, executable));
 
         if (!File.Exists(bundleExecutablePath))
             throw new FileNotFoundException("Main bundle executable file not found");
 
-        // Check if there is a CodeResources file first
-        bool isSigned = File.Exists(Path.Combine(contents, "_CodeSignature", "CodeResources"));
+        if (!PathHelper.IsPhysicalPathWithin(bundleExecutablePath, fullBundlePath))
+            throw new InvalidDataException("CFBundleExecutable resolves outside the bundle.");
 
-        if (isSigned)
+        bool isSigned = File.Exists(Path.Combine(contents, "_CodeSignature", "CodeResources")) || File.Exists(Path.Combine(contents, "CodeResources"));
+
+        using (FileAllocation file = new FileAllocation(bundleExecutablePath))
         {
-            // Read each of the mach objects and determine if they are signed
-            using FileAllocation file = new FileAllocation(bundleExecutablePath);
             Span<byte> span = file.GetSpan();
-
-            // The mach object can be a FAT file, so we wrap the handling in this helper
             Models.MachObject[] objs = MachObjectHelper.GetMachObjects(span);
 
             if (objs.Length == 0)
                 throw new InvalidDataException("Unable to find a valid mach object");
 
             IFormatHandler handler = new MachObjectFormatHandler();
-
-            // Each mach object must be signed too
             foreach (Models.MachObject fatObject in objs)
-                isSigned &= handler.GetContext(fatObject.GetSpan(span)).IsSigned;
+                isSigned |= handler.GetContext(fatObject.GetSpan(span)).IsSigned;
         }
 
         return new AppBundleContext
         {
             Identifier = identifier,
             HasResources = Directory.Exists(Path.Combine(contents, "Resources")),
-            BundlePath = bundlePath,
+            BundlePath = fullBundlePath,
             BundleExecutablePath = bundleExecutablePath,
             IsSigned = isSigned
         };
@@ -76,4 +84,6 @@ public class AppBundleContext : IContext
 
         return ((string)bundleExec, (string)bundleIdent);
     }
+
+    private static bool IsSimpleFileName(string value) => value.Length != 0 && !Path.IsPathRooted(value) && value.IndexOf('/', StringComparison.Ordinal) < 0 && value.IndexOf('\\', StringComparison.Ordinal) < 0 && value != "." && value != "..";
 }
