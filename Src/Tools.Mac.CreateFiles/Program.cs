@@ -13,7 +13,7 @@ internal static class Program
 
         byte[] certBytes = File.ReadAllBytes("FastCodeSign.pfx");
 
-        SignFile("MachO/Default_unsigned", "MachO/Default_signed", certBytes);
+        SignFile("MachO/macho_unsigned.dat", "MachO/macho_signed.dat", certBytes);
     }
 
     private static void SignFile(string unsigned, string signed, byte[] certBytes)

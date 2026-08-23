@@ -50,7 +50,7 @@ public class AuthenticodeTests
     {
         Assert.SkipUnless(File.Exists(fileName), $"File not found: {fileName}");
 
-        Assert.Equal(expectedRes, Authenticode.VerifyFileWithCab(fileName, out byte[] hash));
+        Assert.Equal(expectedRes, AuthenticodeVerifier.VerifyFileWithCab(fileName, out byte[] hash));
         Assert.NotEmpty(hash);
     }
 
@@ -58,6 +58,6 @@ public class AuthenticodeTests
     public void VerifyFile_WithRevocationOption_DoesNotThrowForMissingSignature()
     {
         string path = Path.Combine(FilesDir, "Unsigned/WinPe/exe_unsigned.dat");
-        Assert.Equal(WinVerifyTrustResult.TRUST_E_NOSIGNATURE, Authenticode.VerifyFile(path, enableRevocation: true));
+        Assert.Equal(WinVerifyTrustResult.TRUST_E_NOSIGNATURE, AuthenticodeVerifier.VerifyFile(path, enableRevocation: true));
     }
 }

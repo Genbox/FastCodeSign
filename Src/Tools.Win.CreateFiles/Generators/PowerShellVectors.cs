@@ -17,7 +17,7 @@ internal static class PowerShellVectors
 
     internal static void Generate(X509Certificate2 cert)
     {
-        const string vectorsDir = "TestVectors";
+        const string vectorsDir = "TestVectors/PowerShell";
 
         if (!Directory.Exists(vectorsDir))
             Directory.CreateDirectory(vectorsDir);
