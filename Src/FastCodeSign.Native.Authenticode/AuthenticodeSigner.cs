@@ -2,12 +2,12 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using Genbox.FastCodeSign.Native.Authenticode.Internal;
-using Genbox.FastCodeSign.Native.Authenticode.Internal.Enums;
 using Genbox.FastCodeSign.Internal.Native;
 using Genbox.FastCodeSign.Internal.Native.Enums;
 using Genbox.FastCodeSign.Internal.Native.Structs;
 using Genbox.FastCodeSign.Internal.Native.Unions;
+using Genbox.FastCodeSign.Native.Authenticode.Internal;
+using Genbox.FastCodeSign.Native.Authenticode.Internal.Enums;
 
 namespace Genbox.FastCodeSign.Native.Authenticode;
 
@@ -141,6 +141,7 @@ public static class AuthenticodeSigner
         try
         {
             byte[] signature;
+
             switch (ctx.SigningAlgorithm)
             {
                 case RSA rsa:

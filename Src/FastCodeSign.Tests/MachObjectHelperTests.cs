@@ -35,6 +35,7 @@ public class MachObjectHelperTests
         Assert.Equal(5U, slices[0].Align);
 
         Assert.Equal(CpuType.X86_64, slices[1].CpuType);
+
         // Assert.Equal(X8664CpuSubType.All, slices[1].CpuSubType); // I might have made a mistake in the fat32_3slices file
         Assert.Equal(256UL, slices[1].Offset);
         Assert.Equal(288UL, slices[1].Size);
@@ -60,6 +61,7 @@ public class MachObjectHelperTests
         Assert.Equal(5U, slices[0].Align);
 
         Assert.Equal(CpuType.X86_64, slices[1].CpuType);
+
         // Assert.Equal(X8664CpuSubType.All, slices[1].CpuSubType); // I might have made a mistake in the fat64_3slices file
         Assert.Equal(352UL, slices[1].Offset);
         Assert.Equal(320UL, slices[1].Size);

@@ -26,7 +26,7 @@ public interface IFormatHandler
     /// <summary>Computes a hash of the data as defined by the signing specification.</summary>
     byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm);
 
-    /// <summary>Computes the hash for a CMS extracted at <paramref name="signatureIndex"/>.</summary>
+    /// <summary>Computes the hash for a CMS extracted at <paramref name="signatureIndex" />.</summary>
     byte[] ComputeHash(IContext context, ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, int signatureIndex)
         => ComputeHash(context, data, hashAlgorithm);
 

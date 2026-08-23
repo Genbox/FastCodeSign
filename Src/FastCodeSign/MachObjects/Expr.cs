@@ -44,6 +44,7 @@ public abstract class Expr
             throw new InvalidDataException("Truncated requirement expression.");
 
         ExprOp op = (ExprOp)ReadUInt32BigEndian(buffer);
+
         switch (op)
         {
             case ExprOp.False:
@@ -215,6 +216,7 @@ public abstract class Expr
 
         StringBuilder sb = new StringBuilder();
         sb.Append('"');
+
         foreach (byte c in bytes)
         {
             if (c is (byte)'\\' or (byte)'"')
@@ -238,10 +240,7 @@ public abstract class Expr
     {
         public override int Size => 4;
 
-        public override void Write(Span<byte> buffer)
-        {
-            WriteUInt32BigEndian(buffer, (uint)op);
-        }
+        public override void Write(Span<byte> buffer) => WriteUInt32BigEndian(buffer, (uint)op);
 
         public override string ToString() => op switch
         {

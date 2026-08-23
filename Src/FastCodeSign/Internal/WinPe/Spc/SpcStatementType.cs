@@ -11,6 +11,7 @@ internal sealed record SpcStatementType(Oid[] Oids)
     public byte[] Encode()
     {
         AsnWriter writer = new AsnWriter(RuleSet);
+
         using (writer.PushSequence())
         {
             foreach (Oid oid in Oids)

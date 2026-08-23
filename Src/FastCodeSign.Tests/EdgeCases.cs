@@ -27,7 +27,7 @@ public class EdgeCases
         Span<byte> subSpan = obj.GetSpan(span);
 
         IFormatHandler handler = new MachObjectFormatHandler();
-        var context = handler.GetContext(subSpan);
+        IContext context = handler.GetContext(subSpan);
 
         ReadOnlySpan<byte> sig = handler.ExtractSignature(context, subSpan);
 

@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Genbox.FastCodeSign.Abstracts;
@@ -88,6 +87,7 @@ public class CodeSignBundleProvider
         string backupPath = Path.Combine(parent, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.fcs-backup");
         bool installed = false;
         bool backupCreated = false;
+
         try
         {
             byte[] originalState = CaptureDirectoryState(fullPath, cancellationToken);
@@ -96,6 +96,7 @@ public class CodeSignBundleProvider
                 throw new IOException("The bundle changed while it was being copied.");
 
             CodeSignBundleProvider stagedProvider = new CodeSignBundleProvider(_handler, stagingPath);
+
             if (stagedProvider._handler.GetContext(stagingPath).IsSigned)
             {
                 if (options.ExistingSignatureBehavior == ExistingSignatureBehavior.Fail)
@@ -114,6 +115,7 @@ public class CodeSignBundleProvider
 
             Directory.Move(fullPath, backupPath);
             backupCreated = true;
+
             try
             {
                 Directory.Move(stagingPath, fullPath);
@@ -159,6 +161,7 @@ public class CodeSignBundleProvider
     private static void CopyDirectory(string source, string destination, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(destination);
+
         foreach (string entry in Directory.EnumerateFileSystemEntries(source))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -210,6 +213,7 @@ public class CodeSignBundleProvider
                 File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(source));
                 File.SetLastAccessTimeUtc(destination, File.GetLastAccessTimeUtc(source));
             }
+
             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                 File.SetUnixFileMode(destination, File.GetUnixFileMode(source));
         }
@@ -232,6 +236,7 @@ public class CodeSignBundleProvider
     private static void AppendDirectoryState(IncrementalHash hash, string root, string directory, CancellationToken cancellationToken)
     {
         Span<byte> length = stackalloc byte[sizeof(long)];
+
         foreach (string entry in Directory.EnumerateFileSystemEntries(directory).Order(StringComparer.Ordinal))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -259,10 +264,11 @@ public class CodeSignBundleProvider
             }
 
             using FileStream stream = new FileStream(entry, FileMode.Open, FileAccess.Read, FileShare.Read);
-            BinaryPrimitives.WriteInt64LittleEndian(length, stream.Length);
+            WriteInt64LittleEndian(length, stream.Length);
             hash.AppendData(length);
 
             byte[] buffer = ArrayPool<byte>.Shared.Rent(81920);
+
             try
             {
                 while (true)
@@ -284,7 +290,7 @@ public class CodeSignBundleProvider
     {
         byte[] bytes = Encoding.UTF8.GetBytes(value);
         Span<byte> length = stackalloc byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
+        WriteInt32LittleEndian(length, bytes.Length);
         hash.AppendData(length);
         hash.AppendData(bytes);
     }

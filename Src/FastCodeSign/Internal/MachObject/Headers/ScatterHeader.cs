@@ -10,8 +10,5 @@ internal readonly record struct ScatterHeader
 
     public required uint ScatterOffset { get; init; } // offset of optional scatter vector
 
-    public void Write(Span<byte> buffer)
-    {
-        WriteUInt32BigEndian(buffer, ScatterOffset);
-    }
+    public void Write(Span<byte> buffer) => WriteUInt32BigEndian(buffer, ScatterOffset);
 }

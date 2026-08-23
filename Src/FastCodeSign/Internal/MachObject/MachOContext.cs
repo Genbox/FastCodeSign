@@ -9,6 +9,15 @@ internal class MachOContext : IContext
     private static readonly byte[] LinkEditBytes = "__LINKEDIT"u8.ToArray();
     private static readonly byte[] TextBytes = "__TEXT"u8.ToArray();
 
+    internal required bool IsLittleEndian { get; init; }
+    internal required bool Is64Bit { get; init; }
+    internal required MachHeader MachHeader { get; init; }
+    internal required CodeSignatureHeader? CodeSignature { get; init; }
+    internal required Segment LinkEdit { get; init; }
+    internal required Segment Text { get; init; }
+
+    public required bool IsSigned { get; init; }
+
     public static MachOContext Create(ReadOnlySpan<byte> data)
     {
         //Note: I could be more strict here, but it is not well-defined what constitutes a "minimal mach object".
@@ -123,16 +132,7 @@ internal class MachOContext : IContext
             MachHeader = machHeader,
             CodeSignature = codeSignature,
             LinkEdit = linkEdit,
-            Text = text,
+            Text = text
         };
     }
-
-    public required bool IsSigned { get; init; }
-
-    internal required bool IsLittleEndian { get; init; }
-    internal required bool Is64Bit { get; init; }
-    internal required MachHeader MachHeader { get; init; }
-    internal required CodeSignatureHeader? CodeSignature { get; init; }
-    internal required Segment LinkEdit { get; init; }
-    internal required Segment Text { get; init; }
 }

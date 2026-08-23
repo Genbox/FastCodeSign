@@ -19,9 +19,11 @@ public sealed class Signature
     }
 
     public SignedCms SignedCms { get; }
+
     /// <summary>
-    /// Contains one CMS per signed architecture. For non-universal formats this contains <see cref="SignedCms"/> only.
+    /// Contains one CMS per signed architecture. For non-universal formats this contains <see cref="SignedCms" /> only.
     /// </summary>
     public IReadOnlyList<SignedCms> SignedCmsSignatures { get; }
+
     internal object? SignatureInfo { get; }
 }

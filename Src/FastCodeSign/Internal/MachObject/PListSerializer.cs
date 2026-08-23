@@ -23,12 +23,10 @@ internal static class PListSerializer
         });
 
         writer.WriteStartDocument(); // <?xml version="1.0" encoding="UTF-8"?>
-        writer.WriteDocType(
-            name: "plist",
-            pubid: "-//Apple//DTD PLIST 1.0//EN",
-            sysid: "http://www.apple.com/DTDs/PropertyList-1.0.dtd",
-            subset: null
-        );
+        writer.WriteDocType("plist",
+            "-//Apple//DTD PLIST 1.0//EN",
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd",
+            null);
 
         writer.WriteStartElement("plist");
         writer.WriteAttributeString("version", "1.0");

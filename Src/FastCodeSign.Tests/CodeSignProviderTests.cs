@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.Handlers;
@@ -24,7 +25,7 @@ public class CodeSignProviderTests
         Assert.False(provider.HasSignature());
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void HasSignature(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
@@ -34,7 +35,7 @@ public class CodeSignProviderTests
         Assert.False(provider2.HasSignature());
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private async Task GetSignature(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.Signed, TestContext.Current.CancellationToken)));
@@ -48,14 +49,14 @@ public class CodeSignProviderTests
               .IgnoreMember("RawData");
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void GetSignature_UnsignedFileShouldReturnNull(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Unsigned)));
         Assert.Null(provider.GetSignature());
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void HasValidSignature(TestCase tc)
     {
         byte[] signed = File.ReadAllBytes(tc.Signed);
@@ -72,7 +73,7 @@ public class CodeSignProviderTests
         Assert.False(provider.HasValidSignature(sig));
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void TryRemoveSignature(TestCase tc)
     {
         MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.Signed));
@@ -99,14 +100,14 @@ public class CodeSignProviderTests
         Assert.Equal(modified[..unsigned.Length], unsigned.AsSpan());
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void TryRemoveSignature_FileWithoutSignatureShouldReturnFalse(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Unsigned)));
         Assert.False(provider.TryRemoveSignature(true));
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void ComputeHash(TestCase tc)
     {
         //MachObject does not support stable hashing, so we skip it.
@@ -118,11 +119,11 @@ public class CodeSignProviderTests
         Assert.Equal(tc.Hash, hash);
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private async Task CreateSignature(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken)));
-        using var certificate = Constants.GetCert();
+        using X509Certificate2 certificate = Constants.GetCert();
         Signature sig = provider.CreateSignature(new SignOptions { Certificate = certificate }, tc.FormatOptions);
 
         await Verify(sig.SignedCms)
@@ -132,21 +133,21 @@ public class CodeSignProviderTests
               .IgnoreMember("RawData"); //We don't want to save these to verify files, but the SigningTime extension also makes it change
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void CreateSignature_FileWithSignatureShouldThrow(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
-        using var certificate = Constants.GetCert();
+        using X509Certificate2 certificate = Constants.GetCert();
         Assert.Throws<InvalidOperationException>(() => provider.CreateSignature(new SignOptions { Certificate = certificate }));
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private async Task WriteSignature(TestCase tc)
     {
         byte[] unsigned = await File.ReadAllBytesAsync(tc.Unsigned, TestContext.Current.CancellationToken);
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
         CodeSignProvider provider = tc.ProviderFactory(allocation);
-        using var certificate = Constants.GetCert();
+        using X509Certificate2 certificate = Constants.GetCert();
         provider.WriteSignature(provider.CreateSignature(new SignOptions { Certificate = certificate }, tc.FormatOptions, signer =>
         {
             for (int i = signer.SignedAttributes.Count - 1; i >= 0; i--)
@@ -160,6 +161,7 @@ public class CodeSignProviderTests
         }));
 
         byte[] actual = allocation.GetSpan().ToArray();
+
         if (tc.HandlerType == typeof(PeFormatHandler))
         {
             int peHeaderOffset = ReadInt32LittleEndian(unsigned.AsSpan(0x3c, 4));
@@ -174,7 +176,7 @@ public class CodeSignProviderTests
               .IgnoreMember("RawData");
     }
 
-    [Theory, MemberData(nameof(GetTestCases))]
+    [Theory][MemberData(nameof(GetTestCases))]
     private void WriteSignature_SignedFileShouldThrow(TestCase tc)
     {
         MemoryAllocation allocation = new MemoryAllocation(File.ReadAllBytes(tc.Signed));
@@ -188,7 +190,7 @@ public class CodeSignProviderTests
         byte[] unsigned = File.ReadAllBytes(Path.Combine(Constants.FilesDir, "Unsigned/WinPe/exe_unsigned.dat"));
         MemoryAllocation allocation = new MemoryAllocation(unsigned);
         CodeSignProvider provider = new CodeSignProvider(new PeFormatHandler(), allocation, "exe_unsigned.dat");
-        using var certificate = Constants.GetCert();
+        using X509Certificate2 certificate = Constants.GetCert();
 
         provider.WriteSignature(provider.CreateSignature(new SignOptions { Certificate = certificate }));
 
@@ -238,7 +240,7 @@ public class CodeSignProviderTests
         TestCase.Create(new PeFormatHandler(), "Signed/WinPe/ocx_signed.dat", "Unsigned/WinPe/ocx_unsigned.dat", "c4b65e114e14a873aaeaa9e0dc4c26965270d44314d49106ff24f82c531b0292", equalityPatch: PatchExe),
         TestCase.Create(new PeFormatHandler(), "Signed/WinPe/scr_signed.dat", "Unsigned/WinPe/scr_unsigned.dat", "8d72965b9ece78aabbca4c744b0ab69e37b01fd7546502008c74b04e3a8d023f", equalityPatch: PatchExe),
         TestCase.Create(new PeFormatHandler(), "Signed/WinPe/sys_signed.dat", "Unsigned/WinPe/sys_unsigned.dat", "3177faa0d1f62fc48e9cb042ebc40924cf782525cc43a8ecb0ab2b6f3924f685", equalityPatch: PatchExe),
-        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/winmd_signed.dat", "Unsigned/WinPe/winmd_unsigned.dat", "ae3bd70c2b98c68565673e880eff653fdf30a8dc6c24d2b27eb0bbf936227f97", equalityPatch: PatchExe),
+        TestCase.Create(new PeFormatHandler(), "Signed/WinPe/winmd_signed.dat", "Unsigned/WinPe/winmd_unsigned.dat", "ae3bd70c2b98c68565673e880eff653fdf30a8dc6c24d2b27eb0bbf936227f97", equalityPatch: PatchExe)
     ];
 
     private static void PatchExe(Span<byte> data)

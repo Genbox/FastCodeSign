@@ -6,8 +6,8 @@ namespace Genbox.FastCodeSign.Tests.Code;
 
 internal sealed class BundleTestCase : XUnitTest, IDisposable
 {
-    private readonly string _bundlePathZip;
     private readonly string _bundlePath;
+    private readonly string _bundlePathZip;
 
     public BundleTestCase()
     {
@@ -30,6 +30,15 @@ internal sealed class BundleTestCase : XUnitTest, IDisposable
 
     public Func<string, CodeSignBundleProvider> ProviderFactory { get; }
 
+    public bool IsSigned { get; }
+    public SignatureComponent SignatureComponents { get; }
+
+    public void Dispose()
+    {
+        if (_bundlePath.Length != 0 && Directory.Exists(_bundlePath))
+            Directory.Delete(_bundlePath, true);
+    }
+
     public string UnpackBundle()
     {
         string fullPath = Path.Combine(Constants.FilesDir, _bundlePathZip);
@@ -41,19 +50,7 @@ internal sealed class BundleTestCase : XUnitTest, IDisposable
         return _bundlePath;
     }
 
-    public bool IsSigned { get; }
-    public SignatureComponent SignatureComponents { get; }
-
-    public static BundleTestCase Create(IBundleHandler handler, string bundleZipPath, bool isSigned, SignatureComponent signatureComponents, string testMethod)
-    {
-        return new BundleTestCase(x => new CodeSignBundleProvider(handler, x), handler.GetType(), bundleZipPath, testMethod, isSigned, signatureComponents);
-    }
+    public static BundleTestCase Create(IBundleHandler handler, string bundleZipPath, bool isSigned, SignatureComponent signatureComponents, string testMethod) => new BundleTestCase(x => new CodeSignBundleProvider(handler, x), handler.GetType(), bundleZipPath, testMethod, isSigned, signatureComponents);
 
     public override string ToString() => Path.GetFileName(_bundlePathZip);
-
-    public void Dispose()
-    {
-        if (_bundlePath.Length != 0 && Directory.Exists(_bundlePath))
-            Directory.Delete(_bundlePath, true);
-    }
 }

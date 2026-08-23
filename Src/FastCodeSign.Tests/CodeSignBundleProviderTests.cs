@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.BundleHandlers;
 using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Models;
@@ -11,14 +12,14 @@ namespace Genbox.FastCodeSign.Tests;
 
 public class CodeSignBundleProviderTests
 {
-    [Theory, TestNameData]
+    [Theory][TestNameData]
     private void Sign(BundleTestCase tc)
     {
         using (tc)
         {
             CodeSignBundleProvider provider = tc.ProviderFactory(tc.UnpackBundle());
 
-            using var certificate = Constants.GetCert();
+            using X509Certificate2 certificate = Constants.GetCert();
             SignOptions options = new SignOptions { Certificate = certificate };
 
             if (!tc.IsSigned)
@@ -31,14 +32,14 @@ public class CodeSignBundleProviderTests
         }
     }
 
-    [Theory, TestNameData]
+    [Theory][TestNameData]
     private void WriteSignature(BundleTestCase tc)
     {
         using (tc)
         {
             CodeSignBundleProvider provider = tc.ProviderFactory(tc.UnpackBundle());
 
-            using var certificate = Constants.GetCert();
+            using X509Certificate2 certificate = Constants.GetCert();
             SignOptions options = new SignOptions { Certificate = certificate };
 
             if (!tc.IsSigned)
@@ -52,7 +53,7 @@ public class CodeSignBundleProviderTests
         }
     }
 
-    [Theory, TestNameData]
+    [Theory][TestNameData]
     private void RemoveSignatures(BundleTestCase tc)
     {
         using (tc)
@@ -65,7 +66,7 @@ public class CodeSignBundleProviderTests
         }
     }
 
-    [Theory, TestNameData]
+    [Theory][TestNameData]
     private void HasValidSignature(BundleTestCase tc)
     {
         using (tc)
@@ -79,15 +80,15 @@ public class CodeSignBundleProviderTests
     {
         public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
         {
-            var cases = new[]
+            BundleTestCase[] cases = new[]
             {
                 BundleTestCase.Create(new AppBundleHandler(), "Signed/AppBundle/Discord.dat", true, SignatureComponent.CodeResourcesFile | SignatureComponent.LegacyCodeResourcesFile | SignatureComponent.CodeSignatureFolder | SignatureComponent.MachObjectSignature, testMethod.Name),
-                BundleTestCase.Create(new AppBundleHandler(), "Unsigned/AppBundle/MyApp.dat", false, SignatureComponent.MachObjectSignature, testMethod.Name),
+                BundleTestCase.Create(new AppBundleHandler(), "Unsigned/AppBundle/MyApp.dat", false, SignatureComponent.MachObjectSignature, testMethod.Name)
             };
 
-            var rows = new ReadOnlyCollection<ITheoryDataRow>(cases
-                                                              .Select(ITheoryDataRow (testCase) => new TheoryDataRow<BundleTestCase>(testCase))
-                                                              .ToList());
+            ReadOnlyCollection<ITheoryDataRow> rows = new ReadOnlyCollection<ITheoryDataRow>(cases
+                                                                                             .Select(ITheoryDataRow (testCase) => new TheoryDataRow<BundleTestCase>(testCase))
+                                                                                             .ToList());
 
             return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(rows);
         }

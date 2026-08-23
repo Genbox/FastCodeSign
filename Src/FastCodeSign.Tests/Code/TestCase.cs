@@ -32,18 +32,13 @@ internal sealed class TestCase : XUnitTest
     public string Hash { get; }
     public Type HandlerType { get; }
 
-    public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, IFormatOptions? formatOptions = null, Action<Span<byte>>? equalityPatch = null)
-    {
-        return new TestCase(
-            x => new CodeSignProvider(handler, x, Path.GetFileName(unsigned)),
-            handler.GetType(),
-            Path.Combine(Constants.FilesDir, signed),
-            Path.Combine(Constants.FilesDir, unsigned),
-            hash,
-            equalityPatch,
-            formatOptions
-        );
-    }
+    public static TestCase Create(IFormatHandler handler, string signed, string unsigned, string hash, IFormatOptions? formatOptions = null, Action<Span<byte>>? equalityPatch = null) => new TestCase(x => new CodeSignProvider(handler, x, Path.GetFileName(unsigned)),
+        handler.GetType(),
+        Path.Combine(Constants.FilesDir, signed),
+        Path.Combine(Constants.FilesDir, unsigned),
+        hash,
+        equalityPatch,
+        formatOptions);
 
     public override string ToString()
     {

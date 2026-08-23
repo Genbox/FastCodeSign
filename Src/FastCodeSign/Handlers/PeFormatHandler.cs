@@ -100,6 +100,7 @@ public sealed class PeFormatHandler : IFormatHandler
         }
 
         uint remainingLength = (uint)data.Length - (obj.SecuritySize + sumOfBytesHashed);
+
         if (remainingLength > 0)
         {
             offset = (int)sumOfBytesHashed;
@@ -182,8 +183,7 @@ public sealed class PeFormatHandler : IFormatHandler
 
         configureSigner?.Invoke(signer);
 
-        SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
-            new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),
+        SpcIndirectDataContent dataContent = new SpcIndirectDataContent(new SpcPeImageData(SpcPeImageFlags.IncludeResources, new SpcLink(File: new SpcString(Unicode: ""))).Encode(),
             SpcPeImageData.ObjectIdentifier,
             signer.DigestAlgorithm,
             hash,

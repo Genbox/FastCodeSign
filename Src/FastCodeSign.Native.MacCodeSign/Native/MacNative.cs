@@ -13,6 +13,10 @@ internal static partial class MacNative
 
     private static readonly IntPtr _sec = dlopen(Security, 0x1 | 0x4); // RTLD_LAZY|RTLD_LOCAL
 
+    internal static readonly IntPtr kSecImportExportPassphrase = GetCfConst("kSecImportExportPassphrase");
+    internal static readonly IntPtr kSecImportItemIdentity = GetCfConst("kSecImportItemIdentity");
+    internal static readonly IntPtr kSecCodeSignerIdentity = GetCfConst("kSecCodeSignerIdentity");
+
     // Returns the CFTypeRef *value* stored in the data symbol.
     private static IntPtr GetCfConst(string symbol)
     {
@@ -27,10 +31,6 @@ internal static partial class MacNative
         // symAddr points to a CFTypeRef variable; read the CFTypeRef stored there.
         return Marshal.ReadIntPtr(symAddr);
     }
-
-    internal static readonly IntPtr kSecImportExportPassphrase = GetCfConst("kSecImportExportPassphrase");
-    internal static readonly IntPtr kSecImportItemIdentity = GetCfConst("kSecImportItemIdentity");
-    internal static readonly IntPtr kSecCodeSignerIdentity = GetCfConst("kSecCodeSignerIdentity");
 
     [LibraryImport(CoreFoundation)]
     internal static partial void CFRelease(IntPtr cf);

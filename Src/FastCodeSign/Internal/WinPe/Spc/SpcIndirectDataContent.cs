@@ -73,6 +73,7 @@ internal readonly record struct SpcIndirectDataContent(byte[]? Data, Oid DataTyp
     public byte[] Encode()
     {
         AsnWriter writer = new AsnWriter(RuleSet);
+
         using (writer.PushSequence())
         {
             using (writer.PushSequence())

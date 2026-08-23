@@ -11,5 +11,5 @@ public enum Arm64CpuSubType : uint
     None = 0,
     All = None,
     V8 = 1,
-    E = 2,
+    E = 2
 }

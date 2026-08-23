@@ -17,5 +17,5 @@ public enum MatchOperation
     After, // after (timestamp comparison)
     OnOrBefore, // on or before (timestamp comparison)
     OnOrAfter, // on or after (timestamp comparison)
-    Absent, // not present (kCFNull)
+    Absent // not present (kCFNull)
 }

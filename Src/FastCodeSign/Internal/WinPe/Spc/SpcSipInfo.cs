@@ -14,6 +14,7 @@ internal readonly record struct SpcSipInfo(int Version, Guid Identifier)
     internal byte[] Encode()
     {
         AsnWriter writer = new AsnWriter(RuleSet);
+
         using (writer.PushSequence())
         {
             writer.WriteInteger(Version);

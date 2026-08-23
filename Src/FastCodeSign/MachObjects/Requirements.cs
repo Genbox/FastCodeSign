@@ -11,6 +11,8 @@ public class Requirements
 {
     private readonly Dictionary<RequirementType, Requirement> _values = new Dictionary<RequirementType, Requirement>();
 
+    private int Size => 12 + _values.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
+
     public void Add(RequirementType type, Expr expr)
     {
         if (!Enum.IsDefined(type))
@@ -23,8 +25,6 @@ public class Requirements
 
     public void Remove(RequirementType type) => _values.Remove(type);
 
-    private int Size => 12 + _values.Sum(x => x.Value.Size + 8); //Requirements header + blob index header + data size
-
     public void EncodeTo(Span<byte> buffer)
     {
         WriteUInt32BigEndian(buffer, (uint)CsMagic.Requirements);
@@ -34,6 +34,7 @@ public class Requirements
         int offset = 12 + (_values.Count * 8);
 
         int i = 0;
+
         foreach (KeyValuePair<RequirementType, Requirement> pair in _values)
         {
             WriteUInt32BigEndian(buffer.Slice(12 + (i * 8), 4), (uint)pair.Key);
@@ -130,10 +131,8 @@ public class Requirements
         // identifier "<ident>"
         // and certificate leaf = H"<hash>"
 
-        Expr expr = Expr.And(
-            Expr.Ident(identifier),
-            Expr.AnchorHash(0, Convert.FromHexString(cert.Thumbprint))
-        );
+        Expr expr = Expr.And(Expr.Ident(identifier),
+            Expr.AnchorHash(0, Convert.FromHexString(cert.Thumbprint)));
 
         Requirements req = new Requirements();
         req.Add(RequirementType.Designated, expr);

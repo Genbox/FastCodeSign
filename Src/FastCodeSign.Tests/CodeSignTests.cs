@@ -1,5 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Allocations;
 using Genbox.FastCodeSign.BundleHandlers;
 using Genbox.FastCodeSign.Enums;
@@ -26,11 +28,11 @@ public class CodeSignTests
 
         try
         {
-            using var certificate = Constants.GetCert();
+            using X509Certificate2 certificate = Constants.GetCert();
             CodeSign.SignFile(dstFile, certificate);
 
             using CodeSignFileProvider provider = CodeSignProvider.FromFile(dstFile);
-            var signedCms = provider.GetSignature();
+            SignedCms? signedCms = provider.GetSignature();
             Assert.NotNull(signedCms);
             Assert.True(provider.HasValidSignature(signedCms));
         }
@@ -43,11 +45,11 @@ public class CodeSignTests
     [Fact]
     private void SignDataTest()
     {
-        using var certificate = Constants.GetCert();
+        using X509Certificate2 certificate = Constants.GetCert();
         byte[] signed = CodeSign.SignData(File.ReadAllBytes(_srcFile), certificate, "macho_unsigned").ToArray();
 
         CodeSignProvider provider = CodeSignProvider.FromData(signed, fileName: "macho_unsigned");
-        var signedCms = provider.GetSignature();
+        SignedCms? signedCms = provider.GetSignature();
         Assert.NotNull(signedCms);
         Assert.True(provider.HasValidSignature(signedCms));
     }
@@ -64,7 +66,7 @@ public class CodeSignTests
             CodeSignBundleProvider provider = CodeSignProvider.FromBundle(bundlePath);
             Assert.False(provider.HasValidSignature());
 
-            using var certificate = Constants.GetCert();
+            using X509Certificate2 certificate = Constants.GetCert();
             CodeSign.SignBundle(bundlePath, new SignOptions { Certificate = certificate, ExistingSignatureBehavior = ExistingSignatureBehavior.Replace }, new AppBundleOptions
             {
                 SigningFlags = MachObjectSigningFlags.HardenedRuntime
@@ -77,6 +79,7 @@ public class CodeSignTests
             string executablePath = AppBundleContext.Create(bundlePath).BundleExecutablePath;
             using FileAllocation allocation = new FileAllocation(executablePath);
             ReadOnlySpan<byte> executable = allocation.GetSpan();
+
             foreach (MachObjectModel machObject in MachObjectHelper.GetMachObjects(executable))
             {
                 ReadOnlySpan<byte> slice = machObject.GetSpan(executable);

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
@@ -81,23 +82,17 @@ public class TimestampTransportTests
         Assert.Equal(SignatureIntegrityStatus.Invalid, result.IntegrityStatus);
     }
 
-    private static CodeSignProvider CreateProvider()
-    {
-        return CodeSignProvider.FromData(Encoding.UTF8.GetBytes("Write-Output 'timestamp transport test'\r\n"), new PowerShellScriptFormatHandler(Encoding.UTF8));
-    }
+    private static CodeSignProvider CreateProvider() => CodeSignProvider.FromData(Encoding.UTF8.GetBytes("Write-Output 'timestamp transport test'\r\n"), new PowerShellScriptFormatHandler(Encoding.UTF8));
 
-    private static SignOptions CreateOptions(X509Certificate2 certificate, HttpClient client)
+    private static SignOptions CreateOptions(X509Certificate2 certificate, HttpClient client) => new SignOptions
     {
-        return new SignOptions
+        Certificate = certificate,
+        Timestamp = new TimestampOptions
         {
-            Certificate = certificate,
-            Timestamp = new TimestampOptions
-            {
-                TimestampAuthorityUri = new Uri("https://timestamp.example.test"),
-                HttpClient = client
-            }
-        };
-    }
+            TimestampAuthorityUri = new Uri("https://timestamp.example.test"),
+            HttpClient = client
+        }
+    };
 
     private static X509Certificate2 CreateCertificate()
     {
@@ -114,7 +109,7 @@ public class TimestampTransportTests
         {
             RequestContentType = request.Content?.Headers.ContentType?.MediaType;
             ByteArrayContent content = new ByteArrayContent(response);
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
         }
     }

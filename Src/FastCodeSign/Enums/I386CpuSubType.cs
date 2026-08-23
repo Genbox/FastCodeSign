@@ -23,5 +23,5 @@ public enum I386CpuSubType : uint
     Itanium = 11 + (0 << 4),
     Itanium2 = 11 + (1 << 4),
     Xeon = 12 + (0 << 4),
-    XeonMP = 12 + (1 << 4),
+    XeonMP = 12 + (1 << 4)
 }

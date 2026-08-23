@@ -32,6 +32,7 @@ public static class SignerInfoExtensions
                 throw new InvalidOperationException("The counter signature does not contain a digest algorithm.");
 
             DateTime signingTime = DateTime.MinValue;
+
             foreach (CryptographicAttributeObject attr in info.SignedAttributes)
             {
                 foreach (AsnEncodedData value in attr.Values)
@@ -101,7 +102,7 @@ public static class SignerInfoExtensions
     public static Task CounterSignAsync(this SignerInfo signerInfo, string url, HashAlgorithmName hashAlgorithm)
     {
         ArgumentNullException.ThrowIfNull(url);
-        return CounterSignAsync(signerInfo, new Uri(url, UriKind.Absolute), hashAlgorithm, null, CancellationToken.None);
+        return signerInfo.CounterSignAsync(new Uri(url, UriKind.Absolute), hashAlgorithm, null, CancellationToken.None);
     }
 
     /// <summary>
@@ -119,9 +120,10 @@ public static class SignerInfoExtensions
 
         HttpClient client = httpClient ?? new HttpClient();
         HttpClient? ownedClient = httpClient == null ? client : null;
+
         try
         {
-            AsnEncodedData attribute = await GetTimestampAttributeAsync(signerInfo, timestampAuthorityUri, hashAlgorithm, client, cancellationToken).ConfigureAwait(false);
+            AsnEncodedData attribute = await signerInfo.GetTimestampAttributeAsync(timestampAuthorityUri, hashAlgorithm, client, cancellationToken).ConfigureAwait(false);
             signerInfo.AddUnsignedAttribute(attribute);
         }
         finally
@@ -130,10 +132,7 @@ public static class SignerInfoExtensions
         }
     }
 
-    internal static async Task<AsnEncodedData> GetTimestampAttributeAsync(this SignerInfo signerInfo, Uri timestampAuthorityUri, HashAlgorithmName hashAlgorithm, HttpClient httpClient, CancellationToken cancellationToken)
-    {
-        return await GetTimestampAttributeAsync(signerInfo, timestampAuthorityUri, hashAlgorithm, httpClient, TimestampOptions.DefaultMaximumResponseSizeBytes, false, cancellationToken).ConfigureAwait(false);
-    }
+    internal static async Task<AsnEncodedData> GetTimestampAttributeAsync(this SignerInfo signerInfo, Uri timestampAuthorityUri, HashAlgorithmName hashAlgorithm, HttpClient httpClient, CancellationToken cancellationToken) => await signerInfo.GetTimestampAttributeAsync(timestampAuthorityUri, hashAlgorithm, httpClient, TimestampOptions.DefaultMaximumResponseSizeBytes, false, cancellationToken).ConfigureAwait(false);
 
     internal static async Task<AsnEncodedData> GetTimestampAttributeAsync(this SignerInfo signerInfo, Uri timestampAuthorityUri, HashAlgorithmName hashAlgorithm, HttpClient httpClient, int maximumResponseSizeBytes, bool requireResponseContentType, CancellationToken cancellationToken)
     {
@@ -164,32 +163,35 @@ public static class SignerInfoExtensions
             throw new InvalidOperationException($"Timestamp authority returned an error: {resp.StatusCode}");
 
         string? mediaType = resp.Content.Headers.ContentType?.MediaType;
+
         if (mediaType == null)
         {
             if (requireResponseContentType)
                 throw new InvalidOperationException("The timestamp authority response does not specify a Content-Type.");
         }
         else if (!string.Equals(mediaType, "application/timestamp-reply", StringComparison.OrdinalIgnoreCase))
-        {
             throw new InvalidOperationException($"The timestamp authority response has an invalid Content-Type: {mediaType}.");
-        }
 
         if (resp.Content.Headers.ContentLength is long contentLength && contentLength > maximumResponseSizeBytes)
             throw new InvalidOperationException("The timestamp authority response exceeds the configured maximum size.");
 
         Stream stream = await resp.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+
         await using (stream.ConfigureAwait(false))
         {
             MemoryStream buffer = new MemoryStream(Math.Min(maximumResponseSizeBytes, 81920));
+
             await using (buffer.ConfigureAwait(false))
             {
                 byte[] readBuffer = ArrayPool<byte>.Shared.Rent(81920);
                 int totalRead = 0;
+
                 try
                 {
                     while (true)
                     {
                         int remaining = maximumResponseSizeBytes - totalRead;
+
                         if (remaining == 0)
                         {
                             if (await stream.ReadAsync(readBuffer.AsMemory(0, 1), cancellationToken).ConfigureAwait(false) != 0)

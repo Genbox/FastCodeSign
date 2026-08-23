@@ -17,6 +17,7 @@ internal static class MachObjectSignatureHelper
 
         Span<byte> data = allocation.GetSpan();
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
+
         if (magic is not (MachMagic.FatMagicBE or MachMagic.FatMagicLE or MachMagic.FatMagic64BE or MachMagic.FatMagic64LE))
         {
             IFormatHandler handler = new MachObjectFormatHandler();
@@ -32,6 +33,7 @@ internal static class MachObjectSignatureHelper
         IFormatHandler sliceHandler = new MachObjectFormatHandler();
 
         ulong offset = (ulong)headerSize;
+
         for (int i = 0; i < machObjects.Length; i++)
         {
             MemoryAllocation sliceAllocation = new MemoryAllocation(machObjects[i].GetSpan(data).ToArray());
@@ -46,6 +48,7 @@ internal static class MachObjectSignatureHelper
         WriteU32(rebuilt.AsSpan(4), (uint)machObjects.Length, littleEndian);
 
         offset = (ulong)headerSize;
+
         for (int i = 0; i < machObjects.Length; i++)
         {
             offset = Align(offset, 1UL << checked((int)machObjects[i].Align));
@@ -55,6 +58,7 @@ internal static class MachObjectSignatureHelper
             int archOffset = 8 + (i * archHeaderSize);
             WriteU32(rebuilt.AsSpan(archOffset), (uint)machObjects[i].CpuType, littleEndian);
             WriteU32(rebuilt.AsSpan(archOffset + 4), Convert.ToUInt32(machObjects[i].CpuSubType), littleEndian);
+
             if (is64Bit)
             {
                 WriteU64(rebuilt.AsSpan(archOffset + 8), offset, littleEndian);
@@ -102,6 +106,7 @@ internal static class MachObjectSignatureHelper
         int archHeaderSize = is64Bit ? 32 : 20;
         int headerSize = checked(8 + (machObjects.Length * archHeaderSize));
         ulong offset = (ulong)headerSize;
+
         for (int i = 0; i < slices.Length; i++)
         {
             offset = Align(offset, 1UL << checked((int)machObjects[i].Align));
@@ -112,6 +117,7 @@ internal static class MachObjectSignatureHelper
         data[..8].CopyTo(rebuilt);
         WriteU32(rebuilt.AsSpan(4), (uint)machObjects.Length, littleEndian);
         offset = (ulong)headerSize;
+
         for (int i = 0; i < slices.Length; i++)
         {
             offset = Align(offset, 1UL << checked((int)machObjects[i].Align));
@@ -120,6 +126,7 @@ internal static class MachObjectSignatureHelper
             int archOffset = 8 + (i * archHeaderSize);
             WriteU32(rebuilt.AsSpan(archOffset), (uint)machObjects[i].CpuType, littleEndian);
             WriteU32(rebuilt.AsSpan(archOffset + 4), Convert.ToUInt32(machObjects[i].CpuSubType), littleEndian);
+
             if (is64Bit)
             {
                 WriteU64(rebuilt.AsSpan(archOffset + 8), offset, littleEndian);
@@ -132,6 +139,7 @@ internal static class MachObjectSignatureHelper
                 WriteU32(rebuilt.AsSpan(archOffset + 12), (uint)slice.Length, littleEndian);
                 WriteU32(rebuilt.AsSpan(archOffset + 16), machObjects[i].Align, littleEndian);
             }
+
             offset += (uint)slice.Length;
         }
 

@@ -38,6 +38,7 @@ public class FormatAndBundleSecurityTests
     private void EmptyFileAllocationCanBeResized()
     {
         string path = Path.GetTempFileName();
+
         try
         {
             using FileAllocation allocation = new FileAllocation(path);
@@ -57,6 +58,7 @@ public class FormatAndBundleSecurityTests
     private void AppBundleRejectsExecutablePathTraversal()
     {
         string bundle = CreateBundle("../Outside");
+
         try
         {
             AppBundleHandler handler = new AppBundleHandler();
@@ -73,9 +75,11 @@ public class FormatAndBundleSecurityTests
     {
         string bundle = CreateBundle("App");
         string external = Path.GetTempFileName();
+
         try
         {
             string executable = Path.Combine(bundle, "Contents", "MacOS", "App");
+
             try
             {
                 File.CreateSymbolicLink(executable, external);
@@ -101,13 +105,13 @@ public class FormatAndBundleSecurityTests
         string contents = Path.Combine(bundle, "Contents");
         Directory.CreateDirectory(Path.Combine(contents, "MacOS"));
         File.WriteAllText(Path.Combine(contents, "Info.plist"), $"""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0"><dict>
-            <key>CFBundleExecutable</key><string>{executable}</string>
-            <key>CFBundleIdentifier</key><string>com.fastcodesign.security-test</string>
-            </dict></plist>
-            """);
+                                                                 <?xml version="1.0" encoding="UTF-8"?>
+                                                                 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                                                                 <plist version="1.0"><dict>
+                                                                 <key>CFBundleExecutable</key><string>{executable}</string>
+                                                                 <key>CFBundleIdentifier</key><string>com.fastcodesign.security-test</string>
+                                                                 </dict></plist>
+                                                                 """);
         return bundle;
     }
 }

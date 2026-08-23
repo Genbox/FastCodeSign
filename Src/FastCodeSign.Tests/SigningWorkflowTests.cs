@@ -40,6 +40,7 @@ public class SigningWorkflowTests
         Assert.All(provider.GetSignatures(), signature => Assert.True(provider.HasValidSignature(signature)));
 
         ReadOnlySpan<byte> signedData = allocation.GetSpan();
+
         foreach (MachObjectModel machObject in MachObjectHelper.GetMachObjects(signedData))
         {
             ReadOnlySpan<byte> slice = machObject.GetSpan(signedData);
@@ -104,7 +105,7 @@ public class SigningWorkflowTests
     {
         const int alignment = 4096;
         int firstOffset = alignment;
-        int secondOffset = (firstOffset + slice.Length + alignment - 1) & ~(alignment - 1);
+        int secondOffset = ((firstOffset + slice.Length + alignment) - 1) & ~(alignment - 1);
         byte[] result = new byte[secondOffset + slice.Length];
 
         BinaryPrimitives.WriteUInt32BigEndian(result, 0xcafe_babe);

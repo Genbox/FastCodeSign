@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using Genbox.FastCodeSign.Internal.Native;
 using Genbox.FastCodeSign.Internal.Native.Enums;
@@ -17,10 +16,7 @@ public static class AuthenticodeVerifier
     private static readonly Guid DRIVER_ACTION_VERIFY = new Guid("{F750E6C3-38EE-11d1-85E5-00C04FC295EE}");
     private static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 = new Guid("{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}");
 
-    public static WinVerifyTrustResult VerifyFile(string fileName)
-    {
-        return VerifyFile(fileName, false);
-    }
+    public static WinVerifyTrustResult VerifyFile(string fileName) => VerifyFile(fileName, false);
 
     public static WinVerifyTrustResult VerifyFile(string fileName, bool enableRevocation)
     {
@@ -29,10 +25,7 @@ public static class AuthenticodeVerifier
         return WinVerifyCommon(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, enableRevocation);
     }
 
-    public static WinVerifyTrustResult VerifyFileExt(string fileName, out string? signer, out byte[]? certificate)
-    {
-        return VerifyFileExt(fileName, false, out signer, out certificate);
-    }
+    public static WinVerifyTrustResult VerifyFileExt(string fileName, out string? signer, out byte[]? certificate) => VerifyFileExt(fileName, false, out signer, out certificate);
 
     public static WinVerifyTrustResult VerifyFileExt(string fileName, bool enableRevocation, out string? signer, out byte[]? certificate)
     {
@@ -41,10 +34,7 @@ public static class AuthenticodeVerifier
         return WinVerifyCommonExt(fileInfo, WTD_CHOICE.WTD_CHOICE_FILE, WINTRUST_ACTION_GENERIC_VERIFY_V2, enableRevocation, out signer, out certificate);
     }
 
-    public static WinVerifyTrustResult VerifyFileWithCab(string fileName, out byte[] hash)
-    {
-        return VerifyFileWithCab(fileName, false, out hash);
-    }
+    public static WinVerifyTrustResult VerifyFileWithCab(string fileName, out byte[] hash) => VerifyFileWithCab(fileName, false, out hash);
 
     public static WinVerifyTrustResult VerifyFileWithCab(string fileName, bool enableRevocation, out byte[] hash)
     {
@@ -89,10 +79,7 @@ public static class AuthenticodeVerifier
         }
     }
 
-    public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, out string? signer, out byte[]? certificate, out byte[]? hash)
-    {
-        return VerifyFileWithCabExt(fileName, false, out signer, out certificate, out hash);
-    }
+    public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, out string? signer, out byte[]? certificate, out byte[]? hash) => VerifyFileWithCabExt(fileName, false, out signer, out certificate, out hash);
 
     public static WinVerifyTrustResult VerifyFileWithCabExt(string fileName, bool enableRevocation, out string? signer, out byte[]? certificate, out byte[]? hash)
     {
@@ -308,10 +295,12 @@ public static class AuthenticodeVerifier
     {
         //We try the newer variant first, as it has the ability to set the hash function
         if (FunctionExists(Wintrust, nameof(CryptCATAdminAcquireContext2)))
+        {
             if (CryptCATAdminAcquireContext2(out SafeContextHandle handle1, DRIVER_ACTION_VERIFY, hashAlgorithm?.Name, IntPtr.Zero, 0))
                 return handle1;
             else
                 throw new InvalidOperationException("Unable to obtain context");
+        }
 
         //We fall back to the older variant
         if (CryptCATAdminAcquireContext(out SafeContextHandle handle2, DRIVER_ACTION_VERIFY, 0))

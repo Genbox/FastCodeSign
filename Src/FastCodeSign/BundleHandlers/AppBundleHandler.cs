@@ -36,10 +36,12 @@ public sealed class AppBundleHandler : IBundleHandler
         Requirements? req = opt.Requirements;
 
         if (req == null)
+        {
             if (signOptions.Certificate.IsAppleDeveloperCertificate())
                 req = Requirements.CreateAppleDevDefault(obj.Identifier, signOptions.Certificate);
             else
                 req = Requirements.CreateDefault(obj.Identifier, signOptions.Certificate);
+        }
 
         byte[] requirementsBytes = req.ToArray();
 
@@ -57,6 +59,7 @@ public sealed class AppBundleHandler : IBundleHandler
         }
 
         Dictionary<string, object> signingRules2 = opt.ResourcesPropertyList?.TryGetValue("rules2", out object? customRules) == true && customRules is Dictionary<string, object> customRules2 ? customRules2 : BuildRules2();
+
         // FCS-002: Nested code is signed before the parent envelope captures its CodeDirectory hash.
         string? teamId = opt.TeamId ?? (signOptions.Certificate.IsAppleDeveloperCertificate() ? signOptions.Certificate.GetTeamId() : null);
         CdFlags codeDirectoryFlags = MachObjectFormatHandler.GetCodeDirectoryFlags(opt.SigningFlags);
@@ -101,6 +104,7 @@ public sealed class AppBundleHandler : IBundleHandler
 
         string codeResFile = Path.Combine(codeSigPath, "CodeResources");
         using FileStream fs = File.Create(codeResFile);
+
         // FCS-002: Write the exact CodeResources bytes hashed into the executable's ResourceDir special slot.
         fs.Write(info.CodeResourcesBytes);
 
@@ -155,6 +159,7 @@ public sealed class AppBundleHandler : IBundleHandler
         MachObject[] objects = MachObjectHelper.GetMachObjects(executable);
         IFormatHandler machHandler = new MachObjectFormatHandler();
         bool hasSignature = false;
+
         foreach (MachObject machObject in objects)
         {
             if (machHandler.GetContext(machObject.GetSpan(executable)).IsSigned)
@@ -186,6 +191,7 @@ public sealed class AppBundleHandler : IBundleHandler
 
         // Check if the signature in the mach object is valid
         IFormatHandler handler = new MachObjectFormatHandler();
+
         using (FileAllocation allocation = new FileAllocation(obj.BundleExecutablePath))
         {
             Span<byte> span = allocation.GetSpan();
@@ -267,7 +273,7 @@ public sealed class AppBundleHandler : IBundleHandler
             if (!files2.TryGetValue(relativePath, out object? value))
                 return false;
 
-            if ((entry.NestedCode != null) != IsNestedEntry(value))
+            if (entry.NestedCode != null != IsNestedEntry(value))
                 return false;
         }
 
@@ -349,6 +355,7 @@ public sealed class AppBundleHandler : IBundleHandler
             return ValidateNestedSlice(formatHandler, span, expectedCdHash, expectedRequirementText, out bool matchesCdHash) && matchesCdHash;
 
         bool anyCdHashMatch = false;
+
         for (int i = 0; i < objs.Length; i++)
         {
             ReadOnlySpan<byte> objSpan = objs[i].GetSpan(span);
@@ -478,6 +485,7 @@ public sealed class AppBundleHandler : IBundleHandler
                 files2.Add(relative, new Dictionary<string, object>
                 {
                     { "cdhash", GetExecutableCdHash(nested.ExecutablePath) },
+
                     // FCS-002/FCS-003: This text corresponds byte-for-byte to the designated requirement retained or generated for nested code.
                     { "requirement", nestedRequirement.GetDesignatedRequirementText() }
                 });
@@ -550,6 +558,7 @@ public sealed class AppBundleHandler : IBundleHandler
         ReadOnlySpan<byte> data = allocation.GetSpan();
         MachObject[] machObjects = MachObjectHelper.GetMachObjects(data);
         bool anySigned = false;
+
         foreach (MachObject machObject in machObjects)
         {
             bool isSigned = handler.GetContext(machObject.GetSpan(data)).IsSigned;
@@ -586,15 +595,18 @@ public sealed class AppBundleHandler : IBundleHandler
     private static void RemoveMachSignatures(FileAllocation allocation, ReadOnlySpan<byte> data, MachObject[] machObjects, IFormatHandler handler)
     {
         MachMagic magic = (MachMagic)ReadUInt32BigEndian(data);
+
         if (magic is not (MachMagic.FatMagicBE or MachMagic.FatMagicLE or MachMagic.FatMagic64BE or MachMagic.FatMagic64LE))
         {
             Span<byte> slice = allocation.GetSpan();
             IContext context = handler.GetContext(slice);
+
             if (context.IsSigned)
             {
                 long delta = handler.RemoveSignature(context, slice);
                 allocation.SetLength(checked((uint)(slice.Length - delta)));
             }
+
             return;
         }
 
@@ -629,6 +641,7 @@ public sealed class AppBundleHandler : IBundleHandler
 
         string identifier = Path.GetFileNameWithoutExtension(path);
         string executableName = identifier;
+
         foreach (string infoPath in infoCandidates)
         {
             if (!File.Exists(infoPath))
@@ -682,6 +695,7 @@ public sealed class AppBundleHandler : IBundleHandler
         while (directories.Count != 0)
         {
             string directory = directories.Pop();
+
             foreach (string entry in Directory.EnumerateFileSystemEntries(directory).Order(StringComparer.Ordinal))
             {
                 string relative = NormalizeRelativePath(Path.GetRelativePath(contents, entry));
@@ -692,6 +706,7 @@ public sealed class AppBundleHandler : IBundleHandler
                 bool isDirectory = (attrs & FileAttributes.Directory) != FileAttributes.None;
                 bool isReparse = (attrs & FileAttributes.ReparsePoint) != FileAttributes.None;
                 RuleDecision rule = EvaluateRule(rules2, relative);
+
                 // Framework-style directories are traversed so their resources remain covered by this bundle's seal.
                 NestedCode? nested = !isReparse && rule.Nested ? TryResolveNestedCode(entry, isDirectory) : null;
 
@@ -775,6 +790,7 @@ public sealed class AppBundleHandler : IBundleHandler
         foreach ((string pattern, object value) in rules)
         {
             bool matches;
+
             try
             {
                 matches = Regex.IsMatch(relativePath, pattern, RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, RegexTimeout);

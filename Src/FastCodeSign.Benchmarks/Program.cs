@@ -10,7 +10,6 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-
         IConfig config = ManualConfig.CreateMinimumViable()
                                      .AddJob(new Job(new RunMode
                                      {

@@ -7,7 +7,7 @@ internal static class BundleHandlerFactory
 {
     private static readonly IBundleHandler[] Handlers =
     [
-        new AppBundleHandler(),
+        new AppBundleHandler()
     ];
 
     public static IBundleHandler? Get(string path)

@@ -14,7 +14,7 @@ internal static class Program
         // You need to provide a code signing certificate
         using X509Certificate2 cert = X509CertificateLoader.LoadPkcs12FromFile("FastCodeSign.pfx", "password");
 
-        Span<byte> signed = CodeSign.SignData(pwsh, cert, fileName: "script.ps1");
+        Span<byte> signed = CodeSign.SignData(pwsh, cert, "script.ps1");
         Console.WriteLine(Encoding.UTF8.GetString(signed));
     }
 }

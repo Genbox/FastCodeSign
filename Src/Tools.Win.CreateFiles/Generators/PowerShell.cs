@@ -16,9 +16,7 @@ internal static class PowerShell
         HashAlgorithmName hash = HashAlgorithmName.SHA256;
 
         foreach (string file in Directory.GetFiles("PowerShell", "*_unsigned.dat", SearchOption.TopDirectoryOnly))
-        {
             SignFile(file, cert, rsa, hash);
-        }
     }
 
     private static void SignFile(string unsigned, X509Certificate2 cert, RSA rsa, HashAlgorithmName hash, TimeStampConfiguration? timeConfig = null)

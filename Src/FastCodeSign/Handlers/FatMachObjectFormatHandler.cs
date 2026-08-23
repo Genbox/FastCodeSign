@@ -6,7 +6,6 @@ using Genbox.FastCodeSign.Helpers;
 using Genbox.FastCodeSign.Internal.MachObject;
 using Genbox.FastCodeSign.Internal.MachObject.Headers.Enums;
 using Genbox.FastCodeSign.Models;
-using static Genbox.FastCodeSign.Internal.MachObject.MachBinaryPrimitives;
 
 namespace Genbox.FastCodeSign.Handlers;
 
@@ -105,9 +104,11 @@ internal sealed class FatMachObjectFormatHandler : IFormatHandler
         FatMachObjectContext fatContext = (FatMachObjectContext)context;
         fatContext.EnsureUniformSignatureState();
         byte[] encoded = signedCms.Encode();
+
         for (int i = 0; i < fatContext.Slices.Length; i++)
         {
             ReadOnlySpan<byte> signature = SliceHandler.ExtractSignature(fatContext.SliceContexts[i], fatContext.Slices[i].GetSpan(data));
+
             if (signature.SequenceEqual(encoded))
             {
                 SliceHandler.CheckSignature(fatContext.SliceContexts[i], fatContext.Slices[i].GetSpan(data), signedCms);
@@ -125,8 +126,8 @@ internal sealed class FatMachObjectFormatHandler : IFormatHandler
     {
         public MachObject[] Slices { get; } = slices;
         public IContext[] SliceContexts { get; } = sliceContexts;
-        public bool IsSigned { get; } = isSigned;
         public bool HasMixedSignatureState { get; } = hasMixedSignatureState;
+        public bool IsSigned { get; } = isSigned;
 
         public void EnsureUniformSignatureState()
         {

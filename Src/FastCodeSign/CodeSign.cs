@@ -38,7 +38,7 @@ public static class CodeSign
     /// Symbolic links and reparse points are rejected.
     /// </summary>
     /// <remarks>
-    /// This file-path convenience API provides replacement staging. <see cref="CodeSignProvider.SignAsync"/> operates on an arbitrary allocation and does not provide file replacement semantics.
+    /// This file-path convenience API provides replacement staging. <see cref="CodeSignProvider.SignAsync" /> operates on an arbitrary allocation and does not provide file replacement semantics.
     /// </remarks>
     public static async Task SignFileAsync(string filePath, SignOptions signOptions, IFormatOptions? formatOptions, bool skipExtCheck = false, CancellationToken cancellationToken = default)
     {
@@ -64,6 +64,7 @@ public static class CodeSign
         {
             byte[] sourceHash;
             FileStream source = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous);
+
             await using (source.ConfigureAwait(false))
             {
                 FileStream temporary = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
@@ -76,6 +77,7 @@ public static class CodeSign
             using (FileAllocation allocation = new FileAllocation(temporaryPath))
             {
                 CodeSignProvider provider = CodeSignProvider.FromAllocation(allocation, null, Path.GetFileName(fullPath), skipExtCheck);
+
                 if (provider.HasSignature())
                 {
                     if (signOptions.ExistingSignatureBehavior == ExistingSignatureBehavior.Fail)
@@ -154,7 +156,7 @@ public static class CodeSign
 
     public static void SignBundle(string path, X509Certificate2 cert) => SignBundle(path, new SignOptions
     {
-        Certificate = cert,
+        Certificate = cert
     });
 
     public static void SignBundle(string path, SignOptions signOptions)
@@ -188,6 +190,7 @@ public static class CodeSign
     {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         byte[] buffer = ArrayPool<byte>.Shared.Rent(81920);
+
         try
         {
             while (true)

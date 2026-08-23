@@ -9,7 +9,7 @@ namespace Genbox.FastCodeSign.Tests;
 
 public class VectorTests
 {
-    [Theory, MemberData(nameof(GetPowerShellTestVectors))]
+    [Theory][MemberData(nameof(GetPowerShellTestVectors))]
     private void PowerShellTestVectors(TestCase tc)
     {
         CodeSignProvider provider = tc.ProviderFactory(new MemoryAllocation(File.ReadAllBytes(tc.Signed)));
@@ -40,13 +40,9 @@ public class VectorTests
             Assert.False(provider.HasValidSignature(signedCms));
         }
         else if (filename.StartsWith("invalid-base64_", StringComparison.Ordinal))
-        {
             Assert.Throws<CryptographicException>(() => provider.GetSignature());
-        }
         else
-        {
             Assert.Fail($"There was a test vector type that was not handled: {filename}");
-        }
     }
 
     private static TheoryData<TestCase> GetPowerShellTestVectors()

@@ -31,6 +31,7 @@ public class Entitlements
             return [];
 
         Span<byte> xmlBytes;
+
         using (MemoryStream ms = new MemoryStream())
         {
             PListSerializer.Serialize(_values, ms);
@@ -74,6 +75,7 @@ public class Entitlements
                                 foreach (string item in array)
                                     writer.WriteCharacterString(UniversalTagNumber.UTF8String, item);
                             }
+
                             break;
                         case bool boolean:
                             writer.WriteBoolean(boolean);

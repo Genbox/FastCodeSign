@@ -31,9 +31,11 @@ public static class X509Certificate2Extensions
     {
         AsnReader rdr = new AsnReader(certificate.SubjectName.RawData, AsnEncodingRules.DER);
         AsnReader rdrSeq = rdr.ReadSequence();
+
         while (rdrSeq.HasData)
         {
             AsnReader rdrInner = rdrSeq.ReadSetOf(skipSortOrderValidation: true);
+
             while (rdrInner.HasData)
             {
                 AsnReader rdrSeq2 = rdrInner.ReadSequence();
@@ -55,8 +57,10 @@ public static class X509Certificate2Extensions
         foreach (string profile in Oids)
         {
             foreach (X509Extension extension in certificate.Extensions)
+            {
                 if (string.Equals(extension.Oid?.Value, profile, StringComparison.Ordinal))
                     return profile;
+            }
         }
 
         return null;

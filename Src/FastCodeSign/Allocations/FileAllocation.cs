@@ -8,8 +8,8 @@ namespace Genbox.FastCodeSign.Allocations;
 [SuppressMessage("IDisposableAnalyzers.Correctness", "IDISP003:Dispose previous before re-assigning")]
 public sealed class FileAllocation : IAllocation, IDisposable
 {
-    private readonly FileStream _fileStream;
     private readonly bool _canWrite;
+    private readonly FileStream _fileStream;
     private MemoryMappedFile? _mmf;
     private unsafe byte* _ptr;
     private MemoryMappedViewAccessor? _view;
@@ -17,6 +17,7 @@ public sealed class FileAllocation : IAllocation, IDisposable
     public FileAllocation(string filePath)
     {
         FilePath = filePath;
+
         try
         {
             _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite);

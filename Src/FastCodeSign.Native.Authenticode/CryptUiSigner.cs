@@ -12,7 +12,7 @@ public static class CryptUiSigner
 
     public static void SignFile(string pathToFile, X509Certificate2 cert)
     {
-        var info = new CRYPTUI_WIZ_DIGITAL_SIGN_INFO
+        CRYPTUI_WIZ_DIGITAL_SIGN_INFO info = new CRYPTUI_WIZ_DIGITAL_SIGN_INFO
         {
             dwSize = (uint)Marshal.SizeOf<CRYPTUI_WIZ_DIGITAL_SIGN_INFO>(),
             dwSubjectChoice = CRYPTUI_WIZ_DIGITAL_SIGN_SUBJECT_FILE,
@@ -25,10 +25,8 @@ public static class CryptUiSigner
         };
 
         // Call the wizard in NO-UI mode
-        if (!CryptUIWizDigitalSign(CRYPTUI_WIZ_NO_UI, IntPtr.Zero, null, ref info, out var pSignCtx))
-        {
+        if (!CryptUIWizDigitalSign(CRYPTUI_WIZ_NO_UI, IntPtr.Zero, null, ref info, out IntPtr pSignCtx))
             throw new Win32Exception(Marshal.GetLastWin32Error());
-        }
 
         // Always free the context
         if (pSignCtx != IntPtr.Zero)
@@ -36,12 +34,11 @@ public static class CryptUiSigner
     }
 
     [DllImport("Cryptui.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CryptUIWizDigitalSign(
-        uint dwFlags,
-        IntPtr hwndParent,
-        string? pwszWizardTitle,
-        ref CRYPTUI_WIZ_DIGITAL_SIGN_INFO pDigitalSignInfo,
-        out IntPtr ppSignContext);
+    private static extern bool CryptUIWizDigitalSign(uint dwFlags,
+                                                     IntPtr hwndParent,
+                                                     string? pwszWizardTitle,
+                                                     ref CRYPTUI_WIZ_DIGITAL_SIGN_INFO pDigitalSignInfo,
+                                                     out IntPtr ppSignContext);
 
     [DllImport("Cryptui.dll", SetLastError = true)]
     private static extern void CryptUIWizFreeDigitalSignContext(IntPtr pSignContext);

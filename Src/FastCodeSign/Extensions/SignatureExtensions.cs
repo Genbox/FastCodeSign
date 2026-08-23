@@ -33,6 +33,7 @@ public static class SignatureExtensions
         HttpClient? configuredClient = timestampOptions.HttpClient;
         HttpClient client = configuredClient ?? new HttpClient();
         HttpClient? ownedClient = configuredClient == null ? client : null;
+
         try
         {
             List<(SignerInfo SignerInfo, AsnEncodedData Attribute)> attributes = new List<(SignerInfo, AsnEncodedData)>();
@@ -57,7 +58,7 @@ public static class SignatureExtensions
         return GetTimestampAttributeWithTimeoutAsync(signerInfo, timestampOptions.TimestampAuthorityUri, timestampOptions.HashAlgorithm, client, timestampOptions.MaximumResponseSizeBytes, timestampOptions.RequireResponseContentType, timeout, cancellationToken);
     }
 
-    private static async Task<AsnEncodedData> GetTimestampAttributeWithTimeoutAsync(SignerInfo signerInfo, Uri timestampAuthorityUri, System.Security.Cryptography.HashAlgorithmName hashAlgorithm, HttpClient client, int maximumResponseSizeBytes, bool requireResponseContentType, TimeSpan timeout, CancellationToken cancellationToken)
+    private static async Task<AsnEncodedData> GetTimestampAttributeWithTimeoutAsync(SignerInfo signerInfo, Uri timestampAuthorityUri, HashAlgorithmName hashAlgorithm, HttpClient client, int maximumResponseSizeBytes, bool requireResponseContentType, TimeSpan timeout, CancellationToken cancellationToken)
     {
         using CancellationTokenSource timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCancellation.CancelAfter(timeout);

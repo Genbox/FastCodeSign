@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Handlers;
@@ -103,7 +104,7 @@ public class MachObjectSecurityTests
     {
         BinaryPrimitives.WriteUInt32LittleEndian(data[offset..], 0x19);
         BinaryPrimitives.WriteUInt32LittleEndian(data[(offset + 4)..], 72);
-        System.Text.Encoding.ASCII.GetBytes(name).CopyTo(data[(offset + 8)..]);
+        Encoding.ASCII.GetBytes(name).CopyTo(data[(offset + 8)..]);
         BinaryPrimitives.WriteUInt64LittleEndian(data[(offset + 40)..], fileOffset);
         BinaryPrimitives.WriteUInt64LittleEndian(data[(offset + 48)..], fileSize);
     }

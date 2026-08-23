@@ -151,7 +151,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         if (specialHashOffset < CodeDirectoryHeader.StructSize || (ulong)specialHashOffset + specialHashesSize > (ulong)cdSpan.Length)
             throw new InvalidDataException("The CodeDirectory contains invalid special hash offsets.");
 
-        if ((ulong)hashOff + ((ulong)nCodeSlots * hashSize) > (ulong)cdSpan.Length)
+        if (hashOff + ((ulong)nCodeSlots * hashSize) > (ulong)cdSpan.Length)
             throw new InvalidDataException("The CodeDirectory contains invalid code hash offsets.");
 
         if (codeLimit32 > data.Length || nCodeSlots != ((ulong)codeLimit32 + ((1U << pageSizeLg2) - 1)) >> pageSizeLg2)
@@ -212,7 +212,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         //Remove the LC_CODE_SIGNATURE command from the list of load commands. It is the last command in the list.
         const uint size = LoadCommandHeader.StructSize + CodeSignatureHeader.StructSize;
 
-        int expectedCodeSignatureOffset = checked((obj.Is64Bit ? 32 : 28) + (int)obj.MachHeader.SizeOfCommands - CodeSignatureHeader.StructSize);
+        int expectedCodeSignatureOffset = checked(((obj.Is64Bit ? 32 : 28) + (int)obj.MachHeader.SizeOfCommands) - CodeSignatureHeader.StructSize);
         if (obj.LinkEdit.FileOffset > ulong.MaxValue - obj.LinkEdit.FileSize)
             throw new InvalidDataException("The __LINKEDIT section has invalid bounds.");
 
@@ -267,6 +267,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         blobs.Add(CsSlot.Signature, cmsBytes);
 
         uint requiredSize = checked((uint)(SuperBlobHeader.StructSize + BlobWrapper.StructSize + blobs.Sum(x => x.Value.Length + BlobIndex.StructSize)));
+
         // FCS-006: Capacity is validated before any persistent Mach-O header or allocation mutation.
         if (requiredSize > sbSize)
             throw new InvalidOperationException($"The encoded CMS requires {requiredSize} bytes, exceeding the reserved Mach-O signature capacity of {sbSize} bytes.");
@@ -287,6 +288,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
 
         //Write all the SuperBlob payload headers
         int dataOffset = SuperBlobHeader.StructSize + (blobs.Count * BlobIndex.StructSize);
+
         foreach (KeyValuePair<CsSlot, ReadOnlyMemory<byte>> blob in blobs)
         {
             //Write a blob index
@@ -350,10 +352,12 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         Requirements? req = opt.Requirements;
 
         if (req == null)
+        {
             if (signOptions.Certificate.IsAppleDeveloperCertificate())
                 req = Requirements.CreateAppleDevDefault(identifier, signOptions.Certificate);
             else
                 req = Requirements.CreateDefault(identifier, signOptions.Certificate);
+        }
 
         byte[] requirementsBytes = req.ToArray();
 
@@ -469,6 +473,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         using IncrementalHash hasher = IncrementalHash.CreateHash(GetHashAlgorithmName(hashType));
         hasher.AppendData(value);
         byte[] actualHash = hasher.GetHashAndReset();
+
         // FCS-003: External special-slot inputs are accepted only when their bytes reproduce the stored CodeDirectory hash.
         return codeDirectory.Slice(slotOffset, hashSize).SequenceEqual(actualHash.AsSpan(0, hashSize));
     }
@@ -493,6 +498,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             throw new InvalidDataException("The code signature blob index is truncated.");
 
         superBlob = superBlob[..(int)header.Length];
+
         for (int i = 0; i < header.Count; i++)
         {
             BlobIndex index = BlobIndex.Read(superBlob[(SuperBlobHeader.StructSize + (i * BlobIndex.StructSize))..]);
@@ -572,6 +578,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         WriteHeaders(patch, context, codeLimit, padLen, sbSize);
 
         byte[] cdHash;
+
         using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgo))
         {
             byte hashSize = hashAlgo.GetSize();
@@ -610,22 +617,21 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             EncodeSeq(hashAlgo.ToOidString(), cdHash)));
 
         signer.SignedAttributes.Add(MakeAttribute(OidConstants.ApplePListAttrOid,
-            EncodeString(Encoding.UTF8.GetBytes(
-                $"""
-                     <?xml version="1.0" encoding="UTF-8"?>
-                     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                     <plist version="1.0">
-                     <dict>
-                         <key>cdhashes</key>
-                         <array>
-                             <data>
-                             {Convert.ToBase64String(cdHash.AsSpan(0, 20))}
-                             </data>
-                         </array>
-                     </dict>
-                     </plist>
+            EncodeString(Encoding.UTF8.GetBytes($"""
+                                                 <?xml version="1.0" encoding="UTF-8"?>
+                                                 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                                                 <plist version="1.0">
+                                                 <dict>
+                                                     <key>cdhashes</key>
+                                                     <array>
+                                                         <data>
+                                                         {Convert.ToBase64String(cdHash.AsSpan(0, 20))}
+                                                         </data>
+                                                     </array>
+                                                 </dict>
+                                                 </plist>
 
-                     """.Replace("    ", "\t", StringComparison.Ordinal).ReplaceLineEndings("\n")))));
+                                                 """.Replace("    ", "\t", StringComparison.Ordinal).ReplaceLineEndings("\n")))));
 
         configureSigner?.Invoke(signer);
 
@@ -646,11 +652,13 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         static byte[] EncodeSeq(string oid, ReadOnlySpan<byte> octets)
         {
             AsnWriter w = new AsnWriter(AsnEncodingRules.DER);
+
             using (w.PushSequence())
             {
                 w.WriteObjectIdentifier(oid);
                 w.WriteOctetString(octets);
             }
+
             return w.Encode();
         }
 
@@ -665,6 +673,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
     internal static ExecSegFlags GetExecSegFlags(Entitlements entitlements)
     {
         ExecSegFlags flags = ExecSegFlags.MainBinary;
+
         // FCS-005: ExecSeg permissions require the exact case-sensitive entitlement key with boolean true.
         if (entitlements.IsEnabled("get-task-allow")) flags |= ExecSegFlags.AllowUnsigned;
         if (entitlements.IsEnabled("run-unsigned-code")) flags |= ExecSegFlags.AllowUnsigned;
@@ -697,8 +706,10 @@ public sealed class MachObjectFormatHandler : IFormatHandler
             throw new InvalidDataException("The Mach Object does not have enough header padding for a code signature load command.");
 
         foreach (byte value in span.Slice(headerEnd, commandSize))
+        {
             if (value != 0)
                 throw new InvalidDataException("The Mach Object does not have enough header padding for a code signature load command.");
+        }
 
         // Bump counts in the mach object header
         WriteU32(span[16..], obj.MachHeader.NumberOfCommands + 1, le);
@@ -821,6 +832,7 @@ public sealed class MachObjectFormatHandler : IFormatHandler
         // When false: Run on the original data only, and assume already padded to 4096
 
         long numPages = patch.Length / PageSize;
+
         for (int i = 0; i < numPages; i++)
         {
             hasher.AppendData(patch.Slice(i * PageSize, PageSize));

@@ -90,6 +90,43 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
             throw new InvalidOperationException("Invalid encoding: " + obj.Encoding.CodePage);
     }
 
+    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
+    {
+        SpcIndirectDataContent indirect = SpcIndirectDataContent.Decode(signedCms.ContentInfo.Content);
+        digest = indirect.Digest;
+        algo = OidHelper.OidToHashAlgorithm(indirect.DigestAlgorithm.Value!);
+        return true;
+    }
+
+    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, SignOptions signOptions, IFormatOptions? formatOptions, Action<CmsSigner>? configureSigner)
+    {
+        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, signOptions.Certificate, signOptions.PrivateKey)
+        {
+            DigestAlgorithm = signOptions.HashAlgorithm.ToOid()
+        };
+
+        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, signOptions.HashAlgorithm);
+
+        SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
+        SpcStatementType st = new SpcStatementType([new Oid(OidConstants.MsKeyPurpose, "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
+
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
+        signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
+
+        configureSigner?.Invoke(signer);
+
+        SpcIndirectDataContent dataContent = new SpcIndirectDataContent(new SpcSipInfo(65536, SpcSipInfo.SecurityProviderGuid).Encode(),
+            SpcSipInfo.ObjectIdentifier,
+            signer.DigestAlgorithm,
+            hash,
+            null);
+
+        ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
+        SignedCms signed = new SignedCms(contentInfo, false);
+        signed.ComputeSignature(signer, signOptions.Silent);
+        return new Signature(signed, null);
+    }
+
     private static void WriteUtf8(TextContext obj, IAllocation allocation, ReadOnlySpan<byte> startComment, ReadOnlySpan<byte> endComment, ReadOnlySpan<byte> newLine, byte[] encoded)
     {
         Span<byte> data = allocation.GetSpan();
@@ -102,7 +139,7 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
         base64 = base64[..written];
 
-        int lineCount = (base64.Length + PerLineChars - 1) / PerLineChars;
+        int lineCount = ((base64.Length + PerLineChars) - 1) / PerLineChars;
 
         int headersLen = obj.HeaderSig.Length + obj.FooterSig.Length;
         int commentLen = ((startComment.Length + endComment.Length + newLine.Length) * lineCount) - newLine.Length; // no trailing newline after last line
@@ -163,7 +200,7 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
         base64Chars = base64Chars[..charsWritten];
 
-        int lineCount = (charsWritten + PerLineChars - 1) / PerLineChars;
+        int lineCount = ((charsWritten + PerLineChars) - 1) / PerLineChars;
 
         // We will write the Base64 chars encoded as UTF-16 bytes. Compute the total byte count for the Base64 payload up front.
         int b64ByteLen = obj.Encoding.GetByteCount(base64Chars);
@@ -216,44 +253,6 @@ public abstract class TextFormatHandler(string commentStart, string commentEnd, 
 
         // Write footer
         obj.FooterSig.CopyTo(data[idx..]);
-    }
-
-    bool IFormatHandler.ExtractHashFromSignedCms(SignedCms signedCms, [NotNullWhen(true)]out byte[]? digest, out HashAlgorithmName algo)
-    {
-        SpcIndirectDataContent indirect = SpcIndirectDataContent.Decode(signedCms.ContentInfo.Content);
-        digest = indirect.Digest;
-        algo = OidHelper.OidToHashAlgorithm(indirect.DigestAlgorithm.Value!);
-        return true;
-    }
-
-    Signature IFormatHandler.CreateSignature(IContext context, ReadOnlySpan<byte> data, SignOptions signOptions, IFormatOptions? formatOptions, Action<CmsSigner>? configureSigner)
-    {
-        CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, signOptions.Certificate, signOptions.PrivateKey)
-        {
-            DigestAlgorithm = signOptions.HashAlgorithm.ToOid()
-        };
-
-        byte[] hash = ((IFormatHandler)this).ComputeHash(context, data, signOptions.HashAlgorithm);
-
-        SpcSpOpusInfo oi = new SpcSpOpusInfo(null, null);
-        SpcStatementType st = new SpcStatementType([new Oid(OidConstants.MsKeyPurpose, "SPC_INDIVIDUAL_SP_KEY_PURPOSE_OBJID")]);
-
-        signer.SignedAttributes.Add(new AsnEncodedData(SpcSpOpusInfo.ObjectIdentifier, oi.Encode()));
-        signer.SignedAttributes.Add(new AsnEncodedData(SpcStatementType.ObjectIdentifier, st.Encode()));
-
-        configureSigner?.Invoke(signer);
-
-        SpcIndirectDataContent dataContent = new SpcIndirectDataContent(
-            new SpcSipInfo(65536, SpcSipInfo.SecurityProviderGuid).Encode(),
-            SpcSipInfo.ObjectIdentifier,
-            signer.DigestAlgorithm,
-            hash,
-            null);
-
-        ContentInfo contentInfo = new ContentInfo(SpcIndirectDataContent.ObjectIdentifier, dataContent.Encode());
-        SignedCms signed = new SignedCms(contentInfo, false);
-        signed.ComputeSignature(signer, signOptions.Silent);
-        return new Signature(signed, null);
     }
 
     private ReadOnlySpan<byte> DecodeUtf8Base64(ReadOnlySpan<byte> span)

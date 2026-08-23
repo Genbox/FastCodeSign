@@ -7,6 +7,7 @@ internal static class ByteHelper
     private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
     private static readonly byte[] Utf16Bom = [0xFF, 0xFE];
     private static readonly byte[] Utf16BeBom = [0xFE, 0xFF];
+
     /// <summary>Align value up to next multiple of alignment.</summary>
     internal static ulong Align(ulong val, ulong alignment) => ((val + alignment) - 1) & ~(alignment - 1);
 

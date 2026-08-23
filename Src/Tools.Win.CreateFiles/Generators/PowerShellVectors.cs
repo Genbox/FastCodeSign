@@ -62,6 +62,7 @@ internal static class PowerShellVectors
             {
                 string once = CollapseBase64ToSingleLine(s);
                 string[] lines = once.Split(NewLineArr, StringSplitOptions.None);
+
                 for (int i = 0; i < lines.Length; i++)
                 {
                     if (IsB64(lines[i]))
@@ -71,6 +72,7 @@ internal static class PowerShellVectors
                         break;
                     }
                 }
+
                 return string.Join(NewLine, (IEnumerable<string>)lines);
             }),
 
@@ -122,6 +124,7 @@ internal static class PowerShellVectors
                 string broken = string.Join(NewLine, lines);
                 return broken + NewLine + s;
             }),
+
             // Unicode space variants after '#'
             ("invalid-format_thinspace-after-hash", s => MapB64(s, l => "#\u2009" + l[2..])),
             ("invalid-format_enspace-after-hash", s => MapB64(s, l => "#\u2002" + l[2..])),
@@ -131,8 +134,11 @@ internal static class PowerShellVectors
             ("invalid-format_leading-nbsp-before-hash", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsB64(lines[i]))
                         lines[i] = "\u00A0" + lines[i];
+                }
+
                 return lines;
             })),
 
@@ -166,22 +172,31 @@ internal static class PowerShellVectors
             ("invalid-format_markers-with-trailing-tabs", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsMarker(lines[i]))
                         lines[i] += "\t\t";
+                }
+
                 return lines;
             })),
             ("invalid-format_markers-with-trailing-comment", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsMarker(lines[i]))
                         lines[i] += " # marker";
+                }
+
                 return lines;
             })),
             ("invalid-format_markers-uppercase", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsMarker(lines[i]))
                         lines[i] = lines[i].ToUpperInvariant();
+                }
+
                 return lines;
             })),
             ("invalid-format_markers-no-hash-space", s => Transform(s, lines =>
@@ -191,13 +206,17 @@ internal static class PowerShellVectors
                     if (lines[i] == BeginMarker) lines[i] = "#SIG # Begin signature block";
                     else if (lines[i] == EndMarker) lines[i] = "#SIG # End signature block";
                 }
+
                 return lines;
             })),
             ("invalid-format_markers-with-bom", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsMarker(lines[i]))
                         lines[i] = "\uFEFF" + lines[i];
+                }
+
                 return lines;
             })),
 
@@ -220,16 +239,23 @@ internal static class PowerShellVectors
             ("invalid-format_indented-b64-lines-tabs-3", s => Transform(s, lines =>
             {
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsB64(lines[i]))
                         lines[i] = "\t\t\t" + lines[i];
+                }
+
                 return lines;
             })),
             ("invalid-format_indented-b64-lines-4096", s => Transform(s, lines =>
             {
                 string pad = new string(' ', 4096);
+
                 for (int i = 0; i < lines.Length; i++)
+                {
                     if (IsB64(lines[i]))
                         lines[i] = pad + lines[i];
+                }
+
                 return lines;
             })),
 
@@ -264,6 +290,7 @@ internal static class PowerShellVectors
         string signatureBlock = signedContent[idx..];
 
         UTF8Encoding utfNoBom = new UTF8Encoding(false);
+
         foreach ((string edgeCaseName, Func<string, string> edgeCase) in edgeCases)
         {
             string newSignatureBlock = edgeCase(signatureBlock);
@@ -336,11 +363,13 @@ internal static class PowerShellVectors
     private static string MapB64(string s, Func<string, string> map)
     {
         string[] lines = s.Split(NewLineArr, StringSplitOptions.None);
+
         for (int i = 1; i < lines.Length - 1; i++)
         {
             if (IsB64(lines[i]))
                 lines[i] = map(lines[i]);
         }
+
         return string.Join(NewLine, (IEnumerable<string>)lines);
     }
 
@@ -357,6 +386,7 @@ internal static class PowerShellVectors
         string payload = string.Concat(lines.Where(IsB64).Select(l => l[2..]));
         List<string> outLines = new List<string>(lines.Length);
         bool done = false;
+
         foreach (string l in lines)
         {
             if (IsB64(l))
@@ -369,6 +399,7 @@ internal static class PowerShellVectors
             }
             else outLines.Add(l);
         }
+
         return outLines;
     });
 
@@ -376,12 +407,14 @@ internal static class PowerShellVectors
     {
         List<string> outLines = new List<string>(lines.Length + (lines.Length / 8));
         int n = 0;
+
         foreach (string l in lines)
         {
             outLines.Add(l);
             if (IsB64(l) && ++n % every == 0)
                 outLines.Add("# ");
         }
+
         return outLines;
     });
 
@@ -401,11 +434,13 @@ internal static class PowerShellVectors
     private static string IndentMarkers(string s, int spaces = 4) => Transform(s, lines =>
     {
         string pad = new string(' ', spaces);
+
         for (int i = 0; i < lines.Length; i++)
         {
             if (IsMarker(lines[i]))
                 lines[i] = pad + lines[i];
         }
+
         return lines;
     });
 
@@ -436,6 +471,7 @@ internal static class PowerShellVectors
                 break;
             }
         }
+
         return lines;
     });
 
@@ -443,15 +479,18 @@ internal static class PowerShellVectors
     {
         List<string> list = new List<string>(lines.Length + 1);
         bool duped = false;
+
         foreach (string l in lines)
         {
             list.Add(l);
+
             if (!duped && l.Contains(BeginMarker, StringComparison.Ordinal))
             {
                 list.Add(l);
                 duped = true;
             }
         }
+
         return list;
     });
 
@@ -476,6 +515,7 @@ internal static class PowerShellVectors
     private static string BlankAroundMarkers(string s) => Transform(s, lines =>
     {
         List<string> outLines = new List<string>(lines.Length + 2);
+
         foreach (string line in lines)
         {
             if (line.Contains(BeginMarker, StringComparison.Ordinal))
@@ -490,6 +530,7 @@ internal static class PowerShellVectors
             }
             else outLines.Add(line);
         }
+
         return outLines;
     });
 
@@ -527,23 +568,27 @@ internal static class PowerShellVectors
     private static string TrailingSpacesInBlock(string s, int spaces = 8) => Transform(s, lines =>
     {
         string pad = new string(' ', spaces);
+
         for (int i = 0; i < lines.Length; i++)
         {
             if (lines[i].StartsWith('#'))
                 lines[i] += pad;
         }
+
         return lines;
     });
 
     private static string TrueBlankLinesInBlock(string s) => Transform(s, lines =>
     {
         List<string> list = new List<string>();
+
         foreach (string l in lines)
         {
             list.Add(l);
             if (IsB64(l) && l.Length > 20)
                 list.Add(""); // real empty
         }
+
         return list;
     });
 
@@ -588,6 +633,7 @@ internal static class PowerShellVectors
                 done = true;
                 return "# \uFEFF" + l[2..];
             }
+
             return l;
         });
     }
@@ -615,11 +661,13 @@ internal static class PowerShellVectors
     {
         (string beg, string end, string[] b64) = SplitBlock(s);
         List<string> lines = [beg, beg];
+
         foreach (string l in b64)
         {
             lines.Add(l);
             lines.Add(l);
         }
+
         lines.Add(end);
         lines.Add(end);
         return string.Join(NewLine, lines);
@@ -669,8 +717,10 @@ internal static class PowerShellVectors
         int lastB64 = -1;
 
         for (int i = 0; i < lines.Count; i++)
+        {
             if (IsB64(lines[i]))
                 lastB64 = i;
+        }
 
         if (lastB64 >= 0)
             lines.InsertRange(lastB64 + 1, extraLines);
@@ -683,6 +733,7 @@ internal static class PowerShellVectors
         string[] lines = s.Split(NewLineArr, StringSplitOptions.None);
         List<int> idxs = new List<int>();
         List<string> b64 = new List<string>();
+
         for (int i = 0; i < lines.Length; i++)
         {
             if (IsB64(lines[i]))
@@ -691,6 +742,7 @@ internal static class PowerShellVectors
                 b64.Add(lines[i]);
             }
         }
+
         List<string> outSeq = reorder(b64);
         for (int k = 0; k < idxs.Count && k < outSeq.Count; k++)
             lines[idxs[k]] = outSeq[k];
@@ -711,6 +763,7 @@ internal static class PowerShellVectors
                 list.RemoveAt(r);
             return string.Join(NewLine, list);
         }
+
         return string.Join(NewLine, (IEnumerable<string>)lines);
     }
 
@@ -723,8 +776,10 @@ internal static class PowerShellVectors
         int lastB64 = -1;
 
         for (int i = 0; i < lines.Count; i++)
+        {
             if (IsB64(lines[i]))
                 lastB64 = i;
+        }
 
         if (lastB64 >= 0)
             lines[lastB64] += Convert.ToBase64String("tester"u8.ToArray()); // Insert a duplicate of the final legitimate base64 line just before the End marker

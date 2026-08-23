@@ -9,6 +9,12 @@ namespace Genbox.FastCodeSign.Internal.Bundles;
 
 public class AppBundleContext : IContext
 {
+    public required string Identifier { get; init; }
+    public required bool HasResources { get; init; }
+    public required string BundlePath { get; init; }
+    public required string BundleExecutablePath { get; init; }
+    public bool IsSigned { get; private init; }
+
     public static AppBundleContext Create(string bundlePath)
     {
         string fullBundlePath = Path.GetFullPath(bundlePath);
@@ -65,12 +71,6 @@ public class AppBundleContext : IContext
             IsSigned = isSigned
         };
     }
-
-    public required string Identifier { get; init; }
-    public required bool HasResources { get; init; }
-    public required string BundlePath { get; init; }
-    public required string BundleExecutablePath { get; init; }
-    public bool IsSigned { get; private init; }
 
     private static (string executable, string identifier) GetBundleInfo(string pListFile)
     {

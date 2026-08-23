@@ -17,7 +17,7 @@ internal static class OidHelper
 
     internal static ReadOnlySpan<byte> HashAlgorithmToOidAsciiTerminated(HashAlgorithmName hash) => hash.Name switch
     {
-        nameof(HashAlgorithmName.MD5) =>  "1.2.840.113549.2.5\0"u8,
+        nameof(HashAlgorithmName.MD5) => "1.2.840.113549.2.5\0"u8,
         nameof(HashAlgorithmName.SHA1) => "1.3.14.3.2.26\0"u8,
         nameof(HashAlgorithmName.SHA256) => "2.16.840.1.101.3.4.2.1\0"u8,
         nameof(HashAlgorithmName.SHA384) => "2.16.840.1.101.3.4.2.2\0"u8,

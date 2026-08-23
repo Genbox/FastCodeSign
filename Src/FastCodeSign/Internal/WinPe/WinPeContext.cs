@@ -5,6 +5,15 @@ namespace Genbox.FastCodeSign.Internal.WinPe;
 
 internal sealed class WinPeContext : IContext
 {
+    internal required uint ChecksumOffset { get; init; }
+    internal required uint SizeOfOptionalHeader { get; init; }
+    internal required PeSection[] Sections { get; init; }
+    internal required uint SecurityDirOffset { get; init; }
+    internal required uint SecurityVirtualAddress { get; init; }
+    internal required uint SecuritySize { get; init; }
+
+    public required bool IsSigned { get; init; }
+
     public static WinPeContext Create(ReadOnlySpan<byte> data)
     {
         // Docs: https://upload.wikimedia.org/wikipedia/commons/1/1b/Portable_Executable_32_bit_Structure_in_SVG_fixed.svg
@@ -78,7 +87,7 @@ internal sealed class WinPeContext : IContext
         // Find the offset to the security data directory (contains the authenticode certificates)
         uint dataDirOffset = (uint)(coffHeaderOffset + (magic == 0x10b ? 120 : 136));
 
-        if (sizeOfOptionalHeader < dataDirOffset - optionalHeaderOffset + 8 || dataDirOffset + 8 > (uint)data.Length)
+        if (sizeOfOptionalHeader < (dataDirOffset - optionalHeaderOffset) + 8 || dataDirOffset + 8 > (uint)data.Length)
             throw new InvalidFileException("The data directory is truncated.");
 
         // Data Directory is a set of (PVA + Size) which is 8 bytes in total.
@@ -100,13 +109,4 @@ internal sealed class WinPeContext : IContext
             SecuritySize = securitySize
         };
     }
-
-    public required bool IsSigned { get; init; }
-
-    internal required uint ChecksumOffset { get; init; }
-    internal required uint SizeOfOptionalHeader { get; init; }
-    internal required PeSection[] Sections { get; init; }
-    internal required uint SecurityDirOffset { get; init; }
-    internal required uint SecurityVirtualAddress { get; init; }
-    internal required uint SecuritySize { get; init; }
 }

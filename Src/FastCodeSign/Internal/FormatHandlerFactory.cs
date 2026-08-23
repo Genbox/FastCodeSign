@@ -15,7 +15,7 @@ internal static class FormatHandlerFactory
         new PowerShellManifestFormatHandler(),
         new PowerShellXmlFormatHandler(),
         new PowerShellScriptFormatHandler(), //This is here because it matches everything
-        new PowerShellModuleFormatHandler(),
+        new PowerShellModuleFormatHandler()
     ];
 
     public static IFormatHandler? Get(ReadOnlySpan<byte> span, string? ext, bool skipExtCheck)

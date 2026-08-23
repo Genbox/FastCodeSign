@@ -5,6 +5,7 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using Genbox.FastCodeSign.Abstracts;
 using Genbox.FastCodeSign.Allocations;
+using Genbox.FastCodeSign.Enums;
 using Genbox.FastCodeSign.Extensions;
 using Genbox.FastCodeSign.Handlers;
 using Genbox.FastCodeSign.Internal;
@@ -19,8 +20,8 @@ public class CodeSignProvider
     private const string TimeStampingEkuOid = "1.3.6.1.5.5.7.3.8";
     private const int MaximumVerificationDepth = 16;
     private const int MaximumVerifiedSigners = 256;
-    private readonly IFormatHandler _handler;
     private readonly string? _fileName;
+    private readonly IFormatHandler _handler;
 
     internal CodeSignProvider(IFormatHandler handler, IAllocation allocation, string? fileName)
     {
@@ -92,10 +93,7 @@ public class CodeSignProvider
         return context.IsSigned;
     }
 
-    public SignedCms? GetSignature()
-    {
-        return GetSignatures().FirstOrDefault();
-    }
+    public SignedCms? GetSignature() => GetSignatures().FirstOrDefault();
 
     /// <summary>Gets every embedded CMS signature. Universal Mach-O files return one CMS for each architecture.</summary>
     public IReadOnlyList<SignedCms> GetSignatures()
@@ -108,6 +106,7 @@ public class CodeSignProvider
 
         IReadOnlyList<byte[]> signatureBytes = _handler.ExtractSignatures(context, data);
         List<SignedCms> signatures = new List<SignedCms>(signatureBytes.Count);
+
         foreach (byte[] bytes in signatureBytes)
         {
             Debug.Assert(bytes.Length != 0);
@@ -142,6 +141,7 @@ public class CodeSignProvider
         int signatureIndex = 0;
         byte[] encoded = signedCms.Encode();
         IReadOnlyList<byte[]> signatures = _handler.ExtractSignatures(context, span);
+
         for (int i = 0; i < signatures.Count; i++)
         {
             if (signatures[i].AsSpan().SequenceEqual(encoded))
@@ -169,6 +169,7 @@ public class CodeSignProvider
             return new CodeSignVerificationResult(SignatureIntegrityStatus.NotSigned, CertificateTrustStatus.NotChecked, [], "The file is not signed.");
 
         IReadOnlyList<byte[]> signatureBytes;
+
         try
         {
             signatureBytes = _handler.ExtractSignatures(context, data);
@@ -188,6 +189,7 @@ public class CodeSignProvider
         }
 
         List<SignerVerificationResult> signers = new List<SignerVerificationResult>();
+
         try
         {
             VerificationTraversal traversal = new VerificationTraversal();
@@ -241,13 +243,13 @@ public class CodeSignProvider
 
         List<TimestampVerificationResult> timestamps = VerifyTimestamps(signerInfo, options);
         X509Certificate2? certificate = signerInfo.Certificate;
+
         if (certificate == null)
-        {
             signers.Add(new SignerVerificationResult(null, CertificateTrustStatus.NoCertificate, [], timestamps, "The signer certificate is not present in the CMS."));
-        }
         else
         {
             DateTime? verificationTime = options.VerificationTime;
+
             if (options.UseTimestampTime)
             {
                 TimestampVerificationResult? timestamp = timestamps.FirstOrDefault(static result => result.Status == TimestampVerificationStatus.Trusted);
@@ -285,6 +287,7 @@ public class CodeSignProvider
     private static List<TimestampVerificationResult> VerifyTimestamps(SignerInfo signerInfo, CodeSignVerificationOptions options)
     {
         List<TimestampVerificationResult> results = new List<TimestampVerificationResult>();
+
         foreach (CryptographicAttributeObject attribute in signerInfo.UnsignedAttributes)
         {
             if (attribute.Oid.Value != OidConstants.MsCounterSign && attribute.Oid.Value != Rfc3161TimestampTokenOid)
@@ -302,6 +305,7 @@ public class CodeSignProvider
                 {
                     SignedCms timestampCms = token.AsSignedCms();
                     bool valid = token.VerifySignatureForSignerInfo(signerInfo, out X509Certificate2? certificate, timestampCms.Certificates);
+
                     if (!valid || certificate == null)
                     {
                         results.Add(new TimestampVerificationResult(TimestampVerificationStatus.Invalid, token.TokenInfo.Timestamp, certificate, [], "The RFC3161 timestamp does not match the signer."));
@@ -341,12 +345,6 @@ public class CodeSignProvider
     {
         X509EnhancedKeyUsageExtension[] ekuExtensions = certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().ToArray();
         return ekuExtensions.Length == 1 && ekuExtensions[0].Critical && ekuExtensions[0].EnhancedKeyUsages.Count == 1 && ekuExtensions[0].EnhancedKeyUsages[0].Value == TimeStampingEkuOid;
-    }
-
-    private sealed class VerificationTraversal
-    {
-        internal HashSet<string> NestedCms { get; } = new HashSet<string>(StringComparer.Ordinal);
-        internal int SignerCount { get; set; }
     }
 
     private static bool BuildChain(X509Certificate2 certificate, X509Certificate2Collection extraCertificates, CodeSignVerificationOptions options, DateTime? verificationTime, IEnumerable<string> applicationPolicyOids, out X509ChainStatus[] statuses)
@@ -395,7 +393,7 @@ public class CodeSignProvider
             throw new InvalidOperationException("The file already contains a signature.");
 
         //Small hack to transfer the filename to the MachObjectFormatHandler if user didn't set the format options, but provided a filename.
-        if (formatOptions == null && _fileName != null && (_handler is MachObjectFormatHandler or FatMachObjectFormatHandler))
+        if (formatOptions == null && _fileName != null && _handler is MachObjectFormatHandler or FatMachObjectFormatHandler)
             return _handler.CreateSignature(context, data, signOptions, new MachObjectFormatOptions { Identifier = _fileName }, configureSigner);
 
         return _handler.CreateSignature(context, data, signOptions, formatOptions, configureSigner);
@@ -423,9 +421,10 @@ public class CodeSignProvider
 
         MemoryAllocation stagedAllocation = new MemoryAllocation(Allocation.GetSpan().ToArray());
         CodeSignProvider stagedProvider = new CodeSignProvider(_handler, stagedAllocation, _fileName);
+
         if (stagedProvider.HasSignature())
         {
-            if (signOptions.ExistingSignatureBehavior == Enums.ExistingSignatureBehavior.Fail)
+            if (signOptions.ExistingSignatureBehavior == ExistingSignatureBehavior.Fail)
                 throw new InvalidOperationException("The file already contains a signature.");
             stagedProvider.TryRemoveSignature(true);
         }
@@ -493,5 +492,11 @@ public class CodeSignProvider
     {
         if (!handler.IsBundlePath(path))
             throw new InvalidDataException($"The provided handler does not support the files in '{path}'");
+    }
+
+    private sealed class VerificationTraversal
+    {
+        internal HashSet<string> NestedCms { get; } = new HashSet<string>(StringComparer.Ordinal);
+        internal int SignerCount { get; set; }
     }
 }

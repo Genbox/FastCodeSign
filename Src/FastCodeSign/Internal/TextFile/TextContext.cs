@@ -9,6 +9,13 @@ internal sealed class TextContext : IContext
     private const string MagicFooter = "SIG # End signature block";
     internal const string NewLine = "\r\n";
     private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(false, true);
+    internal required int HeaderIdx { get; init; }
+    internal required byte[] HeaderSig { get; init; }
+    internal required int FooterIdx { get; init; }
+    internal required byte[] FooterSig { get; init; }
+    internal required Encoding Encoding { get; init; }
+
+    public required bool IsSigned { get; init; }
 
     public static TextContext Create(ReadOnlySpan<byte> data, string commentStart, string commentEnd, Encoding? encoding)
     {
@@ -82,11 +89,4 @@ internal sealed class TextContext : IContext
             Encoding = encoding
         };
     }
-
-    public required bool IsSigned { get; init; }
-    internal required int HeaderIdx { get; init; }
-    internal required byte[] HeaderSig { get; init; }
-    internal required int FooterIdx { get; init; }
-    internal required byte[] FooterSig { get; init; }
-    internal required Encoding Encoding { get; init; }
 }

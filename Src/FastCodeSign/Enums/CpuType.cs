@@ -8,6 +8,7 @@ public enum CpuType : uint
     VAX = 1,
     MC680x0 = 6,
     X86 = 7,
+
     // I386  = X86,
     X86_64 = X86 | ABI64,
 
@@ -24,5 +25,5 @@ public enum CpuType : uint
     PowerPC64 = PowerPC | ABI64,
 
     ABI64 = 0x1000000,
-    ABI64_32 = 0x2000000,
+    ABI64_32 = 0x2000000
 }

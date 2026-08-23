@@ -10,8 +10,5 @@ internal readonly record struct TeamIdHeader
 
     public required uint TeamOffset { get; init; } // offset of optional team identifier
 
-    public void Write(Span<byte> buffer)
-    {
-        WriteUInt32BigEndian(buffer, TeamOffset);
-    }
+    public void Write(Span<byte> buffer) => WriteUInt32BigEndian(buffer, TeamOffset);
 }
